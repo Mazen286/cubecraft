@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@theme {
+  /* Yu-Gi-Oh! inspired color palette */
+  --color-gold-50: #fffbeb;
+  --color-gold-100: #fef3c7;
+  --color-gold-200: #fde68a;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+  --color-gold-600: #d97706;
+  --color-gold-700: #b45309;
+  --color-gold-800: #92400e;
+  --color-gold-900: #78350f;
+
+  --color-yugi-dark: #0a0a0f;
+  --color-yugi-darker: #050508;
+  --color-yugi-card: #1a1a2e;
+  --color-yugi-border: #2a2a4a;
+  --color-yugi-accent: #fbbf24;
+  --color-yugi-purple: #7c3aed;
+
+  /* Animations */
+  --animate-glow: glow 2s ease-in-out infinite alternate;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  @keyframes glow {
+    0% { box-shadow: 0 0 5px #fbbf24, 0 0 10px #fbbf24; }
+    100% { box-shadow: 0 0 10px #fbbf24, 0 0 20px #fbbf24, 0 0 30px #fbbf24; }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-yugi-darker text-white min-h-screen m-0;
+    background-image:
+      radial-gradient(ellipse at top, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom, rgba(251, 191, 36, 0.05) 0%, transparent 50%);
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer components {
+  /* Glass morphism card */
+  .glass-card {
+    @apply bg-yugi-card/80 backdrop-blur-md border border-yugi-border rounded-xl;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  /* Primary button with gold accent */
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-gold-500 to-gold-600
+           text-yugi-darker font-semibold rounded-lg
+           hover:from-gold-400 hover:to-gold-500
+           active:from-gold-600 active:to-gold-700
+           transition-all duration-200 ease-out
+           shadow-lg shadow-gold-500/25
+           hover:shadow-xl hover:shadow-gold-500/30
+           focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-yugi-dark;
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply px-6 py-3 bg-yugi-card border border-yugi-border
+           text-white font-medium rounded-lg
+           hover:bg-yugi-border hover:border-gold-500/50
+           active:bg-yugi-dark
+           transition-all duration-200 ease-out
+           focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:ring-offset-2 focus:ring-offset-yugi-dark;
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .card-hover:hover {
+    @apply -translate-y-1;
+    box-shadow:
+      0 20px 25px -5px rgba(0, 0, 0, 0.4),
+      0 10px 10px -5px rgba(0, 0, 0, 0.2),
+      0 0 20px rgba(251, 191, 36, 0.15);
+  }
+
+  /* Gold text gradient */
+  .text-gold-gradient {
+    @apply bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent;
+  }
+
+  /* Scrollbar styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-yugi-dark rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-yugi-border rounded-full hover:bg-gold-500/50;
+  }
+}
+
+@layer utilities {
+  /* Animation delay utilities */
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+}
