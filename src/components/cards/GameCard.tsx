@@ -8,7 +8,7 @@ const loadedImages = new Set<string>();
 
 export interface GameCardProps {
   card: Card;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   onClick?: () => void;
   isSelected?: boolean;
   showDetails?: boolean;
@@ -37,8 +37,9 @@ export const GameCard = memo(function GameCard({
 }: GameCardProps) {
   const { gameConfig } = useGameConfig();
 
-  // Get image URL from game config
-  const imageUrl = gameConfig.getCardImageUrl(card, size);
+  // Get image URL from game config (map 'xl' to 'lg' for API requests)
+  const imageSizeForUrl = size === 'xl' ? 'lg' : size;
+  const imageUrl = gameConfig.getCardImageUrl(card, imageSizeForUrl);
 
   // Check if image was already loaded (cached globally)
   const alreadyCached = loadedImages.has(imageUrl);
@@ -49,6 +50,7 @@ export const GameCard = memo(function GameCard({
     sm: 'w-16 h-24',
     md: 'w-24 h-36',
     lg: 'w-32 h-48',
+    xl: 'w-40 h-60',
   };
 
   // Get indicators from game config

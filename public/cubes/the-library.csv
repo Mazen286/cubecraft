@@ -58,7 +58,6 @@ ID,Name,Score
 4779823,"Michael, the Arch-Lightsworn",60
 4906301,Necro Gardna,70
 4914353,Space Insulator,70
-4918855,Vampire Voivode,55
 4928565,Tearlaments Kashtira,70
 4929256,Mobius the Frost Monarch,90
 4931121,Full Force Virus,50
@@ -126,6 +125,7 @@ ID,Name,Score
 11747708,Spore,60
 12014404,Gagaga Cowboy,60
 12061457,Soul Scissors,80
+12067160,Gorgon of Zilofthonia,85
 12289247,Chronograph Sorcerer,60
 12298909,Prime Material Dragon,60
 12421694,Sky Striker Ace - Kaina,50
@@ -139,6 +139,7 @@ ID,Name,Score
 13382806,Silvervine Senri,50
 13694209,Dogmatika Ashiyan,60
 13758665,Magician's Left Hand,50
+13836592,Behemoth the King of a Hundred Battles,80
 13893596,Exodius the Ultimate Forbidden Lord,70
 13974207,Denko Sekka,70
 14087893,Book of Moon,90
@@ -169,7 +170,6 @@ ID,Name,Score
 16404809,Kuribandit,80
 16509007,Kewl Tune Mix,50
 16625614,Dark Sanctuary,80
-16825874,Eccentric Boy,50
 16893370,"Dreaming Reality of Nemleria, Realized",65
 17259470,Zombie Master,70
 17330916,Performapal Monkeyboard,50
@@ -264,6 +264,7 @@ ID,Name,Score
 27243130,Forbidden Lance,70
 27260347,Snake-Eyes Diabellstar,70
 27354732,Mythical Beast Jackal King,60
+27420823,"K9-17 ""Ripper""",60
 27548199,Borreload Savage Dragon,80
 27572350,Bystial Dis Pater,70
 27750191,Yokotuner,70
@@ -278,6 +279,7 @@ ID,Name,Score
 28566710,Last Turn,40
 28570310,Mythical Beast Garuda,70
 28637168,Crane Crane,60
+28642461,K9-66a Jokul,70
 28654932,Deep Dark Trap Hole,70
 28692962,Mekk-Knight Purple Nightfall,90
 28776350,Akashic Magician,60
@@ -334,7 +336,6 @@ ID,Name,Score
 31924889,Arcanite Magician,70
 32061192,Maliss Dormouse,90
 32362575,Magical Merchant,70
-32391631,Savage Colosseum,50
 32646477,Dark Strike Fighter,70
 32807846,Reinforcement of the Army,70
 32909498,Kashtira Fenrir,95
@@ -352,7 +353,6 @@ ID,Name,Score
 33782437,One Day of Peace,50
 33854624,Bystial Magnamhut,90
 33904024,Shard of Greed,70
-33909817,Sylvan Princessprite,40
 34086406,Lavalval Chain,50
 34090915,Branded Regained,80
 34124316,Cyber Jar,75
@@ -370,7 +370,6 @@ ID,Name,Score
 35261759,Pot of Desires,70
 35371948,Trickstar Light Stage,75
 35405755,Kurikara Divincarnate,50
-35448319,Snyffus,55
 35494087,Speedroid Skull Marbles,80
 35595518,Linkslayer,80
 35614780,Light End Sublimation Dragon,70
@@ -381,10 +380,8 @@ ID,Name,Score
 36629635,Dandy Whitelion,90
 36687247,T.G. Rush Rhino,50
 36733451,Dimensional Alchemist,70
-36776089,Sky Cavalry Centaurea,55
 36974120,"Vouiburial, the Dragon Undertaker",80
 36975314,Crackdown,80
-37021315,Primineral Mandstrong,85
 37101832,Gravekeeper's Guard,80
 37129797,Vampire Sucker,60
 37351133,Sky Striker Ace - Roze,60
@@ -518,7 +515,6 @@ ID,Name,Score
 50323155,Black Horn of Heaven,80
 50383626,"Darkest Diabolos, Lord of the Lair",60
 50482813,Speedroid Fuki-Modoshi Piper,60
-50789693,Armored Kappa,55
 50903514,Blue Flame Swordsman,50
 51227866,Sky Striker Mecha - Shark Cannon,70
 51452091,Royal Decree,60
@@ -560,8 +556,10 @@ ID,Name,Score
 54594017,Blackwing - Sharnga the Waning Moon,50
 54719828,Number 16: Shock Master,50
 54757758,Mudragon of the Swamp,55
+54919528,"K9-ØØ ""Hound""",65
 54965929,Mythical Beast Medusa,50
 54974237,Eradicator Epidemic Virus,50
+55031170,K9-66b Lantern,70
 55144522,Pot of Greed,95
 55285840,Time Thief Redoer,95
 55428242,Traptrix Atrax,50
@@ -608,6 +606,7 @@ ID,Name,Score
 60303245,Salamangreat Almiraj,70
 60303688,"Dogmatika Ecclesia, the Virtuous",70
 60411677,Anubis the Last Judge,80
+60600821,Spring,75
 60666820,Nefarious Archfiend Eater of Nefariousness,50
 60682203,Cold Wave,70
 61318483,Ghostrick Jackfrost,65
@@ -658,6 +657,7 @@ ID,Name,Score
 65504487,Toy Soldier,75
 65741786,I:P Masquerena,80
 65884091,Evilswarm Thanatos,50
+66011101,Number 60: Dugares the Timeless,60
 66022706,Mekk-Knight Green Horizon,70
 66104644,Magister of Endymion,50
 66200210,Mecha Phantom Beast Hamstrat,55
@@ -670,7 +670,7 @@ ID,Name,Score
 67284107,Scapeghost,90
 67441435,Glow-Up Bulb,90
 67556500,Phonon Pulse Dragon,50
-67598234,"Gaia Saber, the Lightning Shadow",50
+67598234,"Gaia Saber, the Lightning Shadow",70
 67616300,Chicken Game,50
 67694706,Magicolloidal Sol,60
 67696066,Performage Trick Clown,80
@@ -739,7 +739,6 @@ ID,Name,Score
 72233469,Lil-la Rap,60
 72270339,Diabellstar the Black Witch,80
 72302403,Swords of Revealing Light,55
-72330894,"Simorgh, Bird of Sovereignty",60
 72336818,Pentestag,50
 72444406,Enigmaster Packbit,80
 72656408,Bystial Baldrake,90
@@ -786,6 +785,7 @@ ID,Name,Score
 75745607,Hino-Kagu-Tsuchi,50
 75902998,Trap Hole of Spikes,60
 76067258,Number 66: Master Key Beetle,50
+76072561,Sky Striker Ace = Zero,60
 76352503,Changshi the Spiridao,50
 76375976,Mystic Mine,70
 76515293,Xing Zhen Hu,60
@@ -798,7 +798,6 @@ ID,Name,Score
 77313225,"Rciela, Sinister Soul of the White Forest",50
 77334267,Wind-Up Arsenal Zenmaioh,60
 77462146,The Phantom Knights of Shadow Veil,65
-77498348,Black Luster Soldier - Envoy of the Evening Twilight,90
 77527210,Soul of Purity and Light,60
 77538567,Dark Bribe,60
 77558536,"Raiden, Hand of the Lightsworn",80
@@ -926,6 +925,7 @@ ID,Name,Score
 90807199,Danger! Thunderbird!,90
 90810762,Raging Flame Sprite,50
 90953320,T.G. Hyper Librarian,50
+91025875,K9-ØØ Lupis,70
 91133740,Snowman Eater,80
 91182675,Mythical Beast Jackal,60
 91336701,Day-Breaker the Shining Magical Warrior,50
@@ -934,6 +934,7 @@ ID,Name,Score
 91812341,Traptrix Myrmeleo,60
 91949988,"Gaia Dragon, the Thunder Charger",50
 92204263,Mekk-Knight Indigo Eclipse,70
+92248362,K9-17 Izuna,80
 92385016,Munin the Runick Wings,80
 92512625,Solemn Scolding,60
 92519087,Virtual World Kyubi - Shenshen,70
@@ -989,7 +990,6 @@ ID,Name,Score
 97021916,Dark Resonator,70
 97077563,Call of the Haunted,90
 97169186,Smashing Ground,80
-97170107,Shining Elf,55
 97204936,"Gaia Knight, the Force of Earth",50
 97223101,That's 10!,70
 97240499,Orphebull the Harmonious Bullfighter Bard,70

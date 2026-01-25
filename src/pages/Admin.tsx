@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Layout } from '../components/layout/Layout';
+import { BottomSheet } from '../components/ui/BottomSheet';
 import { useAuth } from '../context/AuthContext';
 import { getSupabase } from '../lib/supabase';
 import { getGameConfig } from '../config/games';
@@ -831,94 +832,92 @@ function ScoreManagement() {
         )}
       </div>
 
-      {/* Card Preview Modal */}
-      {previewCard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-black/70"
-            onClick={() => setPreviewCard(null)}
-          />
-          <div className="relative bg-yugi-dark border border-yugi-border rounded-lg p-4 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setPreviewCard(null)}
-              className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl leading-none"
-            >
-              ×
-            </button>
+      {/* Card Preview Bottom Sheet */}
+      <BottomSheet
+        isOpen={!!previewCard}
+        onClose={() => setPreviewCard(null)}
+        title={previewCard?.name}
+        titleBadge={previewCard && hasErrata(previewCard.id) && (
+          <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
+            PRE-ERRATA
+          </span>
+        )}
+      >
+        {previewCard && (
+          <div className="p-4 md:p-6">
+            <div className="flex gap-4 md:gap-6">
+              {/* Card image */}
+              <div className="flex-shrink-0">
+                <img
+                  src={getCardImageUrl(previewCard, 'lg')}
+                  alt={previewCard.name}
+                  className="w-32 md:w-40 h-auto rounded-lg shadow-lg"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/card-back.jpg';
+                  }}
+                />
+              </div>
 
-            <div className="flex flex-col items-center">
-              <img
-                src={getCardImageUrl(previewCard, 'lg')}
-                alt={previewCard.name}
-                className="max-w-full h-auto rounded-lg shadow-lg mb-4"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/images/card-back.jpg';
-                }}
-              />
+              {/* Card info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-400 mb-3">{previewCard.type}</p>
 
-              <h3 className="text-lg font-bold text-gold-400 text-center mb-2">
-                {previewCard.name}
-              </h3>
-
-              <div className="text-sm text-gray-400 space-y-1 w-full">
-                <div className="flex justify-between">
-                  <span>Type:</span>
-                  <span className="text-white">{previewCard.type}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>ID:</span>
+                {/* Stats - compact grid */}
+                <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm max-w-xs">
+                  <span className="text-gray-500">ID</span>
                   <span className="text-white font-mono">#{previewCard.id}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Score / Grade:</span>
+
+                  <span className="text-gray-500">Score</span>
                   <span className="flex items-center gap-2">
-                    <span className="text-gold-400 font-medium">
-                      {getCardScore(previewCard.id)}
-                    </span>
+                    <span className="text-gold-400 font-medium">{getCardScore(previewCard.id)}</span>
                     {(() => {
                       const grade = getTierFromScore(getCardScore(previewCard.id));
                       return (
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${GRADE_COLORS[grade]}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${GRADE_COLORS[grade]}`}>
                           {grade}
                         </span>
                       );
                     })()}
                   </span>
-                </div>
-                {previewCard.atk !== undefined && (
-                  <div className="flex justify-between">
-                    <span>ATK/DEF:</span>
-                    <span className="text-white">
-                      {previewCard.atk} / {previewCard.def ?? '?'}
-                    </span>
-                  </div>
-                )}
-                {previewCard.level !== undefined && (
-                  <div className="flex justify-between">
-                    <span>Level:</span>
-                    <span className="text-white">{previewCard.level}</span>
-                  </div>
-                )}
-                {previewCard.attribute && (
-                  <div className="flex justify-between">
-                    <span>Attribute:</span>
-                    <span className="text-white">{previewCard.attribute}</span>
-                  </div>
-                )}
-                {previewCard.race && (
-                  <div className="flex justify-between">
-                    <span>Race:</span>
-                    <span className="text-white">{previewCard.race}</span>
-                  </div>
-                )}
-              </div>
 
-              {/* Errata / Original Text */}
+                  {previewCard.atk !== undefined && (
+                    <>
+                      <span className="text-gray-500">ATK/DEF</span>
+                      <span className="text-white">{previewCard.atk} / {previewCard.def ?? '?'}</span>
+                    </>
+                  )}
+
+                  {previewCard.level !== undefined && (
+                    <>
+                      <span className="text-gray-500">Level</span>
+                      <span className="text-white">{previewCard.level}</span>
+                    </>
+                  )}
+
+                  {previewCard.attribute && (
+                    <>
+                      <span className="text-gray-500">Attribute</span>
+                      <span className="text-white">{previewCard.attribute}</span>
+                    </>
+                  )}
+
+                  {previewCard.race && (
+                    <>
+                      <span className="text-gray-500">Race</span>
+                      <span className="text-white">{previewCard.race}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Description / Errata */}
+            <div className="mt-4 pt-4 border-t border-yugi-border">
               {(() => {
                 const errata = getErrata(previewCard.id);
                 if (errata) {
                   return (
-                    <div className="mt-4 w-full space-y-3">
+                    <div className="space-y-3">
                       <div className="p-3 bg-purple-900/30 border border-purple-600 rounded">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded">
@@ -926,7 +925,7 @@ function ScoreManagement() {
                           </span>
                           <span className="text-purple-300 text-xs font-medium">Original Text (Use This)</span>
                         </div>
-                        <p className="text-sm text-white">{errata.originalText}</p>
+                        <p className="text-sm text-white leading-relaxed">{errata.originalText}</p>
                         {errata.notes && (
                           <p className="text-xs text-purple-300 mt-2 italic">Note: {errata.notes}</p>
                         )}
@@ -934,22 +933,22 @@ function ScoreManagement() {
                       {previewCard.desc && (
                         <div className="p-3 bg-yugi-darker rounded">
                           <p className="text-xs text-gray-500 mb-1">Current Errata'd Text (Reference Only):</p>
-                          <p className="text-sm text-gray-400">{previewCard.desc}</p>
+                          <p className="text-sm text-gray-400 leading-relaxed">{previewCard.desc}</p>
                         </div>
                       )}
                     </div>
                   );
                 }
                 return previewCard.desc ? (
-                  <div className="mt-4 p-3 bg-yugi-darker rounded text-sm text-gray-300 w-full">
+                  <p className="text-sm text-gray-300 leading-relaxed">
                     {previewCard.desc}
-                  </div>
+                  </p>
                 ) : null;
               })()}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </BottomSheet>
     </div>
   );
 }

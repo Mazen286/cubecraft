@@ -3,10 +3,13 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { X, Filter, SortAsc, ChevronDown, ChevronUp } from 'lucide-react';
 import { YuGiOhCard } from '../cards/YuGiOhCard';
 import { Button } from '../ui/Button';
+import { BottomSheet } from '../ui/BottomSheet';
 import { cubeService } from '../../services/cubeService';
 import { useGameConfig } from '../../context/GameContext';
 import type { YuGiOhCard as YuGiOhCardType } from '../../types';
 import type { Card } from '../../types/card';
+import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
+import { ENERGY_COLORS } from '../../config/games/pokemon';
 import { cn, getTierFromScore } from '../../lib/utils';
 import { hasErrata, getErrata } from '../../data/cardErrata';
 
@@ -62,6 +65,8 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
 
   // Selected card for detail view
   const [selectedCard, setSelectedCard] = useState<YuGiOhCardType | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Grid container ref for virtualization
   const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -339,8 +344,9 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   });
 
   // Memoized card click handler
-  const handleCardClick = useCallback((card: YuGiOhCardType) => {
+  const handleCardClick = useCallback((card: YuGiOhCardType, index: number) => {
     setSelectedCard(card);
+    setSelectedIndex(index);
   }, []);
 
   // Stats - game-specific using filterOptions
@@ -409,6 +415,126 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     clearAdvancedFilters();
   }, [currentGameId, clearAdvancedFilters]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const cardCount = filteredCards.length;
+
+      switch (e.key) {
+        case 'ArrowRight': {
+          e.preventDefault();
+          if (cardCount === 0) return;
+          const nextIndex = selectedIndex < 0 ? 0 : (selectedIndex + 1) % cardCount;
+          setSelectedIndex(nextIndex);
+          setSelectedCard(filteredCards[nextIndex]);
+          break;
+        }
+        case 'ArrowLeft': {
+          e.preventDefault();
+          if (cardCount === 0) return;
+          const prevIndex = selectedIndex < 0 ? cardCount - 1 : (selectedIndex - 1 + cardCount) % cardCount;
+          setSelectedIndex(prevIndex);
+          setSelectedCard(filteredCards[prevIndex]);
+          break;
+        }
+        case 'ArrowDown': {
+          e.preventDefault();
+          if (cardCount === 0) return;
+          if (selectedIndex < 0) {
+            setSelectedIndex(0);
+            setSelectedCard(filteredCards[0]);
+          } else {
+            // Move down one row (add column count)
+            const nextIndex = selectedIndex + columnsCount;
+            if (nextIndex < cardCount) {
+              setSelectedIndex(nextIndex);
+              setSelectedCard(filteredCards[nextIndex]);
+            }
+          }
+          break;
+        }
+        case 'ArrowUp': {
+          e.preventDefault();
+          if (cardCount === 0) return;
+          if (selectedIndex < 0) {
+            setSelectedIndex(cardCount - 1);
+            setSelectedCard(filteredCards[cardCount - 1]);
+          } else {
+            // Move up one row (subtract column count)
+            const prevIndex = selectedIndex - columnsCount;
+            if (prevIndex >= 0) {
+              setSelectedIndex(prevIndex);
+              setSelectedCard(filteredCards[prevIndex]);
+            }
+          }
+          break;
+        }
+        case 'Enter':
+        case ' ': {
+          // If bottom sheet is open, close it; otherwise open it for selected card
+          if (selectedCard) {
+            e.preventDefault();
+            // Toggle the detail view - if already showing this card, close it
+            // The bottom sheet is controlled by selectedCard being non-null
+          } else if (selectedIndex >= 0 && selectedIndex < cardCount) {
+            e.preventDefault();
+            setSelectedCard(filteredCards[selectedIndex]);
+          }
+          break;
+        }
+        case 'Escape': {
+          e.preventDefault();
+          if (selectedCard) {
+            // Close bottom sheet but keep selection
+            setSelectedCard(null);
+          } else if (selectedIndex >= 0) {
+            // Clear selection
+            setSelectedIndex(-1);
+          } else {
+            // Close the viewer
+            onClose();
+          }
+          break;
+        }
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9': {
+          const num = parseInt(e.key) - 1;
+          if (num < cardCount) {
+            e.preventDefault();
+            setSelectedIndex(num);
+            setSelectedCard(filteredCards[num]);
+          }
+          break;
+        }
+        case '?': {
+          e.preventDefault();
+          setShowShortcuts(prev => !prev);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, filteredCards, selectedIndex, selectedCard, columnsCount, onClose]);
+
+  // Reset selection when filters change
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [search, typeFilter, tierFilter, advancedFilters, rangeFilters, sortBy, sortDir]);
+
   if (!isOpen) return null;
 
   return (
@@ -436,13 +562,68 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
               ))}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowShortcuts(prev => !prev)}
+              className={cn(
+                "p-2 rounded-lg border text-sm font-bold transition-colors hidden sm:block",
+                showShortcuts
+                  ? "border-gold-500 text-gold-400 bg-gold-500/10"
+                  : "border-yugi-border text-gray-400 hover:text-white hover:border-gold-500"
+              )}
+              title="Keyboard shortcuts (?)"
+            >
+              ?
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
+
+        {/* Keyboard shortcuts help */}
+        {showShortcuts && (
+          <div className="p-4 border-b border-yugi-border bg-yugi-card/50">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white">Keyboard Shortcuts</h3>
+              <button
+                onClick={() => setShowShortcuts(false)}
+                className="text-gray-400 hover:text-white text-sm"
+              >
+                Close
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">←→</kbd>
+                <span className="text-gray-400">Navigate cards</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">↑↓</kbd>
+                <span className="text-gray-400">Navigate rows</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">1-9</kbd>
+                <span className="text-gray-400">Quick select</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Enter</kbd>
+                <span className="text-gray-400">View card</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Esc</kbd>
+                <span className="text-gray-400">Close / Back</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">?</kbd>
+                <span className="text-gray-400">Toggle help</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filters & Sort */}
         <div className="p-2 sm:p-4 border-b border-yugi-border bg-yugi-dark/50">
@@ -709,16 +890,19 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                       }}
                       className="flex gap-2"
                     >
-                      {row.map((card) => (
-                        <YuGiOhCard
-                          key={card.id}
-                          card={card}
-                          size="sm"
-                          showTier
-                          isSelected={selectedCard?.id === card.id}
-                          onClick={() => handleCardClick(card)}
-                        />
-                      ))}
+                      {row.map((card, colIndex) => {
+                        const globalIndex = virtualRow.index * columnsCount + colIndex;
+                        return (
+                          <YuGiOhCard
+                            key={card.id}
+                            card={card}
+                            size="sm"
+                            showTier
+                            isSelected={globalIndex === selectedIndex}
+                            onClick={() => handleCardClick(card, globalIndex)}
+                          />
+                        );
+                      })}
                     </div>
                   );
                 })}
@@ -729,83 +913,37 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
         </div>
 
         {/* Card Detail Bottom Sheet */}
-        {selectedCard && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center">
-            <div
-              className="absolute inset-0 bg-black/80"
-              onClick={() => setSelectedCard(null)}
-            />
-            <div className="relative w-full max-w-2xl max-h-[85vh] bg-yugi-darker rounded-t-2xl border-t border-x border-yugi-border overflow-y-auto custom-scrollbar">
-              {/* Handle bar */}
-              <div className="sticky top-0 bg-yugi-darker pt-3 pb-2 px-4 border-b border-yugi-border">
-                <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-2" />
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-gold-400 text-base md:text-lg truncate flex-1 mr-2">
-                    {selectedCard.name}
-                    {hasErrata(selectedCard.id) && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
-                        PRE-ERRATA
-                      </span>
-                    )}
-                  </h3>
-                  <button
-                    onClick={() => setSelectedCard(null)}
-                    className="p-1 text-gray-400 hover:text-white"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4 md:p-6">
-                <div className="flex gap-4 md:gap-6">
-                  {/* Card image - larger on desktop */}
-                  <div className="flex-shrink-0">
-                    <div className="md:hidden">
-                      <YuGiOhCard card={selectedCard} size="md" showTier />
-                    </div>
-                    <div className="hidden md:block">
-                      <YuGiOhCard card={selectedCard} size="lg" showTier />
-                    </div>
+        <BottomSheet
+          isOpen={!!selectedCard}
+          onClose={() => setSelectedCard(null)}
+          title={selectedCard?.name}
+          titleBadge={selectedCard && hasErrata(selectedCard.id) && (
+            <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
+              PRE-ERRATA
+            </span>
+          )}
+        >
+          {selectedCard && (
+            <div className="p-4 md:p-6">
+              <div className="flex gap-4 md:gap-6">
+                {/* Card image - larger on desktop */}
+                <div className="flex-shrink-0">
+                  <div className="md:hidden">
+                    <YuGiOhCard card={selectedCard} size="lg" showTier />
                   </div>
+                  <div className="hidden md:block">
+                    <YuGiOhCard card={selectedCard} size="xl" showTier />
+                  </div>
+                </div>
 
-                  {/* Card info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm md:text-base text-gray-300 mb-2 md:mb-3">{selectedCard.type}</p>
+                {/* Card info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm md:text-base text-gray-300 mb-2 md:mb-3">{selectedCard.type}</p>
 
-                    {/* Primary Stats */}
-                    {gameConfig.cardDisplay?.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
-                      <div className="flex flex-wrap gap-2 md:gap-3 mb-2 md:mb-3 text-sm md:text-base">
-                        {gameConfig.cardDisplay?.primaryStats?.map(stat => {
-                          const genericCard: Card = {
-                            id: selectedCard.id,
-                            name: selectedCard.name,
-                            type: selectedCard.type,
-                            description: selectedCard.desc,
-                            score: selectedCard.score,
-                            attributes: selectedCard.attributes || {
-                              atk: selectedCard.atk,
-                              def: selectedCard.def,
-                              level: selectedCard.level,
-                              attribute: selectedCard.attribute,
-                              race: selectedCard.race,
-                              linkval: selectedCard.linkval,
-                            },
-                          };
-                          const value = stat.getValue(genericCard);
-                          if (!value) return null;
-                          return (
-                            <span key={stat.label} className={stat.color}>
-                              {stat.label}: {value}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Secondary Info */}
-                    <div className="flex flex-wrap gap-1 md:gap-2 mb-2 md:mb-3">
-                      {gameConfig.cardDisplay?.secondaryInfo?.map(info => {
+                  {/* Primary Stats */}
+                  {gameConfig.cardDisplay?.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
+                    <div className="flex flex-wrap gap-2 md:gap-3 mb-2 md:mb-3 text-sm md:text-base">
+                      {gameConfig.cardDisplay?.primaryStats?.map(stat => {
                         const genericCard: Card = {
                           id: selectedCard.id,
                           name: selectedCard.name,
@@ -821,76 +959,203 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                             linkval: selectedCard.linkval,
                           },
                         };
-                        const value = info.getValue(genericCard);
+                        const value = stat.getValue(genericCard);
                         if (!value) return null;
                         return (
-                          <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-yugi-card rounded text-xs md:text-sm text-gray-300">
-                            {value}
+                          <span key={stat.label} className={stat.color}>
+                            {stat.label}: {value}
                           </span>
                         );
                       })}
                     </div>
+                  )}
 
-                    {/* Score */}
-                    {selectedCard.score !== undefined && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs md:text-sm text-gray-400">Score:</span>
-                        <span className={cn(
-                          "text-xs md:text-sm font-bold",
-                          selectedCard.score >= 90 ? 'text-red-400' :
-                          selectedCard.score >= 75 ? 'text-orange-400' :
-                          selectedCard.score >= 60 ? 'text-yellow-400' :
-                          selectedCard.score >= 45 ? 'text-green-400' :
-                          selectedCard.score >= 30 ? 'text-blue-400' : 'text-gray-400'
-                        )}>
-                          {selectedCard.score}/100 ({getTierFromScore(selectedCard.score)})
+                  {/* Secondary Info */}
+                  <div className="flex flex-wrap gap-1 md:gap-2 mb-2 md:mb-3">
+                    {gameConfig.cardDisplay?.secondaryInfo?.map(info => {
+                      const genericCard: Card = {
+                        id: selectedCard.id,
+                        name: selectedCard.name,
+                        type: selectedCard.type,
+                        description: selectedCard.desc,
+                        score: selectedCard.score,
+                        attributes: selectedCard.attributes || {
+                          atk: selectedCard.atk,
+                          def: selectedCard.def,
+                          level: selectedCard.level,
+                          attribute: selectedCard.attribute,
+                          race: selectedCard.race,
+                          linkval: selectedCard.linkval,
+                        },
+                      };
+                      const value = info.getValue(genericCard);
+                      if (!value) return null;
+                      return (
+                        <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-yugi-card rounded text-xs md:text-sm text-gray-300">
+                          {value}
                         </span>
+                      );
+                    })}
+                  </div>
+
+                  {/* Score */}
+                  {selectedCard.score !== undefined && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs md:text-sm text-gray-400">Score:</span>
+                      <span className={cn(
+                        "text-xs md:text-sm font-bold",
+                        selectedCard.score >= 90 ? 'text-red-400' :
+                        selectedCard.score >= 75 ? 'text-orange-400' :
+                        selectedCard.score >= 60 ? 'text-yellow-400' :
+                        selectedCard.score >= 45 ? 'text-green-400' :
+                        selectedCard.score >= 30 ? 'text-blue-400' : 'text-gray-400'
+                      )}>
+                        {selectedCard.score}/100 ({getTierFromScore(selectedCard.score)})
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Pokemon-specific: Abilities, Attacks, or Card Effect */}
+              {gameConfig.id === 'pokemon' && (() => {
+                const attrs = selectedCard.attributes as PokemonCardAttributes;
+                const abilities = attrs?.abilities as PokemonAbility[] | undefined;
+                const attacks = attrs?.attacks as PokemonAttack[] | undefined;
+                const hasAbilitiesOrAttacks = (abilities?.length || 0) > 0 || (attacks?.length || 0) > 0;
+                // Only Pokemon cards have weakness/resistance/retreat - not Trainers or Energy
+                const isPokemonCard = selectedCard.type?.toLowerCase().includes('pokémon') ||
+                  selectedCard.type?.toLowerCase().includes('pokemon') ||
+                  attrs?.stage !== undefined;
+                const hasStats = isPokemonCard && (attrs?.weakness || attrs?.resistance || attrs?.retreatCost !== undefined);
+
+                // Show section if there's anything to display
+                if (!hasAbilitiesOrAttacks && !selectedCard.desc && !hasStats) return null;
+
+                return (
+                  <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border space-y-4">
+                    {/* Pokemon Abilities */}
+                    {abilities && abilities.length > 0 && (
+                      <div className="space-y-2">
+                        {abilities.map((ability, idx) => (
+                          <div key={idx} className="p-2 md:p-3 bg-red-900/20 border border-red-700/50 rounded">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-1.5 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded">
+                                {ability.type || 'Ability'}
+                              </span>
+                              <span className="text-red-300 text-sm font-medium">{ability.name}</span>
+                            </div>
+                            <p className="text-xs md:text-sm text-gray-300 leading-relaxed">{ability.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Pokemon Attacks */}
+                    {attacks && attacks.length > 0 && (
+                      <div className="space-y-2">
+                        {attacks.map((attack, idx) => (
+                          <div key={idx} className="p-2 md:p-3 bg-yugi-card rounded">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                {/* Energy cost */}
+                                <div className="flex gap-0.5">
+                                  {attack.cost?.map((energy, i) => (
+                                    <span
+                                      key={i}
+                                      className="w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center text-[8px] md:text-[10px] font-bold text-white"
+                                      style={{ backgroundColor: ENERGY_COLORS[energy] || '#A8A878' }}
+                                      title={energy}
+                                    >
+                                      {energy.charAt(0)}
+                                    </span>
+                                  ))}
+                                </div>
+                                <span className="text-white text-sm font-medium">{attack.name}</span>
+                              </div>
+                              {attack.damage && (
+                                <span className="text-yellow-400 font-bold text-sm">{attack.damage}</span>
+                              )}
+                            </div>
+                            {attack.text && (
+                              <p className="text-xs md:text-sm text-gray-400 leading-relaxed">{attack.text}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Trainer/Energy card effect (when no abilities or attacks) */}
+                    {!hasAbilitiesOrAttacks && selectedCard.desc && (
+                      <div className="p-2 md:p-3 bg-yugi-card rounded">
+                        <p className="text-xs md:text-sm text-gray-300 leading-relaxed">{selectedCard.desc}</p>
+                      </div>
+                    )}
+
+                    {/* Weakness / Resistance / Retreat (only for Pokemon with stats) */}
+                    {hasStats && (
+                      <div className="flex flex-wrap gap-3 text-xs md:text-sm">
+                        {attrs?.weakness && (
+                          <span className="text-gray-400">
+                            <span className="text-red-400">Weakness:</span> {attrs.weakness}
+                          </span>
+                        )}
+                        {attrs?.resistance && (
+                          <span className="text-gray-400">
+                            <span className="text-green-400">Resistance:</span> {attrs.resistance}
+                          </span>
+                        )}
+                        {attrs?.retreatCost !== undefined && (
+                          <span className="text-gray-400">
+                            <span className="text-blue-400">Retreat:</span> {attrs.retreatCost}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
-                </div>
+                );
+              })()}
 
-                {/* Description */}
-                {(gameConfig.id !== 'pokemon' || selectedCard.desc) && (
-                  <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border">
-                    {(() => {
-                      const errata = getErrata(selectedCard.id);
-                      if (errata) {
-                        return (
-                          <div className="space-y-3">
-                            <div className="p-2 md:p-3 bg-purple-900/30 border border-purple-600 rounded">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] md:text-[10px] font-bold rounded">
-                                  PRE-ERRATA
-                                </span>
-                                <span className="text-purple-300 text-[10px] md:text-xs font-medium">Use This Text</span>
-                              </div>
-                              <p className="text-xs md:text-sm text-white leading-relaxed">{errata.originalText}</p>
-                              {errata.notes && (
-                                <p className="text-[10px] md:text-xs text-purple-300 mt-1 italic">Note: {errata.notes}</p>
-                              )}
+              {/* Description (Yu-Gi-Oh / non-Pokemon) */}
+              {gameConfig.id !== 'pokemon' && (
+                <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border">
+                  {(() => {
+                    const errata = getErrata(selectedCard.id);
+                    if (errata) {
+                      return (
+                        <div className="space-y-3">
+                          <div className="p-2 md:p-3 bg-purple-900/30 border border-purple-600 rounded">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] md:text-[10px] font-bold rounded">
+                                PRE-ERRATA
+                              </span>
+                              <span className="text-purple-300 text-[10px] md:text-xs font-medium">Use This Text</span>
                             </div>
-                            {selectedCard.desc && (
-                              <div>
-                                <p className="text-[10px] md:text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
-                                <p className="text-xs md:text-sm text-gray-400 leading-relaxed">{selectedCard.desc}</p>
-                              </div>
+                            <p className="text-xs md:text-sm text-white leading-relaxed">{errata.originalText}</p>
+                            {errata.notes && (
+                              <p className="text-[10px] md:text-xs text-purple-300 mt-1 italic">Note: {errata.notes}</p>
                             )}
                           </div>
-                        );
-                      }
-                      return (
-                        <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
-                          {selectedCard.desc || 'No description available.'}
-                        </p>
+                          {selectedCard.desc && (
+                            <div>
+                              <p className="text-[10px] md:text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
+                              <p className="text-xs md:text-sm text-gray-400 leading-relaxed">{selectedCard.desc}</p>
+                            </div>
+                          )}
+                        </div>
                       );
-                    })()}
-                  </div>
-                )}
-              </div>
+                    }
+                    return (
+                      <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
+                        {selectedCard.desc || 'No description available.'}
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </BottomSheet>
 
         {/* Footer */}
         <div className="p-4 border-t border-yugi-border flex justify-end">
