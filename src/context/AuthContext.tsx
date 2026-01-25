@@ -76,8 +76,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Fetch user profile from database with timeout
    */
   const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
+    console.log('[Auth] Fetching profile for user:', userId);
+
     const timeoutPromise = new Promise<null>((resolve) => {
-      setTimeout(() => resolve(null), 5000);
+      setTimeout(() => {
+        console.warn('[Auth] Profile fetch timed out after 5 seconds');
+        resolve(null);
+      }, 5000);
     });
 
     const queryPromise = Promise.resolve(
@@ -88,10 +93,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .single()
     )
       .then(({ data, error }) => {
-        if (error || !data) return null;
+        if (error) {
+          console.error('[Auth] Profile fetch error:', error.message, error.code);
+          return null;
+        }
+        if (!data) {
+          console.warn('[Auth] No profile found for user');
+          return null;
+        }
+        console.log('[Auth] Profile fetched successfully, role:', data.role);
         return rowToProfile(data as UserProfileRow);
       })
-      .catch(() => null);
+      .catch((err) => {
+        console.error('[Auth] Profile fetch exception:', err);
+        return null;
+      });
 
     return Promise.race([queryPromise, timeoutPromise]);
   }, [supabase, rowToProfile]);
