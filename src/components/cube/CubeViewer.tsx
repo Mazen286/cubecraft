@@ -7,24 +7,8 @@ import { cubeService } from '../../services/cubeService';
 import { useGameConfig } from '../../context/GameContext';
 import type { YuGiOhCard as YuGiOhCardType } from '../../types';
 import type { Card } from '../../types/card';
-import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
 import { cn, getTierFromScore } from '../../lib/utils';
 import { hasErrata, getErrata } from '../../data/cardErrata';
-
-// Energy type to color mapping for Pokemon
-const ENERGY_COLORS: Record<string, string> = {
-  Grass: '#78C850',
-  Fire: '#F08030',
-  Water: '#6890F0',
-  Lightning: '#F8D030',
-  Psychic: '#F85888',
-  Fighting: '#C03028',
-  Darkness: '#705848',
-  Metal: '#B8B8D0',
-  Dragon: '#7038F8',
-  Fairy: '#EE99AC',
-  Colorless: '#A8A878',
-};
 
 /**
  * Get contrast color (black or white) based on background color luminance
@@ -742,215 +726,21 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             )}
           </div>
 
-          {/* Card Detail Sidebar - Desktop only */}
-          {selectedCard && (
-            <div className="hidden md:block w-72 border-l border-yugi-border p-4 overflow-y-auto bg-yugi-dark/50 custom-scrollbar">
-              <div className="flex justify-center mb-4">
-                <YuGiOhCard card={selectedCard} size="lg" showTier />
-              </div>
-
-              <h3 className="font-bold text-gold-400 text-lg mb-1">
-                {selectedCard.name}
-                {hasErrata(selectedCard.id) && (
-                  <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
-                    PRE-ERRATA
-                  </span>
-                )}
-              </h3>
-              <p className="text-sm text-gray-300 mb-3">{selectedCard.type}</p>
-
-              {/* Primary Stats - Game specific */}
-              {gameConfig.cardDisplay?.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
-                <div className="flex flex-wrap gap-3 mb-3 text-sm">
-                  {gameConfig.cardDisplay?.primaryStats?.map(stat => {
-                    const genericCard: Card = {
-                      id: selectedCard.id,
-                      name: selectedCard.name,
-                      type: selectedCard.type,
-                      description: selectedCard.desc,
-                      score: selectedCard.score,
-                      attributes: selectedCard.attributes || {
-                        atk: selectedCard.atk,
-                        def: selectedCard.def,
-                        level: selectedCard.level,
-                        attribute: selectedCard.attribute,
-                        race: selectedCard.race,
-                        linkval: selectedCard.linkval,
-                      },
-                    };
-                    const value = stat.getValue(genericCard);
-                    if (!value) return null;
-                    return (
-                      <span key={stat.label} className={stat.color}>
-                        {stat.label}: {value}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Secondary Info - Game specific */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                {gameConfig.cardDisplay?.secondaryInfo?.map(info => {
-                  const genericCard: Card = {
-                    id: selectedCard.id,
-                    name: selectedCard.name,
-                    type: selectedCard.type,
-                    description: selectedCard.desc,
-                    score: selectedCard.score,
-                    attributes: selectedCard.attributes || {
-                      atk: selectedCard.atk,
-                      def: selectedCard.def,
-                      level: selectedCard.level,
-                      attribute: selectedCard.attribute,
-                      race: selectedCard.race,
-                      linkval: selectedCard.linkval,
-                    },
-                  };
-                  const value = info.getValue(genericCard);
-                  if (!value) return null;
-                  return (
-                    <span key={info.label} className="px-2 py-1 bg-yugi-card rounded text-xs text-gray-300">
-                      {value}
-                    </span>
-                  );
-                })}
-              </div>
-
-              {/* Score */}
-              {selectedCard.score !== undefined && (
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="text-sm text-gray-400">Score:</span>
-                  <span className={cn(
-                    "text-sm font-bold",
-                    selectedCard.score >= 90 ? 'text-red-400' :
-                    selectedCard.score >= 75 ? 'text-orange-400' :
-                    selectedCard.score >= 60 ? 'text-yellow-400' :
-                    selectedCard.score >= 45 ? 'text-green-400' :
-                    selectedCard.score >= 30 ? 'text-blue-400' : 'text-gray-400'
-                  )}>
-                    {selectedCard.score}/100 ({getTierFromScore(selectedCard.score)})
-                  </span>
-                </div>
-              )}
-
-              {/* Pokemon Abilities */}
-              {gameConfig.id === 'pokemon' && ((selectedCard.attributes as PokemonCardAttributes)?.abilities?.length ?? 0) > 0 && (
-                <div className="border-t border-yugi-border pt-3 mb-3">
-                  <h4 className="text-xs font-semibold text-purple-400 uppercase mb-2">Abilities</h4>
-                  {((selectedCard.attributes as PokemonCardAttributes)?.abilities as PokemonAbility[])?.map((ability, idx) => (
-                    <div key={idx} className="mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded">
-                          {ability.type}
-                        </span>
-                        <span className="text-sm font-medium text-white">{ability.name}</span>
-                      </div>
-                      {ability.text && (
-                        <p className="text-xs text-gray-400 mt-1">{ability.text}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Pokemon Attacks */}
-              {gameConfig.id === 'pokemon' && ((selectedCard.attributes as PokemonCardAttributes)?.attacks?.length ?? 0) > 0 && (
-                <div className="border-t border-yugi-border pt-3 mb-3">
-                  <h4 className="text-xs font-semibold text-red-400 uppercase mb-2">Attacks</h4>
-                  {((selectedCard.attributes as PokemonCardAttributes)?.attacks as PokemonAttack[])?.map((attack, idx) => (
-                    <div key={idx} className="mb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {/* Energy cost circles */}
-                          <div className="flex gap-0.5">
-                            {attack.cost.map((energy, i) => (
-                              <span
-                                key={i}
-                                className="w-4 h-4 rounded-full text-[8px] flex items-center justify-center font-bold text-white"
-                                style={{ backgroundColor: ENERGY_COLORS[energy] || ENERGY_COLORS.Colorless }}
-                                title={energy}
-                              >
-                                {energy.charAt(0)}
-                              </span>
-                            ))}
-                          </div>
-                          <span className="text-sm font-medium text-white">{attack.name}</span>
-                        </div>
-                        {attack.damage && (
-                          <span className="text-sm font-bold text-yellow-400">{attack.damage}</span>
-                        )}
-                      </div>
-                      {attack.text && (
-                        <p className="text-xs text-gray-400 mt-1">{attack.text}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Description (for non-Pokemon or additional text) */}
-              {(gameConfig.id !== 'pokemon' || selectedCard.desc) && (
-                <div className="border-t border-yugi-border pt-3">
-                  {(() => {
-                    const errata = getErrata(selectedCard.id);
-                    if (errata) {
-                      return (
-                        <div className="space-y-3">
-                          <div className="p-2 bg-purple-900/30 border border-purple-600 rounded">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] font-bold rounded">
-                                PRE-ERRATA
-                              </span>
-                              <span className="text-purple-300 text-[10px] font-medium">Use This Text</span>
-                            </div>
-                            <p className="text-xs text-white leading-relaxed">{errata.originalText}</p>
-                            {errata.notes && (
-                              <p className="text-[10px] text-purple-300 mt-1 italic">Note: {errata.notes}</p>
-                            )}
-                          </div>
-                          {selectedCard.desc && (
-                            <div>
-                              <p className="text-[10px] text-gray-500 mb-1">Current Errata'd Text:</p>
-                              <p className="text-xs text-gray-400 leading-relaxed">{selectedCard.desc}</p>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-                    return (
-                      <p className="text-xs text-gray-300 leading-relaxed">
-                        {selectedCard.desc || 'No description available.'}
-                      </p>
-                    );
-                  })()}
-                </div>
-              )}
-
-              <Button
-                variant="ghost"
-                className="w-full mt-4"
-                onClick={() => setSelectedCard(null)}
-              >
-                Close Detail
-              </Button>
-            </div>
-          )}
         </div>
 
-        {/* Mobile Card Detail Modal */}
+        {/* Card Detail Bottom Sheet */}
         {selectedCard && (
-          <div className="md:hidden fixed inset-0 z-[60] flex items-end justify-center">
+          <div className="fixed inset-0 z-[60] flex items-end justify-center">
             <div
               className="absolute inset-0 bg-black/80"
               onClick={() => setSelectedCard(null)}
             />
-            <div className="relative w-full max-h-[85vh] bg-yugi-darker rounded-t-2xl border-t border-yugi-border overflow-y-auto custom-scrollbar">
+            <div className="relative w-full max-w-2xl max-h-[85vh] bg-yugi-darker rounded-t-2xl border-t border-x border-yugi-border overflow-y-auto custom-scrollbar">
               {/* Handle bar */}
               <div className="sticky top-0 bg-yugi-darker pt-3 pb-2 px-4 border-b border-yugi-border">
                 <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-2" />
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-gold-400 text-base truncate flex-1 mr-2">
+                  <h3 className="font-bold text-gold-400 text-base md:text-lg truncate flex-1 mr-2">
                     {selectedCard.name}
                     {hasErrata(selectedCard.id) && (
                       <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
@@ -967,20 +757,25 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                 </div>
               </div>
 
-              <div className="p-4">
-                <div className="flex gap-4">
-                  {/* Card image */}
+              <div className="p-4 md:p-6">
+                <div className="flex gap-4 md:gap-6">
+                  {/* Card image - larger on desktop */}
                   <div className="flex-shrink-0">
-                    <YuGiOhCard card={selectedCard} size="md" showTier />
+                    <div className="md:hidden">
+                      <YuGiOhCard card={selectedCard} size="md" showTier />
+                    </div>
+                    <div className="hidden md:block">
+                      <YuGiOhCard card={selectedCard} size="lg" showTier />
+                    </div>
                   </div>
 
                   {/* Card info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300 mb-2">{selectedCard.type}</p>
+                    <p className="text-sm md:text-base text-gray-300 mb-2 md:mb-3">{selectedCard.type}</p>
 
                     {/* Primary Stats */}
                     {gameConfig.cardDisplay?.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-2 text-sm">
+                      <div className="flex flex-wrap gap-2 md:gap-3 mb-2 md:mb-3 text-sm md:text-base">
                         {gameConfig.cardDisplay?.primaryStats?.map(stat => {
                           const genericCard: Card = {
                             id: selectedCard.id,
@@ -1009,7 +804,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                     )}
 
                     {/* Secondary Info */}
-                    <div className="flex flex-wrap gap-1 mb-2">
+                    <div className="flex flex-wrap gap-1 md:gap-2 mb-2 md:mb-3">
                       {gameConfig.cardDisplay?.secondaryInfo?.map(info => {
                         const genericCard: Card = {
                           id: selectedCard.id,
@@ -1029,7 +824,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                         const value = info.getValue(genericCard);
                         if (!value) return null;
                         return (
-                          <span key={info.label} className="px-2 py-0.5 bg-yugi-card rounded text-xs text-gray-300">
+                          <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-yugi-card rounded text-xs md:text-sm text-gray-300">
                             {value}
                           </span>
                         );
@@ -1039,9 +834,9 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                     {/* Score */}
                     {selectedCard.score !== undefined && (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">Score:</span>
+                        <span className="text-xs md:text-sm text-gray-400">Score:</span>
                         <span className={cn(
-                          "text-xs font-bold",
+                          "text-xs md:text-sm font-bold",
                           selectedCard.score >= 90 ? 'text-red-400' :
                           selectedCard.score >= 75 ? 'text-orange-400' :
                           selectedCard.score >= 60 ? 'text-yellow-400' :
@@ -1057,35 +852,35 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
 
                 {/* Description */}
                 {(gameConfig.id !== 'pokemon' || selectedCard.desc) && (
-                  <div className="mt-4 pt-3 border-t border-yugi-border">
+                  <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border">
                     {(() => {
                       const errata = getErrata(selectedCard.id);
                       if (errata) {
                         return (
                           <div className="space-y-3">
-                            <div className="p-2 bg-purple-900/30 border border-purple-600 rounded">
+                            <div className="p-2 md:p-3 bg-purple-900/30 border border-purple-600 rounded">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] font-bold rounded">
+                                <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] md:text-[10px] font-bold rounded">
                                   PRE-ERRATA
                                 </span>
-                                <span className="text-purple-300 text-[10px] font-medium">Use This Text</span>
+                                <span className="text-purple-300 text-[10px] md:text-xs font-medium">Use This Text</span>
                               </div>
-                              <p className="text-xs text-white leading-relaxed">{errata.originalText}</p>
+                              <p className="text-xs md:text-sm text-white leading-relaxed">{errata.originalText}</p>
                               {errata.notes && (
-                                <p className="text-[10px] text-purple-300 mt-1 italic">Note: {errata.notes}</p>
+                                <p className="text-[10px] md:text-xs text-purple-300 mt-1 italic">Note: {errata.notes}</p>
                               )}
                             </div>
                             {selectedCard.desc && (
                               <div>
-                                <p className="text-[10px] text-gray-500 mb-1">Current Errata'd Text:</p>
-                                <p className="text-xs text-gray-400 leading-relaxed">{selectedCard.desc}</p>
+                                <p className="text-[10px] md:text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
+                                <p className="text-xs md:text-sm text-gray-400 leading-relaxed">{selectedCard.desc}</p>
                               </div>
                             )}
                           </div>
                         );
                       }
                       return (
-                        <p className="text-xs text-gray-300 leading-relaxed">
+                        <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
                           {selectedCard.desc || 'No description available.'}
                         </p>
                       );
