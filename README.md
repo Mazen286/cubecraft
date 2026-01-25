@@ -1,11 +1,17 @@
-# Yu-Gi-Oh! Cube Draft Simulator
+# CubeCraft
 
-A web-based cube draft simulator for Yu-Gi-Oh! that brings the beloved draft format from Magic: The Gathering to the world of Yu-Gi-Oh! Draft solo against AI opponents or host multiplayer sessions with friends in real-time.
+A multi-game cube draft simulator for trading card games. Draft solo against AI opponents or host real-time multiplayer sessions with friends.
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)
+
+## Supported Games
+
+- **Yu-Gi-Oh!** — Full card type support, YDK export for simulators
+- **Magic: The Gathering** — Color identity, MTG Arena export
+- **Pokemon TCG** — Energy types, PTCGO export
 
 ## Features
 
@@ -16,8 +22,8 @@ A web-based cube draft simulator for Yu-Gi-Oh! that brings the beloved draft for
 
 ### Card System
 - **Tier Ratings**: Cards scored 0-100, displayed as tiers (S/A/B/C/E/F)
-- **Card Types**: Full support for all Yu-Gi-Oh! card types including Extra Deck monsters
-- **YGOProDeck Integration**: Automatic card data and image fetching
+- **Game-Specific Rendering**: Each game has its own card display and categorization
+- **API Integration**: Automatic card data and image fetching from game APIs
 
 ### Real-Time Multiplayer
 - **Room Codes**: 4-character codes for easy joining
@@ -31,12 +37,12 @@ A web-based cube draft simulator for Yu-Gi-Oh! that brings the beloved draft for
 - **Keyboard Shortcuts**: Arrow keys, 1-9 quick select, Enter to pick
 - **Drag & Drop**: Drag cards to the drafted pile
 - **Image Preloading**: Cards load instantly with background preloading
-- **Dark Theme**: Yu-Gi-Oh! inspired dark purple/gold aesthetic
+- **Dark Theme**: Elegant dark theme with gold accents
 
-### Results & Statistics
+### Results & Export
 - **Draft Statistics**: Pick times, auto-pick rate, type distribution
 - **Burned Cards**: View cards discarded during the draft
-- **YDK Export**: Export your deck for use in simulators
+- **Game-Specific Export**: YDK (Yu-Gi-Oh!), MTG Arena, PTCGO formats
 
 ## Getting Started
 
@@ -49,8 +55,8 @@ A web-based cube draft simulator for Yu-Gi-Oh! that brings the beloved draft for
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/yugioh-cube-draft.git
-cd yugioh-cube-draft
+git clone https://github.com/yourusername/cubecraft.git
+cd cubecraft
 
 # Install dependencies
 npm install
@@ -90,18 +96,25 @@ npm run dev
 
 ### CSV Format
 
-Cubes are defined as CSV files in `public/cubes/`. Each row contains:
+Cubes are defined as CSV files in `public/cubes/`. Format varies by game:
 
+**Yu-Gi-Oh!:**
 ```csv
 ID,Name,Score
 55878038,Chaos Dragon Levianeer,95
-82301904,Chaos Emperor Dragon - Envoy of the End,95
-89631139,Blue-Eyes White Dragon,85
 ```
 
-- **ID**: YGOProDeck card ID (required)
-- **Name**: Card name (auto-filled by build script)
-- **Score**: Rating from 0-100 (determines tier)
+**MTG:**
+```csv
+Name,Set,Score
+Lightning Bolt,2ED,90
+```
+
+**Pokemon:**
+```csv
+ID,Name,Score
+base1-4,Charizard,95
+```
 
 ### Tier System
 
@@ -116,37 +129,18 @@ ID,Name,Score
 
 ### Building Cubes
 
-After editing a CSV file, rebuild the JSON:
-
 ```bash
-# Build cube JSON from CSV
+# Build Yu-Gi-Oh! cube from CSV
 npm run build:cube
 
-# This will:
-# 1. Read public/cubes/*.csv files
-# 2. Fetch card data from YGOProDeck API
-# 3. Generate public/cubes/*.json files
-# 4. Update CSV with full card names
-```
+# Build MTG cube
+node scripts/build-mtg-cube.cjs
 
-### Auto-Rebuild During Development
+# Build Pokemon cube
+node scripts/build-pokemon-cube.cjs
 
-For convenience during cube editing, use the watch script:
-
-```bash
 # Watch for CSV changes and auto-rebuild
 npm run watch:cube
-
-# Edit your CSV files and save - JSON rebuilds automatically
-```
-
-### Downloading Card Images (Optional)
-
-For offline/faster image loading:
-
-```bash
-# Download all card images for a cube
-node scripts/download-cube-images.cjs mazcube
 ```
 
 ## Scripts Reference
@@ -165,76 +159,30 @@ node scripts/download-cube-images.cjs mazcube
 ## Project Structure
 
 ```
-yugioh-cube-draft/
+cubecraft/
 ├── src/
 │   ├── pages/              # Route pages (Home, Draft, Results, etc.)
 │   ├── components/         # Reusable React components
-│   │   ├── ui/            # Base UI components (Button)
-│   │   ├── cards/         # Card display components
+│   │   ├── ui/            # Base UI components
+│   │   ├── cards/         # Game-specific card displays
 │   │   ├── layout/        # Layout wrapper
-│   │   └── cube/          # Cube browser
+│   │   ├── auth/          # Authentication components
+│   │   └── cube/          # Cube browser & upload
+│   ├── config/            # Game configurations
+│   │   └── games/         # Per-game settings (yugioh, mtg, pokemon)
+│   ├── context/           # React contexts (Game, Auth)
 │   ├── hooks/             # Custom React hooks
-│   │   ├── useDraftSession.ts  # Draft state & Supabase sync
-│   │   ├── useCards.ts         # Card data fetching
-│   │   └── useImagePreloader.ts # Image preloading
-│   ├── services/          # Business logic
-│   │   ├── draftService.ts     # Supabase operations
-│   │   ├── cubeService.ts      # Cube loading & caching
-│   │   ├── cardService.ts      # YGOProDeck API
-│   │   └── statisticsService.ts # Pick statistics
+│   ├── services/          # Business logic & API calls
 │   ├── lib/               # Utilities
-│   │   ├── supabase.ts    # Supabase client
-│   │   ├── utils.ts       # Helper functions
-│   │   └── database.types.ts # TypeScript types
 │   └── types/             # Type definitions
 ├── public/
 │   └── cubes/             # Cube CSV and JSON files
-├── scripts/               # Build scripts
-│   ├── build-cube.cjs     # CSV to JSON builder
-│   ├── watch-cubes.cjs    # File watcher
-│   └── download-cube-images.cjs # Image downloader
+├── scripts/               # Build scripts per game
 ├── supabase/
 │   ├── schema.sql         # Database schema
 │   └── migrations/        # Database migrations
 └── tests/                 # Playwright E2E tests
 ```
-
-## Draft Mechanics
-
-### Pack Drafting
-1. Each player receives a pack of cards
-2. Players pick one card from their pack
-3. Remaining cards pass to the next player
-4. Direction alternates each pack (left, right, left...)
-
-### Burned Cards
-Configure "burned per pack" to discard the last N cards of each pack. This adds strategic depth by making late picks less reliable.
-
-### Timer & Auto-Pick
-- Configurable timer per pick (default 60s)
-- When timer expires, the highest-rated card is auto-picked
-- Server-side enforcement prevents stalling
-
-### Pack Direction
-- Pack 1: Pass left
-- Pack 2: Pass right
-- Pack 3: Pass left
-- (alternates)
-
-## API & Data Sources
-
-### YGOProDeck API
-Card data and images are fetched from [YGOProDeck](https://ygoprodeck.com/):
-- Card info: `https://db.ygoprodeck.com/api/v7/cardinfo.php`
-- Card images: `https://images.ygoprodeck.com/images/cards/{id}.jpg`
-- Small images: `https://images.ygoprodeck.com/images/cards_small/{id}.jpg`
-
-### Supabase
-Real-time multiplayer uses Supabase PostgreSQL with Realtime subscriptions:
-- `draft_sessions`: Game state, settings, pack data
-- `draft_players`: Player info, current hand, connection status
-- `draft_picks`: Pick history with timing data
-- `draft_burned_cards`: Discarded cards tracking
 
 ## Keyboard Shortcuts
 
@@ -246,57 +194,35 @@ Real-time multiplayer uses Supabase PostgreSQL with Realtime subscriptions:
 | `Escape` | Deselect card |
 | `?` | Toggle shortcuts help |
 
-## Testing
-
-```bash
-# Run all tests
-npm run test
-
-# Run multiplayer tests only
-npm run test:mp
-```
-
-Tests use Playwright with Chromium to simulate multi-player draft scenarios.
-
 ## Deployment
 
-### Vercel (Recommended)
+### Netlify
+
+1. Connect your GitHub repository
+2. Set build command: `npm run build`
+3. Set publish directory: `dist`
+4. Add environment variables in Netlify dashboard
+
+### Vercel
 
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
 vercel
 ```
 
-Set environment variables in Vercel dashboard:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+Set environment variables in Vercel dashboard.
 
-### Static Hosting
+## API & Data Sources
 
-```bash
-# Build for production
-npm run build
-
-# Serve the dist/ folder
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- **Yu-Gi-Oh!**: [YGOProDeck](https://ygoprodeck.com/)
+- **MTG**: [Scryfall](https://scryfall.com/)
+- **Pokemon**: [Pokemon TCG API](https://pokemontcg.io/)
 
 ## License
 
-This project is for educational and personal use. Yu-Gi-Oh! is a trademark of Konami. Card data provided by YGOProDeck.
+This project is for educational and personal use. All card game names and logos are trademarks of their respective owners.
 
 ## Acknowledgments
 
-- [YGOProDeck](https://ygoprodeck.com/) for card data and images
+- [YGOProDeck](https://ygoprodeck.com/), [Scryfall](https://scryfall.com/), [Pokemon TCG API](https://pokemontcg.io/) for card data
 - [Supabase](https://supabase.com/) for real-time database
-- The Yu-Gi-Oh! community for inspiration
+- The TCG community for inspiration

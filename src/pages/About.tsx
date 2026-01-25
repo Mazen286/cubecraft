@@ -10,7 +10,7 @@ export function About() {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-2">About</h1>
         <p className="text-gray-300 mb-8">
-          Learn about Cube Draft Simulator
+          Learn about CubeCraft
         </p>
 
         <div className="space-y-8">

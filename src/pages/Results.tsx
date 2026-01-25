@@ -310,7 +310,7 @@ export function Results() {
         .map(({ card }) => card.id)
         .join('\n');
 
-      const ydkContent = `#created by Cube Draft Simulator
+      const ydkContent = `#created by CubeCraft
 #main
 ${mainDeck}
 #extra

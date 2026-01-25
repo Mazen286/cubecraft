@@ -94,7 +94,7 @@ function generateYDK(cards: Card[], _deckZones: DeckZone[]): string {
   const mainDeck = cards.filter(c => !isExtraDeckCard(c));
   const extraDeck = cards.filter(c => isExtraDeckCard(c));
 
-  return `#created by Card Game Cube Draft
+  return `#created by CubeCraft
 #main
 ${mainDeck.map(c => c.id).join('\n')}
 #extra

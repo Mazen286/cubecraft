@@ -83,7 +83,7 @@ export function Home() {
         {/* Hero Section */}
         <div className="mb-8 sm:mb-12 px-4">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4">
-            <span className="text-gold-gradient">Cube Draft</span>
+            <span className="text-gold-gradient">CubeCraft</span>
           </h1>
           <p className="text-lg sm:text-xl text-gray-300 max-w-2xl mx-auto">
             Draft cards from custom cubes for Yu-Gi-Oh!, Magic: The Gathering, Pokemon, and more.
