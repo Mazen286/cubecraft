@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useGameConfig } from '../../hooks/useGameConfig';
+import { useGameConfig } from '../../context/GameContext';
 import { parseUploadedFile, validateCube, cubeToCardMap, type ParsedCube } from '../../services/cubeUploadService';
 import { cubeService } from '../../services/cubeService';
 import { getAllGameConfigs } from '../../config/games';
@@ -203,8 +203,8 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
                 onChange={(e) => handleGameChange(e.target.value)}
                 className="w-full bg-yugi-darker border border-yugi-border rounded px-3 py-2 text-white"
               >
-                {Object.entries(GAME_CONFIGS).map(([id, config]) => (
-                  <option key={id} value={id}>{config.name}</option>
+                {getAllGameConfigs().map(config => (
+                  <option key={config.id} value={config.id}>{config.name}</option>
                 ))}
               </select>
             </div>

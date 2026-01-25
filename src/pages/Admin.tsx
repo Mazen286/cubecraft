@@ -23,7 +23,7 @@ interface CubeItem {
   is_public: boolean;
   card_count: number;
   created_at: string;
-  user_profiles?: { display_name: string } | null;
+  user_profiles?: { display_name: string }[] | null;
 }
 
 export function Admin() {
@@ -310,7 +310,7 @@ function CubeManagement() {
                   <span className="text-white">{cube.name}</span>
                 </td>
                 <td className="px-4 py-3 text-gray-400">
-                  {cube.user_profiles?.display_name || 'Anonymous'}
+                  {cube.user_profiles?.[0]?.display_name || 'Anonymous'}
                 </td>
                 <td className="px-4 py-3">
                   <span className="px-2 py-0.5 bg-yugi-darker text-gray-400 text-xs rounded">

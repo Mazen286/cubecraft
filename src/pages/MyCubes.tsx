@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getSupabase } from '../lib/supabase';
@@ -18,7 +17,6 @@ interface CubeItem {
 
 export function MyCubes() {
   const { user, isLoading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const [cubes, setCubes] = useState<CubeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
@@ -99,7 +97,7 @@ export function MyCubes() {
       <Layout>
         <div className="max-w-4xl mx-auto">
           <CubeUpload
-            onUploadComplete={(cubeId) => {
+            onUploadComplete={() => {
               setShowUpload(false);
               loadCubes();
             }}
