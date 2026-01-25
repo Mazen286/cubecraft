@@ -9,11 +9,11 @@ const CONFIG = {
   cardBackChance: 0.12, // 12% chance to show card back instead of card front
 };
 
-// Card backs for each game
+// Card backs for each game - all local for reliability
 const CARD_BACKS: Record<CardGame, string> = {
-  yugioh: '/card-back.jpg',
-  mtg: 'https://upload.wikimedia.org/wikipedia/en/a/aa/Magic_the_gathering-cardback.jpg',
-  pokemon: 'https://tcg.pokemon.com/assets/img/global/tcg-card-back-2x.jpg',
+  yugioh: '/card-backs/yugioh.jpg',
+  mtg: '/card-backs/mtg.jpg',
+  pokemon: '/card-backs/pokemon.jpg',
 };
 
 interface IconicCard {
