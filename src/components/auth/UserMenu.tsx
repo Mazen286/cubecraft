@@ -3,12 +3,22 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AuthModal } from './AuthModal';
+import { draftService } from '../../services/draftService';
+
+interface DraftHistoryItem {
+  sessionId: string;
+  roomCode: string;
+  cubeName: string;
+  completedAt: string;
+}
 
 export function UserMenu() {
   const { user, isAuthenticated, isAdmin, signOut, isLoading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+  const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -54,6 +64,39 @@ export function UserMenu() {
       };
     }
   }, [showDropdown]);
+
+  // Fetch draft history when dropdown opens
+  useEffect(() => {
+    if (showDropdown && isAuthenticated) {
+      setHistoryLoading(true);
+      console.log('[UserMenu] Fetching draft history for user:', user?.id);
+      draftService.getUserDraftHistory(user?.id, 5)
+        .then((history) => {
+          console.log('[UserMenu] Got draft history:', history);
+          setDraftHistory(history);
+        })
+        .catch((err) => {
+          console.error('[UserMenu] Error fetching draft history:', err);
+        })
+        .finally(() => setHistoryLoading(false));
+    }
+  }, [showDropdown, isAuthenticated, user?.id]);
+
+  // Format relative time
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   if (isLoading) {
     return (
@@ -128,6 +171,33 @@ export function UserMenu() {
         </svg>
         My Cubes
       </button>
+
+      {/* Draft History */}
+      {(draftHistory.length > 0 || historyLoading) && (
+        <>
+          <hr className="my-1 border-yugi-border" />
+          <div className="px-4 py-1">
+            <p className="text-xs text-gray-500 font-medium">Recent Drafts</p>
+          </div>
+          {historyLoading ? (
+            <div className="px-4 py-2 text-xs text-gray-500">Loading...</div>
+          ) : (
+            draftHistory.map((draft) => (
+              <button
+                key={draft.sessionId}
+                onClick={() => {
+                  navigate(`/results/${draft.sessionId}`);
+                  setShowDropdown(false);
+                }}
+                className="w-full px-4 py-2 text-left hover:bg-white/5 cursor-pointer"
+              >
+                <div className="text-sm text-gray-300 truncate">{draft.cubeName}</div>
+                <div className="text-xs text-gray-500">{formatRelativeTime(draft.completedAt)}</div>
+              </button>
+            ))
+          )}
+        </>
+      )}
 
       {isAdmin && (
         <button

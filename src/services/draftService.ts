@@ -1391,21 +1391,30 @@ export const draftService = {
     // (drafts may have been created before user logged in, or user_id might be the anonymous one)
     const userIds = authUserId ? [authUserId, anonymousId] : [anonymousId];
 
+    console.log('[DraftHistory] Looking up drafts for userIds:', userIds);
+
     // Find sessions where this user was a player and status is completed
-    const { data: playerRecords } = await supabase
+    const { data: playerRecords, error: playerError } = await supabase
       .from('draft_players')
       .select('session_id')
       .in('user_id', userIds)
       .eq('is_bot', false);
 
+    if (playerError) {
+      console.error('[DraftHistory] Error fetching player records:', playerError);
+      return [];
+    }
+
     if (!playerRecords || playerRecords.length === 0) {
+      console.log('[DraftHistory] No player records found');
       return [];
     }
 
     const sessionIds = playerRecords.map(p => p.session_id);
+    console.log('[DraftHistory] Found session IDs:', sessionIds);
 
     // Get completed sessions (without cube join - we'll resolve cube names separately)
-    const { data: sessions } = await supabase
+    const { data: sessions, error: sessionError } = await supabase
       .from('draft_sessions')
       .select('id, room_code, cube_id, completed_at, player_count, cards_per_player')
       .in('id', sessionIds)
@@ -1414,9 +1423,17 @@ export const draftService = {
       .order('completed_at', { ascending: false })
       .limit(limit);
 
-    if (!sessions || sessions.length === 0) {
+    if (sessionError) {
+      console.error('[DraftHistory] Error fetching sessions:', sessionError);
       return [];
     }
+
+    if (!sessions || sessions.length === 0) {
+      console.log('[DraftHistory] No completed sessions found');
+      return [];
+    }
+
+    console.log('[DraftHistory] Found completed sessions:', sessions.length);
 
     // Resolve cube names - handle both local cubes and database cubes
     const results = await Promise.all(sessions.map(async (s) => {
@@ -1453,6 +1470,7 @@ export const draftService = {
       };
     }));
 
+    console.log('[DraftHistory] Returning results:', results.length);
     return results;
   },
 };
