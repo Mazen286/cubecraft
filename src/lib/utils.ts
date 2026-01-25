@@ -6,8 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Format card stats for display
-export function formatStat(value: number | undefined): string {
-  if (value === undefined) return '-';
+export function formatStat(value: number | undefined | null): string {
+  if (value === undefined || value === null) return '-';
   if (value === -1) return '?'; // For cards with ? ATK/DEF
   return value.toString();
 }
@@ -77,4 +77,32 @@ export function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Tier colors for badges
+const TIER_COLORS: Record<string, string> = {
+  S: 'bg-amber-500 text-black',
+  A: 'bg-red-500 text-white',
+  B: 'bg-orange-500 text-white',
+  C: 'bg-yellow-500 text-black',
+  E: 'bg-green-500 text-white',
+  F: 'bg-gray-500 text-white',
+};
+
+// Get tier letter from score (0-100)
+export function getTierFromScore(score: number | undefined): string {
+  if (score === undefined) return 'F';
+  if (score >= 95) return 'S';
+  if (score >= 90) return 'A';
+  if (score >= 75) return 'B';
+  if (score >= 60) return 'C';
+  if (score >= 50) return 'E';
+  return 'F';
+}
+
+// Get tier info (letter + color) from score - single source of truth
+export function getTierInfo(score: number | undefined): { tier: string; color: string } | null {
+  if (score === undefined) return null;
+  const tier = getTierFromScore(score);
+  return { tier, color: TIER_COLORS[tier] || TIER_COLORS.F };
 }

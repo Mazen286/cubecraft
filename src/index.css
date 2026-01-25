@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Yu-Gi-Oh! inspired color palette */
+  /* Game-agnostic color palette (can be overridden per game) */
   --color-gold-50: #fffbeb;
   --color-gold-100: #fef3c7;
   --color-gold-200: #fde68a;
@@ -13,12 +13,18 @@
   --color-gold-800: #92400e;
   --color-gold-900: #78350f;
 
+  /* Dark theme base colors */
   --color-yugi-dark: #0a0a0f;
   --color-yugi-darker: #050508;
   --color-yugi-card: #1a1a2e;
   --color-yugi-border: #2a2a4a;
   --color-yugi-accent: #fbbf24;
   --color-yugi-purple: #7c3aed;
+
+  /* Dynamic game colors (set via JavaScript) */
+  --game-primary: #fbbf24;
+  --game-accent: #7c3aed;
+  --game-bg: #0a0a0f;
 
   /* Animations */
   --animate-glow: glow 2s ease-in-out infinite alternate;
@@ -142,4 +148,79 @@
   .animation-delay-300 {
     animation-delay: 300ms;
   }
+}
+
+/* Floating card animations - one-shot animations from briefing */
+@keyframes float-up-enhanced {
+  0% {
+    transform: translateX(-50%) translateY(calc(100vh + 200px));
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(calc(-100vh - 200px));
+    opacity: 0;
+  }
+}
+
+@keyframes float-down-enhanced {
+  0% {
+    transform: translateX(-50%) translateY(calc(-100vh - 200px));
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(calc(100vh + 200px));
+    opacity: 0;
+  }
+}
+
+/* 3D card rotation for foreground/midground cards - subtle wobble */
+@keyframes cardRotate3D {
+  0% {
+    transform: perspective(1000px) rotateY(0deg);
+  }
+  25% {
+    transform: perspective(1000px) rotateY(12deg);
+  }
+  50% {
+    transform: perspective(1000px) rotateY(0deg);
+  }
+  75% {
+    transform: perspective(1000px) rotateY(-12deg);
+  }
+  100% {
+    transform: perspective(1000px) rotateY(0deg);
+  }
+}
+
+/* Pause animations when page is not visible */
+.paused-animations *,
+.paused-animations *::before,
+.paused-animations *::after {
+  animation-play-state: paused !important;
+}
+
+/* Mobile drawer slide-up animation */
+@keyframes slide-up {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
 }

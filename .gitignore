@@ -17,6 +17,10 @@ dist
 dist-ssr
 *.local
 
+# Card images (downloaded via scripts/download-cube-images.cjs)
+public/images/cards/
+public/images/cards_small/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -27,3 +31,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test artifacts
+test-results/
+.playwright-mcp/
+playwright-report/
+
+# MCP config (local)
+.mcp.json

@@ -1,0 +1,337 @@
+import type { GameConfig, DeckZone, ExportFormat } from '../gameConfig';
+import type { Card } from '../../types/card';
+import type { YuGiOhCardAttributes } from '../../types/card';
+
+/**
+ * Extra Deck monster types in Yu-Gi-Oh!
+ */
+const EXTRA_DECK_TYPES = [
+  'Fusion Monster',
+  'Synchro Monster',
+  'XYZ Monster',
+  'Link Monster',
+  'Pendulum Effect Fusion Monster',
+  'Synchro Pendulum Effect Monster',
+  'XYZ Pendulum Effect Monster',
+] as const;
+
+/**
+ * Check if a card is an Extra Deck card
+ */
+function isExtraDeckCard(card: Card): boolean {
+  return EXTRA_DECK_TYPES.some(t => card.type.includes(t));
+}
+
+/**
+ * Check if a card is a Monster card
+ */
+function isMonsterCard(card: Card): boolean {
+  return card.type.toLowerCase().includes('monster');
+}
+
+/**
+ * Check if a card is a Spell card
+ */
+function isSpellCard(card: Card): boolean {
+  return card.type.toLowerCase().includes('spell');
+}
+
+/**
+ * Check if a card is a Trap card
+ */
+function isTrapCard(card: Card): boolean {
+  return card.type.toLowerCase().includes('trap');
+}
+
+/**
+ * Get ATK/DEF display string
+ */
+function getAtkDefDisplay(card: Card): string {
+  const attrs = card.attributes as YuGiOhCardAttributes;
+  if (attrs.atk === undefined) return '';
+
+  if (attrs.def === undefined) {
+    // Link monster - no DEF
+    return `${formatStat(attrs.atk)} / LINK`;
+  }
+  return `${formatStat(attrs.atk)} / ${formatStat(attrs.def)}`;
+}
+
+/**
+ * Format a stat value (handles undefined, ?, etc.)
+ */
+function formatStat(value: number | undefined): string {
+  if (value === undefined) return '?';
+  if (value === -1) return '?';
+  return value.toString();
+}
+
+/**
+ * Get level/rank/link display string
+ */
+function getLevelDisplay(card: Card): string {
+  const attrs = card.attributes as YuGiOhCardAttributes;
+  const level = attrs.level;
+  const linkval = attrs.linkval;
+
+  if (linkval !== undefined && linkval > 0) {
+    return `Link ${linkval}`;
+  }
+
+  if (level === undefined || level === 0) return '';
+
+  if (card.type.includes('XYZ')) {
+    return `Rank ${level}`;
+  }
+
+  return `Lv ${level}`;
+}
+
+/**
+ * Generate YDK format export
+ */
+function generateYDK(cards: Card[], _deckZones: DeckZone[]): string {
+  const mainDeck = cards.filter(c => !isExtraDeckCard(c));
+  const extraDeck = cards.filter(c => isExtraDeckCard(c));
+
+  return `#created by Card Game Cube Draft
+#main
+${mainDeck.map(c => c.id).join('\n')}
+#extra
+${extraDeck.map(c => c.id).join('\n')}
+!side
+`;
+}
+
+/**
+ * Yu-Gi-Oh! card types
+ */
+export const YUGIOH_CARD_TYPES = [
+  'Normal Monster',
+  'Effect Monster',
+  'Ritual Monster',
+  'Fusion Monster',
+  'Synchro Monster',
+  'XYZ Monster',
+  'Pendulum Monster',
+  'Link Monster',
+  'Spell Card',
+  'Trap Card',
+] as const;
+
+/**
+ * Yu-Gi-Oh! attributes
+ */
+export const YUGIOH_ATTRIBUTES = [
+  'DARK',
+  'DIVINE',
+  'EARTH',
+  'FIRE',
+  'LIGHT',
+  'WATER',
+  'WIND',
+] as const;
+
+/**
+ * Yu-Gi-Oh! monster types (races)
+ */
+export const YUGIOH_MONSTER_TYPES = [
+  'Aqua', 'Beast', 'Beast-Warrior', 'Cyberse', 'Dinosaur', 'Divine-Beast',
+  'Dragon', 'Fairy', 'Fiend', 'Fish', 'Insect', 'Machine', 'Plant',
+  'Psychic', 'Pyro', 'Reptile', 'Rock', 'Sea Serpent', 'Spellcaster',
+  'Thunder', 'Warrior', 'Winged Beast', 'Wyrm', 'Zombie',
+] as const;
+
+/**
+ * Bot names for Yu-Gi-Oh!
+ */
+const YUGIOH_BOT_NAMES = [
+  'Kaiba Bot', 'Yugi Bot', 'Joey Bot', 'Mai Bot',
+  'Pegasus Bot', 'Marik Bot', 'Bakura Bot', 'Ishizu Bot',
+];
+
+/**
+ * Export formats for Yu-Gi-Oh!
+ */
+const yugiohExportFormats: ExportFormat[] = [
+  {
+    id: 'ydk',
+    name: 'YDK (YGOPro/EDOPro)',
+    extension: '.ydk',
+    generate: generateYDK,
+  },
+];
+
+/**
+ * Deck zones for Yu-Gi-Oh!
+ */
+const yugiohDeckZones: DeckZone[] = [
+  {
+    id: 'main',
+    name: 'Main Deck',
+    minCards: 40,
+    maxCards: 60,
+    cardBelongsTo: (card) => !isExtraDeckCard(card),
+  },
+  {
+    id: 'extra',
+    name: 'Extra Deck',
+    minCards: 0,
+    maxCards: 15,
+    cardBelongsTo: isExtraDeckCard,
+  },
+  {
+    id: 'side',
+    name: 'Side Deck',
+    minCards: 0,
+    maxCards: 15,
+    cardBelongsTo: () => false, // Cards must be manually moved here
+  },
+];
+
+/**
+ * Yu-Gi-Oh! game configuration
+ */
+export const yugiohConfig: GameConfig = {
+  id: 'yugioh',
+  name: 'Yu-Gi-Oh!',
+  shortName: 'YGO',
+
+  theme: {
+    primaryColor: '#fbbf24',  // gold-400
+    accentColor: '#7c3aed',   // purple-600
+    cardBackImage: '/card-back.jpg',
+    backgroundColor: '#0a0a0f',
+  },
+
+  cardDisplay: {
+    primaryStats: [
+      {
+        label: 'ATK/DEF',
+        getValue: getAtkDefDisplay,
+        color: 'text-white',
+      },
+    ],
+    secondaryInfo: [
+      {
+        label: 'Level',
+        getValue: getLevelDisplay,
+        color: 'text-yellow-400',
+      },
+      {
+        label: 'Attribute',
+        getValue: (card) => (card.attributes as YuGiOhCardAttributes).attribute || '',
+        color: 'text-gray-300',
+      },
+      {
+        label: 'Type',
+        getValue: (card) => (card.attributes as YuGiOhCardAttributes).race || '',
+        color: 'text-gray-400',
+      },
+    ],
+    indicators: [
+      {
+        show: isExtraDeckCard,
+        color: '#7c3aed',  // purple
+        tooltip: 'Extra Deck',
+      },
+    ],
+    detailFields: [
+      {
+        label: 'ATK',
+        getValue: (card) => formatStat((card.attributes as YuGiOhCardAttributes).atk),
+        color: 'text-red-400',
+      },
+      {
+        label: 'DEF',
+        getValue: (card) => {
+          const def = (card.attributes as YuGiOhCardAttributes).def;
+          return def === undefined ? 'LINK' : formatStat(def);
+        },
+        color: 'text-blue-400',
+      },
+    ],
+  },
+
+  deckZones: yugiohDeckZones,
+
+  defaultPlayerName: 'Duelist',
+  botNames: YUGIOH_BOT_NAMES,
+
+  cardTypes: YUGIOH_CARD_TYPES,
+  cardAttributes: YUGIOH_ATTRIBUTES,
+
+  getCardImageUrl: (card, size) => {
+    const id = card.id;
+    if (size === 'sm') {
+      return `/images/cards_small/${id}.jpg`;
+    }
+    return `/images/cards/${id}.jpg`;
+  },
+
+  exportFormats: yugiohExportFormats,
+
+  cardClassifiers: {
+    isExtraDeck: isExtraDeckCard,
+    isCreature: isMonsterCard,
+    isSpell: isSpellCard,
+    isTrap: isTrapCard,
+  },
+
+  storageKeyPrefix: 'yugioh-draft',
+
+  filterOptions: [
+    { id: 'all', label: 'All Cards', filter: () => true },
+    { id: 'monsters', label: 'Monsters', filter: isMonsterCard },
+    { id: 'spells', label: 'Spells', filter: isSpellCard },
+    { id: 'traps', label: 'Traps', filter: isTrapCard },
+    { id: 'main', label: 'Main Deck', filter: (c) => !isExtraDeckCard(c) },
+    { id: 'extra', label: 'Extra Deck', filter: isExtraDeckCard },
+  ],
+
+  sortOptions: [
+    { id: 'name', label: 'Name', compare: (a, b) => a.name.localeCompare(b.name) },
+    { id: 'type', label: 'Type', compare: (a, b) => a.type.localeCompare(b.type) },
+    {
+      id: 'level',
+      label: 'Level',
+      compare: (a, b) => {
+        const aLevel = (a.attributes as YuGiOhCardAttributes).level || 0;
+        const bLevel = (b.attributes as YuGiOhCardAttributes).level || 0;
+        return bLevel - aLevel;
+      },
+    },
+    {
+      id: 'atk',
+      label: 'ATK',
+      compare: (a, b) => {
+        const aAtk = (a.attributes as YuGiOhCardAttributes).atk ?? -1;
+        const bAtk = (b.attributes as YuGiOhCardAttributes).atk ?? -1;
+        return bAtk - aAtk;
+      },
+    },
+    {
+      id: 'def',
+      label: 'DEF',
+      compare: (a, b) => {
+        const aDef = (a.attributes as YuGiOhCardAttributes).def ?? -1;
+        const bDef = (b.attributes as YuGiOhCardAttributes).def ?? -1;
+        return bDef - aDef;
+      },
+    },
+    {
+      id: 'score',
+      label: 'Score',
+      compare: (a, b) => (b.score ?? 0) - (a.score ?? 0),
+    },
+  ],
+
+  api: {
+    baseUrl: 'https://db.ygoprodeck.com/api/v7',
+    searchEndpoint: '/cardinfo.php',
+    getCardEndpoint: (cardId) => `/cardinfo.php?id=${cardId}`,
+  },
+};
+
+// Re-export helper functions for use elsewhere
+export { isExtraDeckCard, isMonsterCard, isSpellCard, isTrapCard };

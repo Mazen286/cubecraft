@@ -1,4 +1,18 @@
-// Yu-Gi-Oh! Card Types
+// Re-export generic card types
+export type {
+  Card,
+  YuGiOhCardAttributes,
+  MTGCardAttributes,
+  PokemonCardAttributes,
+  TypedCard,
+  LegacyYuGiOhCard,
+} from './card';
+
+export { fromLegacyYuGiOhCard, toLegacyYuGiOhCard } from './card';
+
+// Yu-Gi-Oh! Card Types - essential fields for drafting
+// NOTE: This interface is kept for backward compatibility.
+// New code should use the generic Card type with YuGiOhCardAttributes.
 export interface YuGiOhCard {
   id: number;
   name: string;
@@ -7,26 +21,24 @@ export interface YuGiOhCard {
   atk?: number;
   def?: number;
   level?: number;
-  race: string;
   attribute?: string;
+  race?: string; // Monster type (Spellcaster, Dragon, etc.)
+  linkval?: number; // Link rating for Link monsters
   archetype?: string;
-  card_images: CardImage[];
-  card_prices?: CardPrice[];
+  score?: number; // 0-100 rating for AI drafting
+  // Generic attributes for non-YuGiOh games (MTG scryfallId, Pokemon setId, etc.)
+  attributes?: Record<string, unknown>;
+  // Image URL for non-YuGiOh games (stored directly from API)
+  imageUrl?: string;
 }
 
-export interface CardImage {
-  id: number;
-  image_url: string;
-  image_url_small: string;
-  image_url_cropped: string;
+// Helper functions to get card image URLs (from local public/images folder)
+export function getCardImageUrl(cardId: number): string {
+  return `/images/cards/${cardId}.jpg`;
 }
 
-export interface CardPrice {
-  cardmarket_price: string;
-  tcgplayer_price: string;
-  ebay_price: string;
-  amazon_price: string;
-  coolstuffinc_price: string;
+export function getCardImageUrlSmall(cardId: number): string {
+  return `/images/cards_small/${cardId}.jpg`;
 }
 
 // Cube Types
@@ -48,10 +60,11 @@ export type DraftStatus = 'waiting' | 'in_progress' | 'completed';
 export interface DraftSettings {
   mode: DraftMode;
   playerCount: number;
+  botCount: number; // Number of AI players (0 for multiplayer, 0-11 for solo)
   cardsPerPlayer: number;
   packSize: number;
+  burnedPerPack: number; // Cards discarded from each pack after all picks (not selected)
   timerSeconds: number;
-  isMultiplayer: boolean;
 }
 
 export interface DraftSession {
@@ -97,6 +110,28 @@ export interface CardFilter {
 
 export type SortOption = 'name' | 'level' | 'atk' | 'def' | 'type';
 export type SortDirection = 'asc' | 'desc';
+
+// Draft Statistics Types
+export interface PickRecord {
+  cardId: number;
+  cardName: string;
+  cardType: string;
+  cardLevel?: number; // Level/Rank for monsters
+  cardScore?: number;
+  packNumber: number;
+  pickNumber: number; // Position in pack (1 = first pick, higher = wheeled)
+  pickTime: number; // Time taken in seconds
+  timestamp: number; // Unix timestamp
+  wasAutoPick: boolean;
+}
+
+export interface DraftStatistics {
+  sessionId: string;
+  picks: PickRecord[];
+  totalPickTime: number; // Total time spent picking (seconds)
+  startTime: number;
+  endTime?: number;
+}
 
 // API Response Types
 export interface YGOProDeckResponse {
