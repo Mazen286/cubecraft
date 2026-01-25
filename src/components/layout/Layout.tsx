@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 import { UserMenu } from '../auth/UserMenu';
+import { Box } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -26,7 +27,7 @@ function Header() {
         <div className="flex items-center justify-between">
           <a href="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shadow-lg shadow-gold-500/25 group-hover:shadow-gold-500/40 transition-shadow">
-              <span className="text-xl font-bold text-yugi-darker">CC</span>
+              <Box className="w-6 h-6 text-yugi-darker" strokeWidth={2.5} />
             </div>
             <div>
               <h1 className="text-lg font-bold text-gold-gradient">
@@ -64,7 +65,15 @@ function Footer() {
       <div className="container mx-auto px-4 py-6 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-300">
           <p>
-            CubeCraft
+            CubeCraft — Built by{' '}
+            <a
+              href="https://figmentanalytics.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gold-400 hover:text-gold-300 transition-colors"
+            >
+              Figment Analytics
+            </a>
           </p>
           <p>
             A multi-game cube drafting platform for TCG enthusiasts.

@@ -2,6 +2,8 @@
 
 A multi-game cube draft simulator for trading card games. Draft solo against AI opponents or host real-time multiplayer sessions with friends.
 
+**Built by [Figment Analytics](https://figmentanalytics.com)**
+
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
@@ -219,6 +221,8 @@ Set environment variables in Vercel dashboard.
 
 ## License
 
+Copyright (c) 2024 Figment Analytics. All rights reserved.
+
 This project is for educational and personal use. All card game names and logos are trademarks of their respective owners.
 
 ## Acknowledgments
@@ -226,3 +230,7 @@ This project is for educational and personal use. All card game names and logos 
 - [YGOProDeck](https://ygoprodeck.com/), [Scryfall](https://scryfall.com/), [Pokemon TCG API](https://pokemontcg.io/) for card data
 - [Supabase](https://supabase.com/) for real-time database
 - The TCG community for inspiration
+
+---
+
+Built with care by [Figment Analytics](https://figmentanalytics.com)

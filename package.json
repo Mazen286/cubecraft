@@ -1,7 +1,10 @@
 {
   "name": "cubecraft",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A multi-game cube draft simulator for trading card games",
+  "author": "Figment Analytics",
+  "homepage": "https://figmentanalytics.com",
   "type": "module",
   "scripts": {
     "dev": "vite",
