@@ -1,56 +1,50 @@
 #!/usr/bin/env node
 /**
- * Download card images for a cube from YGOProDeck API
- * Usage: node scripts/download-cube-images.js [cubeName]
- * Example: node scripts/download-cube-images.js the-library
+ * Downloads card images for all cards in the cube from YGOProDeck CDN.
+ * Stores them locally in public/images/cards/ and public/images/cards_small/
  */
 
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const CONCURRENT_DOWNLOADS = 10; // Number of parallel downloads
-const RETRY_DELAY = 1000; // 1 second delay on retry
-const MAX_RETRIES = 3;
+const CUBE_PATH = path.join(__dirname, '../public/cubes/the-library.json');
+const IMAGES_DIR = path.join(__dirname, '../public/images/cards');
+const IMAGES_SMALL_DIR = path.join(__dirname, '../public/images/cards_small');
 
-const IMAGES_DIR = path.join(__dirname, '..', 'public', 'images');
-const CARDS_DIR = path.join(IMAGES_DIR, 'cards');
-const CARDS_SMALL_DIR = path.join(IMAGES_DIR, 'cards_small');
-const CUBES_DIR = path.join(__dirname, '..', 'public', 'cubes');
-
-// Ensure directories exist
-[IMAGES_DIR, CARDS_DIR, CARDS_SMALL_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
+// Create directories if they don't exist
+if (!fs.existsSync(IMAGES_DIR)) {
+  fs.mkdirSync(IMAGES_DIR, { recursive: true });
+}
+if (!fs.existsSync(IMAGES_SMALL_DIR)) {
+  fs.mkdirSync(IMAGES_SMALL_DIR, { recursive: true });
+}
 
 function downloadFile(url, destPath) {
   return new Promise((resolve, reject) => {
     // Skip if file already exists
     if (fs.existsSync(destPath)) {
-      resolve({ skipped: true });
+      resolve('skipped');
       return;
     }
 
     const file = fs.createWriteStream(destPath);
-
     https.get(url, (response) => {
       if (response.statusCode === 200) {
         response.pipe(file);
         file.on('finish', () => {
           file.close();
-          resolve({ skipped: false });
+          resolve('downloaded');
         });
-      } else if (response.statusCode === 301 || response.statusCode === 302) {
-        // Handle redirect
+      } else if (response.statusCode === 302 || response.statusCode === 301) {
+        // Follow redirect
         file.close();
         fs.unlinkSync(destPath);
         downloadFile(response.headers.location, destPath).then(resolve).catch(reject);
       } else {
         file.close();
         fs.unlinkSync(destPath);
-        reject(new Error(`HTTP ${response.statusCode}`));
+        reject(new Error(`HTTP ${response.statusCode} for ${url}`));
       }
     }).on('error', (err) => {
       file.close();
@@ -62,115 +56,72 @@ function downloadFile(url, destPath) {
   });
 }
 
-async function downloadWithRetry(url, destPath, retries = MAX_RETRIES) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await downloadFile(url, destPath);
-    } catch (err) {
-      if (i < retries - 1) {
-        await new Promise(r => setTimeout(r, RETRY_DELAY * (i + 1)));
-      } else {
-        throw err;
-      }
-    }
-  }
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function downloadCardImages(cardIds) {
-  const total = cardIds.length * 2; // Regular + small for each card
-  let completed = 0;
+async function main() {
+  console.log('Loading cube data...');
+  const cube = JSON.parse(fs.readFileSync(CUBE_PATH, 'utf8'));
+  const cardIds = Object.keys(cube.cardMap);
+
+  console.log(`Found ${cardIds.length} cards to download images for.\n`);
+
   let downloaded = 0;
   let skipped = 0;
   let failed = 0;
   const errors = [];
 
-  console.log(`\nDownloading images for ${cardIds.length} cards (${total} files total)...`);
-  console.log(`Regular images: ${CARDS_DIR}`);
-  console.log(`Small images: ${CARDS_SMALL_DIR}\n`);
+  for (let i = 0; i < cardIds.length; i++) {
+    const cardId = cardIds[i];
+    const progress = `[${i + 1}/${cardIds.length}]`;
 
-  // Create download tasks for both sizes
-  const tasks = [];
-  for (const cardId of cardIds) {
-    // Regular size
-    tasks.push({
-      cardId,
-      size: 'regular',
-      url: `https://images.ygoprodeck.com/images/cards/${cardId}.jpg`,
-      destPath: path.join(CARDS_DIR, `${cardId}.jpg`)
-    });
-    // Small size
-    tasks.push({
-      cardId,
-      size: 'small',
-      url: `https://images.ygoprodeck.com/images/cards_small/${cardId}.jpg`,
-      destPath: path.join(CARDS_SMALL_DIR, `${cardId}.jpg`)
-    });
-  }
+    // Download full-size image
+    const fullUrl = `https://images.ygoprodeck.com/images/cards/${cardId}.jpg`;
+    const fullPath = path.join(IMAGES_DIR, `${cardId}.jpg`);
 
-  // Process in batches
-  async function processTask(task) {
+    // Download small image
+    const smallUrl = `https://images.ygoprodeck.com/images/cards_small/${cardId}.jpg`;
+    const smallPath = path.join(IMAGES_SMALL_DIR, `${cardId}.jpg`);
+
     try {
-      const result = await downloadWithRetry(task.url, task.destPath);
-      completed++;
-      if (result.skipped) {
+      const [fullResult, smallResult] = await Promise.all([
+        downloadFile(fullUrl, fullPath),
+        downloadFile(smallUrl, smallPath),
+      ]);
+
+      if (fullResult === 'skipped' && smallResult === 'skipped') {
         skipped++;
+        process.stdout.write(`\r${progress} Skipped ${cardId} (already exists)    `);
       } else {
         downloaded++;
-      }
-
-      // Progress update every 50 files
-      if (completed % 50 === 0 || completed === total) {
-        const percent = Math.round((completed / total) * 100);
-        process.stdout.write(`\rProgress: ${completed}/${total} (${percent}%) - Downloaded: ${downloaded}, Skipped: ${skipped}, Failed: ${failed}`);
+        process.stdout.write(`\r${progress} Downloaded ${cardId}                    `);
       }
     } catch (err) {
-      completed++;
       failed++;
-      errors.push({ cardId: task.cardId, size: task.size, error: err.message });
+      errors.push({ cardId, error: err.message });
+      process.stdout.write(`\r${progress} Failed ${cardId}: ${err.message}    `);
+    }
+
+    // Small delay to avoid rate limiting
+    if ((i + 1) % 10 === 0) {
+      await sleep(100);
     }
   }
 
-  // Process tasks in parallel batches
-  for (let i = 0; i < tasks.length; i += CONCURRENT_DOWNLOADS) {
-    const batch = tasks.slice(i, i + CONCURRENT_DOWNLOADS);
-    await Promise.all(batch.map(processTask));
-  }
-
-  console.log('\n\n=== Download Complete ===');
-  console.log(`Total files: ${total}`);
+  console.log('\n\n--- Summary ---');
   console.log(`Downloaded: ${downloaded}`);
-  console.log(`Skipped (already exist): ${skipped}`);
+  console.log(`Skipped (already existed): ${skipped}`);
   console.log(`Failed: ${failed}`);
 
   if (errors.length > 0) {
-    console.log('\nFailed downloads:');
-    errors.forEach(e => console.log(`  Card ${e.cardId} (${e.size}): ${e.error}`));
+    console.log('\nFailed cards:');
+    errors.forEach(({ cardId, error }) => {
+      console.log(`  - ${cardId}: ${error}`);
+    });
   }
 
-  return { downloaded, skipped, failed, errors };
+  console.log('\nDone!');
 }
 
-async function main() {
-  const cubeName = process.argv[2] || 'the-library';
-  const cubePath = path.join(CUBES_DIR, `${cubeName}.json`);
-
-  if (!fs.existsSync(cubePath)) {
-    console.error(`Cube not found: ${cubePath}`);
-    console.error(`Available cubes:`);
-    const cubes = fs.readdirSync(CUBES_DIR).filter(f => f.endsWith('.json'));
-    cubes.forEach(c => console.error(`  - ${c.replace('.json', '')}`));
-    process.exit(1);
-  }
-
-  console.log(`Loading cube: ${cubeName}`);
-  const cube = JSON.parse(fs.readFileSync(cubePath, 'utf8'));
-  const cardIds = Object.keys(cube.cardMap);
-  console.log(`Found ${cardIds.length} cards in cube`);
-
-  await downloadCardImages(cardIds);
-}
-
-main().catch(err => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+main().catch(console.error);

@@ -372,9 +372,9 @@ export const yugiohConfig: GameConfig = {
   getCardImageUrl: (card, size) => {
     const id = card.id;
     if (size === 'sm') {
-      return `https://images.ygoprodeck.com/images/cards_small/${id}.jpg`;
+      return `/images/cards_small/${id}.jpg`;
     }
-    return `https://images.ygoprodeck.com/images/cards/${id}.jpg`;
+    return `/images/cards/${id}.jpg`;
   },
 
   exportFormats: yugiohExportFormats,
