@@ -1,4 +1,4 @@
-import type { GameConfig, DeckZone, ExportFormat } from '../gameConfig';
+import type { GameConfig, DeckZone, ExportFormat, FilterGroup } from '../gameConfig';
 import type { Card } from '../../types/card';
 import type { YuGiOhCardAttributes } from '../../types/card';
 
@@ -41,6 +41,57 @@ function isSpellCard(card: Card): boolean {
  */
 function isTrapCard(card: Card): boolean {
   return card.type.toLowerCase().includes('trap');
+}
+
+/**
+ * Monster mechanic checks
+ */
+function isNormalMonster(card: Card): boolean {
+  return card.type.toLowerCase().includes('normal monster');
+}
+
+function isEffectMonster(card: Card): boolean {
+  return card.type.toLowerCase().includes('effect') && isMonsterCard(card);
+}
+
+function isRitualMonster(card: Card): boolean {
+  return card.type.toLowerCase().includes('ritual') && isMonsterCard(card);
+}
+
+function isFusionMonster(card: Card): boolean {
+  return card.type.toLowerCase().includes('fusion');
+}
+
+function isSynchroMonster(card: Card): boolean {
+  return card.type.toLowerCase().includes('synchro');
+}
+
+function isXyzMonster(card: Card): boolean {
+  return card.type.toLowerCase().includes('xyz');
+}
+
+function isPendulumMonster(card: Card): boolean {
+  return card.type.toLowerCase().includes('pendulum');
+}
+
+function isLinkMonster(card: Card): boolean {
+  return card.type.toLowerCase().includes('link');
+}
+
+/**
+ * Attribute check helper
+ */
+function hasAttribute(card: Card, attribute: string): boolean {
+  const attrs = card.attributes as YuGiOhCardAttributes;
+  return attrs.attribute === attribute;
+}
+
+/**
+ * Race/Type check helper
+ */
+function hasRace(card: Card, race: string): boolean {
+  const attrs = card.attributes as YuGiOhCardAttributes;
+  return attrs.race === race;
 }
 
 /**
@@ -148,6 +199,63 @@ export const YUGIOH_MONSTER_TYPES = [
 const YUGIOH_BOT_NAMES = [
   'Kaiba Bot', 'Yugi Bot', 'Joey Bot', 'Mai Bot',
   'Pegasus Bot', 'Marik Bot', 'Bakura Bot', 'Ishizu Bot',
+];
+
+/**
+ * Yu-Gi-Oh! Filter Groups for advanced filtering
+ */
+const yugiohFilterGroups: FilterGroup[] = [
+  {
+    id: 'monsterType',
+    label: 'Monster Type',
+    type: 'multi-select',
+    options: [
+      { id: 'normal', label: 'Normal', color: '#FDE68A', filter: isNormalMonster },
+      { id: 'effect', label: 'Effect', color: '#FF8B53', filter: isEffectMonster },
+      { id: 'ritual', label: 'Ritual', color: '#9FC5E8', filter: isRitualMonster },
+      { id: 'fusion', label: 'Fusion', color: '#A855F7', filter: isFusionMonster },
+      { id: 'synchro', label: 'Synchro', color: '#FFFFFF', filter: isSynchroMonster },
+      { id: 'xyz', label: 'XYZ', color: '#1F1F1F', filter: isXyzMonster },
+      { id: 'pendulum', label: 'Pendulum', color: '#22D3EE', filter: isPendulumMonster },
+      { id: 'link', label: 'Link', color: '#3B82F6', filter: isLinkMonster },
+    ],
+  },
+  {
+    id: 'attribute',
+    label: 'Attribute',
+    type: 'multi-select',
+    options: [
+      { id: 'DARK', label: 'DARK', color: '#581C87', filter: (c) => hasAttribute(c, 'DARK') },
+      { id: 'LIGHT', label: 'LIGHT', color: '#FEF08A', filter: (c) => hasAttribute(c, 'LIGHT') },
+      { id: 'EARTH', label: 'EARTH', color: '#854D0E', filter: (c) => hasAttribute(c, 'EARTH') },
+      { id: 'WATER', label: 'WATER', color: '#1D4ED8', filter: (c) => hasAttribute(c, 'WATER') },
+      { id: 'FIRE', label: 'FIRE', color: '#DC2626', filter: (c) => hasAttribute(c, 'FIRE') },
+      { id: 'WIND', label: 'WIND', color: '#16A34A', filter: (c) => hasAttribute(c, 'WIND') },
+      { id: 'DIVINE', label: 'DIVINE', color: '#FBBF24', filter: (c) => hasAttribute(c, 'DIVINE') },
+    ],
+  },
+  {
+    id: 'race',
+    label: 'Type',
+    type: 'multi-select',
+    options: YUGIOH_MONSTER_TYPES.map(race => ({
+      id: race.toLowerCase().replace(/[- ]/g, '_'),
+      label: race,
+      filter: (c: Card) => hasRace(c, race),
+    })),
+  },
+  {
+    id: 'level',
+    label: 'Level/Rank',
+    type: 'range',
+    rangeConfig: {
+      min: 1,
+      max: 12,
+      step: 1,
+      getValue: (card) => (card.attributes as YuGiOhCardAttributes).level,
+      formatValue: (v) => `Lv ${v}`,
+    },
+  },
 ];
 
 /**
@@ -288,6 +396,8 @@ export const yugiohConfig: GameConfig = {
     { id: 'main', label: 'Main Deck', filter: (c) => !isExtraDeckCard(c) },
     { id: 'extra', label: 'Extra Deck', filter: isExtraDeckCard },
   ],
+
+  filterGroups: yugiohFilterGroups,
 
   sortOptions: [
     { id: 'name', label: 'Name', compare: (a, b) => a.name.localeCompare(b.name) },

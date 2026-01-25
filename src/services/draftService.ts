@@ -389,47 +389,56 @@ export const draftService = {
   /**
    * Toggle pause state (host only)
    * When pausing: saves the time remaining
-   * When resuming: sets a 5-second countdown before timer resumes
+   * When resuming: clears the saved time (countdown handled client-side)
    */
   async togglePause(sessionId: string, currentTimeRemaining?: number): Promise<boolean> {
     const supabase = getSupabase();
     const userId = getUserId();
 
     // Get current session state
-    const { data: session } = await supabase
+    const { data: session, error: fetchError } = await supabase
       .from('draft_sessions')
       .select()
       .eq('id', sessionId)
       .single();
 
-    if (!session || session.host_id !== userId) {
+    if (fetchError) {
+      console.error('[draftService] Failed to fetch session for pause:', fetchError);
+      throw new Error(`Failed to fetch session: ${fetchError.message}`);
+    }
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    if (session.host_id !== userId) {
       throw new Error('Only the host can pause/unpause the draft');
     }
 
     const newPausedState = !session.paused;
 
-    if (newPausedState) {
-      // Pausing - save the current time remaining
-      await supabase
-        .from('draft_sessions')
-        .update({
-          paused: true,
-          paused_at: new Date().toISOString(),
-          time_remaining_at_pause: currentTimeRemaining ?? session.timer_seconds,
-          resume_at: null,
-        })
-        .eq('id', sessionId);
-    } else {
-      // Resuming - set resume_at to 5 seconds from now
-      const resumeAt = new Date(Date.now() + 5000).toISOString();
-      await supabase
-        .from('draft_sessions')
-        .update({
-          paused: false,
-          resume_at: resumeAt,
-          // Keep time_remaining_at_pause so clients know what to resume to
-        })
-        .eq('id', sessionId);
+    // When pausing: save the time remaining so we can restore it
+    // When resuming: clear the saved time (timer resumes from saved value after countdown)
+    const updateData: { paused: boolean; time_remaining_at_pause?: number | null } = {
+      paused: newPausedState,
+    };
+
+    if (newPausedState && currentTimeRemaining !== undefined) {
+      // Pausing - save current time remaining
+      updateData.time_remaining_at_pause = currentTimeRemaining;
+    } else if (!newPausedState) {
+      // Resuming - keep the saved time (don't clear it yet, client needs it for countdown)
+      // The time will be used by clients after the 5-second countdown
+    }
+
+    const { error } = await supabase
+      .from('draft_sessions')
+      .update(updateData)
+      .eq('id', sessionId);
+
+    if (error) {
+      console.error('[draftService] Failed to toggle pause:', error);
+      throw new Error(`Failed to pause: ${error.message}`);
     }
 
     return newPausedState;
@@ -1008,21 +1017,24 @@ export const draftService = {
       return; // Already paused or not in progress
     }
 
-    // Pause the session
+    // Pause the session and save time remaining
+    const updateData: { paused: boolean; time_remaining_at_pause?: number } = {
+      paused: true,
+    };
+
+    if (currentTimeRemaining !== undefined) {
+      updateData.time_remaining_at_pause = currentTimeRemaining;
+    }
+
     await supabase
       .from('draft_sessions')
-      .update({
-        paused: true,
-        paused_at: new Date().toISOString(),
-        time_remaining_at_pause: currentTimeRemaining,
-        resume_at: null,
-      })
+      .update(updateData)
       .eq('id', sessionId);
   },
 
   /**
    * Check if the user has an active session they can rejoin.
-   * First checks localStorage, then queries database as fallback.
+   * Uses localStorage to track sessions - database fallback disabled temporarily.
    * Returns session info if found, null otherwise.
    */
   async getActiveSession(): Promise<{
@@ -1031,12 +1043,12 @@ export const draftService = {
     status: 'waiting' | 'in_progress';
     cubeId: string;
   } | null> {
-    const supabase = getSupabase();
-    const userId = getUserId();
     const lastSession = getLastSession();
+    if (!lastSession) return null;
 
-    // First, try to find session from localStorage
-    if (lastSession) {
+    // Verify session is still active via draft_sessions (this table works)
+    try {
+      const supabase = getSupabase();
       const { data: session } = await supabase
         .from('draft_sessions')
         .select('id, room_code, status, cube_id')
@@ -1045,57 +1057,20 @@ export const draftService = {
         .single();
 
       if (session) {
-        // Verify user is still a player
-        const { data: player } = await supabase
-          .from('draft_players')
-          .select('id')
-          .eq('session_id', session.id)
-          .eq('user_id', userId)
-          .single();
-
-        if (player) {
-          return {
-            sessionId: session.id,
-            roomCode: session.room_code,
-            status: session.status,
-            cubeId: session.cube_id,
-          };
-        }
+        return {
+          sessionId: session.id,
+          roomCode: session.room_code,
+          status: session.status,
+          cubeId: session.cube_id,
+        };
       }
-      // Session not found or user not in it - clear localStorage
-      clearLastSession();
+    } catch {
+      // Table may not be accessible yet
     }
 
-    // Fallback: Query database for any active session the user is in
-    const { data: playerRecord } = await supabase
-      .from('draft_players')
-      .select('session_id')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (!playerRecord) return null;
-
-    // Check if that session is still active
-    const { data: session } = await supabase
-      .from('draft_sessions')
-      .select('id, room_code, status, cube_id')
-      .eq('id', playerRecord.session_id)
-      .in('status', ['waiting', 'in_progress'])
-      .single();
-
-    if (!session) return null;
-
-    // Found an active session - save it to localStorage for next time
-    setLastSession(session.id, session.room_code);
-
-    return {
-      sessionId: session.id,
-      roomCode: session.room_code,
-      status: session.status,
-      cubeId: session.cube_id,
-    };
+    // Session not found or expired - clear localStorage
+    clearLastSession();
+    return null;
   },
 
   /**

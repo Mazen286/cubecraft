@@ -37,6 +37,11 @@ export interface Database {
         Insert: CubeInsert;
         Update: CubeUpdate;
       };
+      card_scores: {
+        Row: CardScoreRow;
+        Insert: CardScoreInsert;
+        Update: CardScoreUpdate;
+      };
       user_profiles: {
         Row: UserProfileRow;
         Insert: UserProfileInsert;
@@ -242,6 +247,30 @@ export interface PackData {
   player_seat: number;
   pack_number: number; // 1-indexed pack number
   cards: number[]; // Card IDs
+}
+
+// Card Scores table - admin-editable card scores per cube
+export interface CardScoreRow {
+  id: string;
+  cube_id: string;
+  card_id: number;
+  score: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CardScoreInsert {
+  id?: string;
+  cube_id: string;
+  card_id: number;
+  score: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CardScoreUpdate {
+  score?: number;
+  updated_at?: string;
 }
 
 // Realtime payload types

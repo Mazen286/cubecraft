@@ -1,10 +1,35 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Layers, Pause, Play, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import type { YuGiOhCard as YuGiOhCardType } from '../types';
+import type { Card } from '../types/card';
 import { formatTime } from '../lib/utils';
+import { hasErrata, getErrata } from '../data/cardErrata';
+
+// Helper to convert YuGiOhCard to Card format expected by game config
+function toCardWithAttributes(card: YuGiOhCardType): Card {
+  return {
+    id: card.id,
+    name: card.name,
+    type: card.type,
+    description: card.desc,
+    score: card.score,
+    attributes: {
+      atk: card.atk,
+      def: card.def,
+      level: card.level,
+      attribute: card.attribute,
+      race: card.race,
+      linkval: card.linkval,
+      archetype: card.archetype,
+      ...(card.attributes || {}),
+    },
+  };
+}
 import { useDraftSession } from '../hooks/useDraftSession';
 import { useCards } from '../hooks/useCards';
 import { useImagePreloader } from '../hooks/useImagePreloader';
@@ -84,15 +109,23 @@ export function Draft() {
   const [isPicking, setIsPicking] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [autoSelect, setAutoSelect] = useState(false);
   const [autoPickNotification, setAutoPickNotification] = useState<string | null>(null);
   const [timeoutNotification, setTimeoutNotification] = useState<string | null>(null);
+  const [pauseNotification, setPauseNotification] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showMobileCards, setShowMobileCards] = useState(false);
   const [mobileViewCard, setMobileViewCard] = useState<YuGiOhCardType | null>(null);
   const [_draftedSortMode, _setDraftedSortMode] = useState<'pick' | 'type' | 'name'>('pick');
   const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isPausing, setIsPausing] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [myCardsFilter, setMyCardsFilter] = useState<'all' | 'monster' | 'spell' | 'trap' | 'extra'>('all');
+  const [myCardsSearch, setMyCardsSearch] = useState('');
+  const [showMyCardsStats, setShowMyCardsStats] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -100,6 +133,7 @@ export function Draft() {
   const packStartTimeRef = useRef<number>(Date.now());
   const isAutoPickRef = useRef<boolean>(false);
   const hasPickedRef = useRef<boolean>(false);
+  const prevPausedRef = useRef<boolean | undefined>(undefined);
 
   // Pack is ready when we have cards loaded (or player already picked, waiting for next pack)
   const packReady = (currentPackCards.length > 0 && !cardsLoading) || currentPlayer?.pick_made;
@@ -109,6 +143,94 @@ export function Draft() {
 
   // Keep ref in sync with hasPicked for use in timer interval
   hasPickedRef.current = hasPicked;
+
+  // Calculate drafted cards stats and apply filters
+  const myCardsStats = useMemo(() => {
+    const stats = {
+      total: draftedCards.length,
+      mainDeck: 0,
+      extraDeck: 0,
+      monsters: 0,
+      spells: 0,
+      traps: 0,
+      avgScore: 0,
+      tiers: { S: 0, A: 0, B: 0, C: 0, E: 0, F: 0 } as Record<string, number>,
+    };
+
+    if (draftedCards.length === 0) return stats;
+
+    let totalScore = 0;
+    let scoredCards = 0;
+
+    draftedCards.forEach((card) => {
+      const type = card.type.toLowerCase();
+      const isExtraDeck = type.includes('fusion') || type.includes('synchro') ||
+                          type.includes('xyz') || type.includes('link');
+
+      if (isExtraDeck) {
+        stats.extraDeck++;
+      } else {
+        stats.mainDeck++;
+      }
+
+      if (type.includes('spell')) {
+        stats.spells++;
+      } else if (type.includes('trap')) {
+        stats.traps++;
+      } else {
+        stats.monsters++;
+      }
+
+      if (card.score !== undefined) {
+        totalScore += card.score;
+        scoredCards++;
+        // Calculate tier
+        const tier = card.score >= 90 ? 'S' : card.score >= 75 ? 'A' : card.score >= 60 ? 'B' :
+                     card.score >= 40 ? 'C' : card.score >= 20 ? 'E' : 'F';
+        stats.tiers[tier]++;
+      }
+    });
+
+    stats.avgScore = scoredCards > 0 ? Math.round(totalScore / scoredCards) : 0;
+    return stats;
+  }, [draftedCards]);
+
+  // Filter drafted cards based on current filter
+  const filteredDraftedCards = useMemo(() => {
+    let filtered = draftedCards;
+
+    // Apply type filter
+    if (myCardsFilter !== 'all') {
+      filtered = filtered.filter((card) => {
+        const type = card.type.toLowerCase();
+        switch (myCardsFilter) {
+          case 'monster':
+            return !type.includes('spell') && !type.includes('trap');
+          case 'spell':
+            return type.includes('spell');
+          case 'trap':
+            return type.includes('trap');
+          case 'extra':
+            return type.includes('fusion') || type.includes('synchro') ||
+                   type.includes('xyz') || type.includes('link');
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply search filter
+    if (myCardsSearch.trim()) {
+      const search = myCardsSearch.toLowerCase();
+      filtered = filtered.filter((card) =>
+        card.name.toLowerCase().includes(search) ||
+        card.type.toLowerCase().includes(search) ||
+        (card.desc && card.desc.toLowerCase().includes(search))
+      );
+    }
+
+    return filtered;
+  }, [draftedCards, myCardsFilter, myCardsSearch]);
 
   // Initialize statistics when draft starts
   useEffect(() => {
@@ -141,6 +263,41 @@ export function Draft() {
     }
   }, [hostPlayer?.is_connected, session?.status, session?.paused, sessionId, humanPlayers.length, timeRemaining]);
 
+  // Show notification when pause state changes
+  const prevPausedState = useRef<boolean | undefined>(undefined);
+  useEffect(() => {
+    if (session?.status !== 'in_progress') {
+      prevPausedState.current = session?.paused;
+      return;
+    }
+
+    const wasPaused = prevPausedState.current;
+    const isPaused = session?.paused;
+    prevPausedState.current = isPaused;
+
+    // Only show notification when state actually changes (not on initial load)
+    if (wasPaused !== undefined && wasPaused !== isPaused) {
+      if (isPaused) {
+        // Draft was paused
+        const reason = hostPlayer && !hostPlayer.is_connected
+          ? 'Draft paused - Host disconnected'
+          : 'Draft paused by host';
+        setPauseNotification(reason);
+      } else {
+        // Draft was resumed (will show countdown overlay instead)
+        setPauseNotification(null);
+      }
+    }
+  }, [session?.paused, session?.status, hostPlayer?.is_connected]);
+
+  // Clear pause notification after delay (but keep it while paused)
+  useEffect(() => {
+    if (pauseNotification && !session?.paused) {
+      const timer = setTimeout(() => setPauseNotification(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [pauseNotification, session?.paused]);
+
   // Sync pack start time with database (for accurate pick timing after refresh)
   useEffect(() => {
     if (currentPackCards.length > 0 && !currentPlayer?.pick_made) {
@@ -157,6 +314,12 @@ export function Draft() {
   const handleDragStart = (e: React.DragEvent, card: YuGiOhCardType) => {
     e.dataTransfer.setData('cardId', card.id.toString());
     e.dataTransfer.effectAllowed = 'move';
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setIsDragOver(false);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -172,6 +335,7 @@ export function Draft() {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+    setIsDragging(false);
 
     const cardId = parseInt(e.dataTransfer.getData('cardId'));
     const card = currentPackCards.find(c => c.id === cardId);
@@ -216,46 +380,54 @@ export function Draft() {
     initialTimerCalculatedRef.current = packPickKey;
   }, [session?.timer_seconds, session?.current_pick, session?.current_pack, session?.status, session?.pick_started_at, session?.paused, session?.time_remaining_at_pause]);
 
-  // Handle resume countdown when host unpauses
+  // Handle resume countdown when host unpauses (client-side detection)
   useEffect(() => {
-    if (!session?.resume_at || session?.paused) {
+    // Detect transition from paused to unpaused
+    const wasPaused = prevPausedRef.current;
+    const isPaused = session?.paused;
+
+    // Update ref for next comparison
+    prevPausedRef.current = isPaused;
+
+    // Only trigger countdown when transitioning from paused (true) to unpaused (false)
+    // and the draft is in progress
+    if (wasPaused === true && isPaused === false && session?.status === 'in_progress') {
+      // Capture the saved time at the moment of resume
+      const savedTime = session?.time_remaining_at_pause;
+
+      // Start 5-second countdown
+      setResumeCountdown(5);
+
+      const countdownInterval = setInterval(() => {
+        setResumeCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(countdownInterval);
+            // Restore the saved time when countdown ends
+            if (savedTime && savedTime > 0) {
+              setTimeRemaining(savedTime);
+            }
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      resumeCountdownRef.current = countdownInterval;
+
+      return () => {
+        clearInterval(countdownInterval);
+      };
+    }
+
+    // If paused, clear any existing countdown
+    if (isPaused) {
       setResumeCountdown(null);
       if (resumeCountdownRef.current) {
         clearInterval(resumeCountdownRef.current);
         resumeCountdownRef.current = null;
       }
-      return;
     }
-
-    const resumeTime = new Date(session.resume_at).getTime();
-
-    // Calculate initial countdown
-    const updateCountdown = () => {
-      const remaining = Math.max(0, Math.ceil((resumeTime - Date.now()) / 1000));
-      if (remaining <= 0) {
-        setResumeCountdown(null);
-        // Restore timer to saved value when countdown ends
-        if (session.time_remaining_at_pause) {
-          setTimeRemaining(session.time_remaining_at_pause);
-        }
-        if (resumeCountdownRef.current) {
-          clearInterval(resumeCountdownRef.current);
-          resumeCountdownRef.current = null;
-        }
-      } else {
-        setResumeCountdown(remaining);
-      }
-    };
-
-    updateCountdown();
-    resumeCountdownRef.current = setInterval(updateCountdown, 100);
-
-    return () => {
-      if (resumeCountdownRef.current) {
-        clearInterval(resumeCountdownRef.current);
-      }
-    };
-  }, [session?.resume_at, session?.paused, session?.time_remaining_at_pause]);
+  }, [session?.paused, session?.status, session?.time_remaining_at_pause]);
 
   // Track when we last reset the timer (to avoid resetting on every render)
   const lastPackPickRef = useRef<string>('');
@@ -393,6 +565,21 @@ export function Draft() {
       handlePickCard(highestRated, true); // Mark as auto-pick
     }
   }, [autoSelect, session?.status, session?.paused, currentPackCards, currentPlayer?.pick_made, isPicking, handlePickCard]);
+
+  // Handle pause button click
+  const handlePauseClick = useCallback(async () => {
+    if (isPausing) return;
+
+    setIsPausing(true);
+    try {
+      await togglePause(timeRemaining);
+    } catch (err) {
+      console.error('[Draft] Failed to toggle pause:', err);
+      alert(`Failed to pause: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsPausing(false);
+    }
+  }, [togglePause, timeRemaining, isPausing]);
 
   // Handle draft completion
   useEffect(() => {
@@ -740,12 +927,14 @@ export function Draft() {
               <span className="text-gray-300">Auto-pick</span>
             </label>
             {/* Host pause button */}
-            {isHost && !session?.paused && resumeCountdown === null && (
+            {isHost && !session?.paused && resumeCountdown === null && session?.status === 'in_progress' && (
               <button
-                onClick={() => togglePause(timeRemaining)}
-                className="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 text-white rounded text-xs font-medium transition-colors"
+                onClick={handlePauseClick}
+                disabled={isPausing}
+                className="flex items-center gap-1.5 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-600/50 text-white rounded text-sm font-semibold transition-colors shadow-sm"
               >
-                Pause
+                <Pause className="w-4 h-4" />
+                {isPausing ? 'Pausing...' : 'Pause'}
               </button>
             )}
             <div className="flex items-center gap-2">
@@ -766,6 +955,14 @@ export function Draft() {
         {timeoutNotification && (
           <div className="mb-4 p-3 rounded-lg bg-orange-500/20 border border-orange-500/50 text-orange-300 text-sm text-center animate-pulse">
             ⚠️ {timeoutNotification}
+          </div>
+        )}
+
+        {/* Pause notification */}
+        {pauseNotification && (
+          <div className="mb-4 p-3 rounded-lg bg-yellow-500/20 border border-yellow-500/50 text-yellow-300 text-sm text-center animate-pulse">
+            <Pause className="w-4 h-4 inline-block mr-2" />
+            {pauseNotification}
           </div>
         )}
 
@@ -810,10 +1007,10 @@ export function Draft() {
           </div>
         )}
 
-        {/* Main content - CSS Grid for precise control */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_380px] 2xl:grid-cols-[1fr_440px] gap-4 lg:gap-6 min-h-0 lg:overflow-hidden">
+        {/* Main content */}
+        <div className="flex-1 min-h-0 overflow-hidden">
           {/* Current Pack */}
-          <div className="glass-card p-4 lg:p-6 overflow-auto min-h-0">
+          <div className="glass-card p-4 lg:p-6 overflow-auto h-full">
             <h2 className="text-lg font-semibold text-white mb-4">
               Current Pack {hasPicked && <span className="text-green-400 text-sm font-normal ml-2">Waiting for other players...</span>}
             </h2>
@@ -823,23 +1020,17 @@ export function Draft() {
               </div>
             ) : currentPackCards.length > 0 ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 lg:gap-4">
-                {currentPackCards.map((card, index) => (
+                {currentPackCards.map((card) => (
                   <div key={card.id} className="relative">
-                    {/* Number indicator for keyboard shortcut */}
-                    {index < 9 && !hasPicked && (
-                      <div className="absolute -top-1 -left-1 z-10 w-5 h-5 rounded-full bg-yugi-dark border border-yugi-border flex items-center justify-center text-xs font-bold text-gray-400">
-                        {index + 1}
-                      </div>
-                    )}
                     <YuGiOhCard
                       card={card}
                       size="md"
                       isSelected={selectedCard?.id === card.id}
                       onClick={hasPicked ? undefined : () => setSelectedCard(card)}
-                      showDetails
                       showTier
                       draggable={!hasPicked}
                       onDragStart={(e) => handleDragStart(e, card)}
+                      onDragEnd={handleDragEnd}
                       className={hasPicked ? 'opacity-50 cursor-not-allowed' : ''}
                     />
                   </div>
@@ -865,10 +1056,10 @@ export function Draft() {
             )}
           </div>
 
-          {/* Sidebar - Selected Card & Drafted Cards */}
-          <div className="flex flex-col gap-4 min-h-0 lg:overflow-hidden">
+          {/* Sidebar - Selected Card & Drafted Cards (Hidden - using floating button instead) */}
+          <div className="hidden flex-col gap-4 min-h-0 lg:overflow-hidden">
             {/* Selected Card Preview - flex-shrink-0 prevents collapse */}
-            <div className="glass-card p-4 flex-shrink-0 overflow-auto max-h-[35vh] lg:max-h-[50%]">
+            <div className="glass-card p-4 flex-shrink-0 overflow-auto max-h-[50%]">
               <h3 className="text-sm font-semibold text-gray-300 mb-3">
                 Selected Card
               </h3>
@@ -886,7 +1077,7 @@ export function Draft() {
                     {gameConfig.cardDisplay.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
                       <div className="flex items-center gap-3 mt-1 text-xs flex-wrap">
                         {gameConfig.cardDisplay.primaryStats.map((stat, index) => {
-                          const value = stat.getValue({ ...selectedCard, attributes: selectedCard.attributes || {} });
+                          const value = stat.getValue(toCardWithAttributes(selectedCard));
                           if (!value) return null;
                           return (
                             <span key={index} className={stat.color || 'text-gray-300'}>
@@ -900,7 +1091,7 @@ export function Draft() {
                     {gameConfig.cardDisplay.secondaryInfo && gameConfig.cardDisplay.secondaryInfo.length > 0 && (
                       <div className="flex items-center gap-3 mt-1 text-xs flex-wrap">
                         {gameConfig.cardDisplay.secondaryInfo.map((info, index) => {
-                          const value = info.getValue({ ...selectedCard, attributes: selectedCard.attributes || {} });
+                          const value = info.getValue(toCardWithAttributes(selectedCard));
                           if (!value) return null;
                           return (
                             <span key={index} className={info.color || 'text-gray-400'}>
@@ -985,11 +1176,7 @@ export function Draft() {
           <div className="flex gap-2">
             <Button
               variant="ghost"
-              onClick={() => {
-                if (confirm('Are you sure you want to leave the draft?')) {
-                  navigate('/');
-                }
-              }}
+              onClick={() => setShowLeaveModal(true)}
             >
               Leave Draft
             </Button>
@@ -998,19 +1185,7 @@ export function Draft() {
                 variant="ghost"
                 className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                 disabled={isCancelling}
-                onClick={async () => {
-                  if (confirm('Are you sure you want to cancel this draft? This will end the session for all players and delete all data.')) {
-                    setIsCancelling(true);
-                    try {
-                      await draftService.cancelSession(sessionId!);
-                      navigate('/');
-                    } catch (err) {
-                      console.error('Failed to cancel session:', err);
-                      alert('Failed to cancel session. Please try again.');
-                      setIsCancelling(false);
-                    }
-                  }
-                }}
+                onClick={() => setShowCancelModal(true)}
               >
                 {isCancelling ? 'Cancelling...' : 'Cancel Session'}
               </Button>
@@ -1023,18 +1198,98 @@ export function Draft() {
           )}
         </div>
 
-        {/* Mobile floating button to view drafted cards */}
+        {/* Pause Overlay Screen */}
+        {session?.paused && session?.status === 'in_progress' && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm">
+            <div className="text-center max-w-md mx-auto p-8">
+              {/* Pause Icon */}
+              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <Pause className="w-12 h-12 text-yellow-400" />
+              </div>
+
+              {/* Title */}
+              <h2 className="text-4xl font-bold text-yellow-400 mb-4">
+                DRAFT PAUSED
+              </h2>
+
+              {/* Reason */}
+              {hostPlayer && !hostPlayer.is_connected ? (
+                <div className="mb-6">
+                  <p className="text-red-400 text-lg mb-2">Host Disconnected</p>
+                  <p className="text-gray-400 text-sm">
+                    The draft has been automatically paused. Waiting for the host to reconnect...
+                  </p>
+                </div>
+              ) : (
+                <p className="text-gray-400 mb-6">
+                  The host has paused the draft. Please wait for them to resume.
+                </p>
+              )}
+
+              {/* Time remaining info */}
+              {session.time_remaining_at_pause && (
+                <div className="mb-6 p-4 rounded-lg bg-yugi-card border border-yugi-border">
+                  <p className="text-sm text-gray-400 mb-1">Time remaining when paused</p>
+                  <p className="text-2xl font-bold text-gold-400">
+                    {formatTime(session.time_remaining_at_pause)}
+                  </p>
+                </div>
+              )}
+
+              {/* Resume button (host only) */}
+              {isHost && (
+                <Button
+                  onClick={() => togglePause()}
+                  className="flex items-center gap-2 mx-auto px-6 py-3"
+                >
+                  <Play className="w-5 h-5" />
+                  Resume Draft
+                </Button>
+              )}
+
+              {/* Non-host message */}
+              {!isHost && (
+                <p className="text-sm text-gray-500 mt-4">
+                  Only the host can resume the draft
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Resume Countdown Overlay */}
+        {resumeCountdown !== null && resumeCountdown > 0 && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="text-center">
+              <div className="text-8xl font-bold text-green-400 animate-pulse mb-4">
+                {resumeCountdown}
+              </div>
+              <p className="text-2xl text-white">Resuming draft...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Floating button to view drafted cards (also a drop zone) */}
         <button
           onClick={() => setShowMobileCards(true)}
-          className="lg:hidden fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-gold-500 hover:bg-gold-400 text-black font-semibold rounded-full shadow-lg shadow-gold-500/30 transition-all"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`fixed bottom-20 right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
+            isDragOver
+              ? 'bg-green-500 text-white scale-110 shadow-green-500/50 shadow-2xl ring-4 ring-green-400/50 ring-offset-2 ring-offset-yugi-darker'
+              : isDragging
+                ? 'bg-gold-400 text-black scale-105 shadow-gold-400/50 shadow-xl ring-2 ring-gold-300/50 animate-pulse'
+                : 'bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30'
+          }`}
         >
-          <span className="text-lg">📦</span>
-          <span>My Cards ({draftedCards.length})</span>
+          <Layers className={`w-5 h-5 ${isDragOver ? 'animate-bounce' : ''}`} />
+          <span>{isDragOver ? 'Drop to Pick!' : isDragging ? 'Drag Here!' : `My Cards (${draftedCards.length})`}</span>
         </button>
 
-        {/* Mobile drawer for viewing drafted cards */}
+        {/* Drawer for viewing drafted cards */}
         {showMobileCards && (
-          <div className="lg:hidden fixed inset-0 z-50">
+          <div className="fixed inset-0 z-50">
             {/* Backdrop */}
             <div
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -1077,6 +1332,150 @@ export function Draft() {
                 </div>
               </div>
 
+              {/* Stats and Filters - only show when not viewing a card */}
+              {!mobileViewCard && draftedCards.length > 0 && (
+                <div className="px-4 py-3 border-b border-yugi-border flex-shrink-0 space-y-3">
+                  {/* Stats Toggle & Summary */}
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setShowMyCardsStats(!showMyCardsStats)}
+                      className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      {showMyCardsStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      <span>Build Stats</span>
+                    </button>
+                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                      <span>Main: <span className="text-white font-medium">{myCardsStats.mainDeck}</span></span>
+                      <span>Extra: <span className="text-purple-400 font-medium">{myCardsStats.extraDeck}</span></span>
+                      <span>Avg: <span className="text-gold-400 font-medium">{myCardsStats.avgScore}</span></span>
+                    </div>
+                  </div>
+
+                  {/* Expanded Stats */}
+                  {showMyCardsStats && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      {/* Card Type Breakdown */}
+                      <div className="bg-yugi-card rounded-lg p-2">
+                        <div className="text-gray-400 mb-1">Card Types</div>
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between">
+                            <span className="text-orange-400">Monsters</span>
+                            <span className="text-white font-medium">{myCardsStats.monsters}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-green-400">Spells</span>
+                            <span className="text-white font-medium">{myCardsStats.spells}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-pink-400">Traps</span>
+                            <span className="text-white font-medium">{myCardsStats.traps}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Deck Split */}
+                      <div className="bg-yugi-card rounded-lg p-2">
+                        <div className="text-gray-400 mb-1">Deck Split</div>
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between">
+                            <span className="text-blue-400">Main Deck</span>
+                            <span className="text-white font-medium">{myCardsStats.mainDeck}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-purple-400">Extra Deck</span>
+                            <span className="text-white font-medium">{myCardsStats.extraDeck}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Tier Distribution */}
+                      <div className="bg-yugi-card rounded-lg p-2 col-span-2 sm:col-span-2">
+                        <div className="text-gray-400 mb-1">Tier Distribution</div>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {myCardsStats.tiers.S > 0 && (
+                            <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-[10px] font-bold">
+                              S: {myCardsStats.tiers.S}
+                            </span>
+                          )}
+                          {myCardsStats.tiers.A > 0 && (
+                            <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 rounded text-[10px] font-bold">
+                              A: {myCardsStats.tiers.A}
+                            </span>
+                          )}
+                          {myCardsStats.tiers.B > 0 && (
+                            <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-[10px] font-bold">
+                              B: {myCardsStats.tiers.B}
+                            </span>
+                          )}
+                          {myCardsStats.tiers.C > 0 && (
+                            <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-[10px] font-bold">
+                              C: {myCardsStats.tiers.C}
+                            </span>
+                          )}
+                          {myCardsStats.tiers.E > 0 && (
+                            <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded text-[10px] font-bold">
+                              E: {myCardsStats.tiers.E}
+                            </span>
+                          )}
+                          {myCardsStats.tiers.F > 0 && (
+                            <span className="px-1.5 py-0.5 bg-gray-500/20 text-gray-400 rounded text-[10px] font-bold">
+                              F: {myCardsStats.tiers.F}
+                            </span>
+                          )}
+                          {Object.values(myCardsStats.tiers).every(v => v === 0) && (
+                            <span className="text-gray-500 text-[10px]">No scored cards</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Search and Filter */}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {/* Search */}
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <input
+                        type="text"
+                        placeholder="Search cards..."
+                        value={myCardsSearch}
+                        onChange={(e) => setMyCardsSearch(e.target.value)}
+                        className="w-full bg-yugi-card border border-yugi-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Type Filter */}
+                    <div className="flex gap-1 overflow-x-auto">
+                      {(['all', 'monster', 'spell', 'trap', 'extra'] as const).map((filter) => (
+                        <button
+                          key={filter}
+                          onClick={() => setMyCardsFilter(filter)}
+                          className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                            myCardsFilter === filter
+                              ? 'bg-gold-500 text-black'
+                              : 'bg-yugi-card text-gray-400 hover:text-white border border-yugi-border'
+                          }`}
+                        >
+                          {filter === 'all' ? 'All' :
+                           filter === 'monster' ? `Monsters (${myCardsStats.monsters})` :
+                           filter === 'spell' ? `Spells (${myCardsStats.spells})` :
+                           filter === 'trap' ? `Traps (${myCardsStats.traps})` :
+                           `Extra (${myCardsStats.extraDeck})`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Filter results count */}
+                  {(myCardsFilter !== 'all' || myCardsSearch) && (
+                    <div className="text-xs text-gray-500">
+                      Showing {filteredDraftedCards.length} of {draftedCards.length} cards
+                      {myCardsSearch && ` matching "${myCardsSearch}"`}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Content - with proper touch scrolling */}
               <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {mobileViewCard ? (
@@ -1086,13 +1485,20 @@ export function Draft() {
                       <YuGiOhCard card={mobileViewCard} size="lg" showTier />
                     </div>
                     <div className="space-y-2">
-                      <h4 className="text-lg font-semibold" style={{ color: gameConfig.theme.primaryColor }}>{mobileViewCard.name}</h4>
+                      <h4 className="text-lg font-semibold" style={{ color: gameConfig.theme.primaryColor }}>
+                        {mobileViewCard.name}
+                        {hasErrata(mobileViewCard.id) && (
+                          <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
+                            PRE-ERRATA
+                          </span>
+                        )}
+                      </h4>
                       <p className="text-sm text-gray-300">{mobileViewCard.type}</p>
                       {/* Primary Stats from game config */}
                       {gameConfig.cardDisplay.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
                         <div className="flex flex-wrap items-center gap-3 text-sm">
                           {gameConfig.cardDisplay.primaryStats.map((stat, index) => {
-                            const value = stat.getValue({ ...mobileViewCard, attributes: mobileViewCard.attributes || {} });
+                            const value = stat.getValue(toCardWithAttributes(mobileViewCard));
                             if (!value) return null;
                             return (
                               <span key={index} className={stat.color || 'text-gray-300'}>
@@ -1106,7 +1512,7 @@ export function Draft() {
                       {gameConfig.cardDisplay.secondaryInfo && gameConfig.cardDisplay.secondaryInfo.length > 0 && (
                         <div className="flex flex-wrap items-center gap-3 text-sm">
                           {gameConfig.cardDisplay.secondaryInfo.map((info, index) => {
-                            const value = info.getValue({ ...mobileViewCard, attributes: mobileViewCard.attributes || {} });
+                            const value = info.getValue(toCardWithAttributes(mobileViewCard));
                             if (!value) return null;
                             return (
                               <span key={index} className={info.color || 'text-gray-400'}>
@@ -1119,24 +1525,62 @@ export function Draft() {
                       {mobileViewCard.score !== undefined && (
                         <p className="text-sm text-gray-400">Score: {mobileViewCard.score}/100</p>
                       )}
+                      {/* Description / Errata */}
                       <div className="pt-3 border-t border-yugi-border">
-                        <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{mobileViewCard.desc}</p>
+                        {(() => {
+                          const errata = getErrata(mobileViewCard.id);
+                          if (errata) {
+                            return (
+                              <div className="space-y-3">
+                                <div className="p-3 bg-purple-900/30 border border-purple-600 rounded">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded">
+                                      PRE-ERRATA
+                                    </span>
+                                    <span className="text-purple-300 text-xs font-medium">Use This Text</span>
+                                  </div>
+                                  <p className="text-sm text-white leading-relaxed">{errata.originalText}</p>
+                                  {errata.notes && (
+                                    <p className="text-xs text-purple-300 mt-2 italic">Note: {errata.notes}</p>
+                                  )}
+                                </div>
+                                {mobileViewCard.desc && (
+                                  <div>
+                                    <p className="text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
+                                    <p className="text-xs text-gray-400 leading-relaxed line-through opacity-60">
+                                      {mobileViewCard.desc}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+                          return mobileViewCard.desc ? (
+                            <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{mobileViewCard.desc}</p>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   </div>
                 ) : draftedCards.length > 0 ? (
                   /* Cards grid - larger cards for easier tapping */
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    {draftedCards.map((card) => (
-                      <div
-                        key={card.id}
-                        onClick={() => setMobileViewCard(card)}
-                        className="cursor-pointer active:scale-95 transition-transform"
-                      >
-                        <YuGiOhCard card={card} size="md" showTier />
-                      </div>
-                    ))}
-                  </div>
+                  filteredDraftedCards.length > 0 ? (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                      {filteredDraftedCards.map((card) => (
+                        <div
+                          key={card.id}
+                          onClick={() => setMobileViewCard(card)}
+                          className="cursor-pointer active:scale-95 transition-transform"
+                        >
+                          <YuGiOhCard card={card} size="md" showTier />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-40 flex items-center justify-center text-gray-500">
+                      No cards match your filter
+                    </div>
+                  )
                 ) : (
                   <div className="h-40 flex items-center justify-center text-gray-500">
                     No cards drafted yet
@@ -1146,6 +1590,178 @@ export function Draft() {
             </div>
           </div>
         )}
+
+        {/* Card Selection Bottom Sheet */}
+        {selectedCard && !hasPicked && (
+          <div className="fixed inset-0 z-[60] flex items-end justify-center">
+            <div
+              className="absolute inset-0 bg-black/80"
+              onClick={() => setSelectedCard(null)}
+            />
+            <div className="relative w-full max-h-[85vh] bg-yugi-darker rounded-t-2xl border-t border-yugi-border overflow-hidden">
+              {/* Handle bar */}
+              <div className="sticky top-0 bg-yugi-darker pt-3 pb-2 px-4 border-b border-yugi-border z-10">
+                <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-2" />
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-base truncate flex-1 mr-2" style={{ color: gameConfig.theme.primaryColor }}>
+                    {selectedCard.name}
+                    {hasErrata(selectedCard.id) && (
+                      <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
+                        PRE-ERRATA
+                      </span>
+                    )}
+                  </h3>
+                  <button
+                    onClick={() => setSelectedCard(null)}
+                    className="p-1 text-gray-400 hover:text-white text-xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 overflow-y-auto max-h-[calc(85vh-120px)]">
+                <div className="flex gap-4">
+                  {/* Card image */}
+                  <div className="flex-shrink-0">
+                    <YuGiOhCard card={selectedCard} size="md" showTier />
+                  </div>
+
+                  {/* Card info */}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <p className="text-sm text-gray-300">{selectedCard.type}</p>
+
+                    {/* Primary Stats (ATK/DEF) */}
+                    {gameConfig.cardDisplay.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
+                      <div className="flex flex-wrap gap-3 text-sm">
+                        {gameConfig.cardDisplay.primaryStats.map((stat, index) => {
+                          const value = stat.getValue(toCardWithAttributes(selectedCard));
+                          if (!value) return null;
+                          return (
+                            <span key={index} className={`font-semibold ${stat.color || 'text-gray-300'}`}>
+                              {stat.label}: {value}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Secondary Info (Level, Attribute, Type) */}
+                    {gameConfig.cardDisplay.secondaryInfo && gameConfig.cardDisplay.secondaryInfo.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {gameConfig.cardDisplay.secondaryInfo.map((info, index) => {
+                          const value = info.getValue(toCardWithAttributes(selectedCard));
+                          if (!value) return null;
+                          return (
+                            <span key={index} className={`px-2 py-1 bg-yugi-card rounded text-xs font-medium ${info.color || 'text-gray-300'}`}>
+                              {value}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Score */}
+                    {selectedCard.score !== undefined && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="text-xs text-gray-400">Score:</span>
+                        <span className="text-sm font-bold text-gold-400">
+                          {selectedCard.score}/100
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description / Errata */}
+                <div className="mt-4 pt-3 border-t border-yugi-border">
+                  {(() => {
+                    const errata = getErrata(selectedCard.id);
+                    if (errata) {
+                      return (
+                        <div className="space-y-3">
+                          <div className="p-3 bg-purple-900/30 border border-purple-600 rounded">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded">
+                                PRE-ERRATA
+                              </span>
+                              <span className="text-purple-300 text-xs font-medium">Use This Text</span>
+                            </div>
+                            <p className="text-sm text-white leading-relaxed">{errata.originalText}</p>
+                            {errata.notes && (
+                              <p className="text-xs text-purple-300 mt-2 italic">Note: {errata.notes}</p>
+                            )}
+                          </div>
+                          {selectedCard.desc && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
+                              <p className="text-xs text-gray-400 leading-relaxed line-through opacity-60">
+                                {selectedCard.desc}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return selectedCard.desc ? (
+                      <p className="text-sm text-gray-300 leading-relaxed">
+                        {selectedCard.desc}
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+
+              {/* Pick Button - sticky at bottom */}
+              <div className="sticky bottom-0 p-4 bg-yugi-darker border-t border-yugi-border">
+                <Button
+                  onClick={() => handlePickCard()}
+                  className="w-full py-3 text-lg"
+                  disabled={isPicking}
+                >
+                  {isPicking ? 'Picking...' : 'Pick This Card'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Leave Draft Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showLeaveModal}
+          onClose={() => setShowLeaveModal(false)}
+          onConfirm={() => {
+            setShowLeaveModal(false);
+            navigate('/');
+          }}
+          title="Leave Draft"
+          message="Are you sure you want to leave the draft? You can rejoin later if the draft is still in progress."
+          confirmText="Leave"
+          cancelText="Stay"
+        />
+
+        {/* Cancel Session Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showCancelModal}
+          onClose={() => !isCancelling && setShowCancelModal(false)}
+          onConfirm={async () => {
+            setIsCancelling(true);
+            try {
+              await draftService.cancelSession(sessionId!);
+              setShowCancelModal(false);
+              navigate('/');
+            } catch (err) {
+              console.error('Failed to cancel session:', err);
+              setIsCancelling(false);
+            }
+          }}
+          title="Cancel Session"
+          message="Are you sure you want to cancel this draft? This will end the session for all players and delete all data."
+          confirmText="Cancel Draft"
+          cancelText="Keep Draft"
+          variant="danger"
+          isLoading={isCancelling}
+        />
       </div>
     </Layout>
   );

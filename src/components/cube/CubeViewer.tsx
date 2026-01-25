@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { X, Filter, SortAsc } from 'lucide-react';
+import { X, Filter, SortAsc, ChevronDown, ChevronUp } from 'lucide-react';
 import { YuGiOhCard } from '../cards/YuGiOhCard';
 import { Button } from '../ui/Button';
 import { cubeService } from '../../services/cubeService';
@@ -9,6 +9,7 @@ import type { YuGiOhCard as YuGiOhCardType } from '../../types';
 import type { Card } from '../../types/card';
 import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
 import { cn, getTierFromScore } from '../../lib/utils';
+import { hasErrata, getErrata } from '../../data/cardErrata';
 
 // Energy type to color mapping for Pokemon
 const ENERGY_COLORS: Record<string, string> = {
@@ -25,6 +26,20 @@ const ENERGY_COLORS: Record<string, string> = {
   Colorless: '#A8A878',
 };
 
+/**
+ * Get contrast color (black or white) based on background color luminance
+ */
+function getContrastColor(hexColor: string): string {
+  // Remove # if present
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  // Calculate relative luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5 ? '#000000' : '#ffffff';
+}
+
 interface CubeViewerProps {
   cubeId: string;
   cubeName: string;
@@ -32,7 +47,7 @@ interface CubeViewerProps {
   onClose: () => void;
 }
 
-type TierFilter = 'all' | 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
+type TierFilter = 'all' | 'S' | 'A' | 'B' | 'C' | 'E' | 'F';
 
 // Card dimensions for grid calculation
 const CARD_WIDTH = 72; // w-16 + gap
@@ -51,7 +66,11 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [tierFilter, setTierFilter] = useState<TierFilter>('all');
-  const [attributeFilter, setAttributeFilter] = useState<string>('all');
+
+  // Advanced filter state
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<Record<string, Set<string>>>({});
+  const [rangeFilters, setRangeFilters] = useState<Record<string, [number, number]>>({});
 
   // Sort state - using game config sort options
   const [sortBy, setSortBy] = useState<string>('name');
@@ -140,15 +159,6 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     }
   }, [isOpen, previousGameId, setGame]);
 
-  // Get unique attributes from cards
-  const uniqueAttributes = useMemo(() => {
-    const attrs = new Set<string>();
-    cards.forEach(card => {
-      if (card.attribute) attrs.add(card.attribute);
-    });
-    return Array.from(attrs).sort();
-  }, [cards]);
-
   // Convert cards to generic Card type for filtering
   const cardsAsGeneric = useMemo(() => {
     return cards.map(card => ({
@@ -214,9 +224,68 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
       result = result.filter(card => getTierFromScore(card.score) === tierFilter);
     }
 
-    // Attribute filter
-    if (attributeFilter !== 'all') {
-      result = result.filter(card => card.attribute === attributeFilter);
+    // Advanced filters - multi-select groups
+    if (gameConfig.filterGroups && Object.keys(advancedFilters).length > 0) {
+      for (const [groupId, selectedOptions] of Object.entries(advancedFilters)) {
+        if (selectedOptions.size === 0) continue;
+
+        const group = gameConfig.filterGroups.find(g => g.id === groupId);
+        if (!group || !group.options) continue;
+
+        // Filter: card must match at least one selected option (OR logic within group)
+        result = result.filter(card => {
+          const genericCard: Card = {
+            id: card.id,
+            name: card.name,
+            type: card.type,
+            description: card.desc,
+            score: card.score,
+            attributes: card.attributes || {
+              atk: card.atk,
+              def: card.def,
+              level: card.level,
+              attribute: card.attribute,
+              race: card.race,
+              linkval: card.linkval,
+            },
+          };
+
+          return Array.from(selectedOptions).some(optionId => {
+            const option = group.options?.find(o => o.id === optionId);
+            return option ? option.filter(genericCard) : false;
+          });
+        });
+      }
+    }
+
+    // Advanced filters - range groups
+    if (gameConfig.filterGroups && Object.keys(rangeFilters).length > 0) {
+      for (const [groupId, [min, max]] of Object.entries(rangeFilters)) {
+        const group = gameConfig.filterGroups.find(g => g.id === groupId);
+        if (!group || !group.rangeConfig) continue;
+
+        result = result.filter(card => {
+          const genericCard: Card = {
+            id: card.id,
+            name: card.name,
+            type: card.type,
+            description: card.desc,
+            score: card.score,
+            attributes: card.attributes || {
+              atk: card.atk,
+              def: card.def,
+              level: card.level,
+              attribute: card.attribute,
+              race: card.race,
+              linkval: card.linkval,
+            },
+          };
+
+          const value = group.rangeConfig!.getValue(genericCard);
+          if (value === undefined) return false;
+          return value >= min && value <= max;
+        });
+      }
     }
 
     // Sort - use game config sort options
@@ -266,7 +335,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     }
 
     return result;
-  }, [cards, search, typeFilter, tierFilter, attributeFilter, sortBy, sortDir, gameConfig]);
+  }, [cards, search, typeFilter, tierFilter, advancedFilters, rangeFilters, sortBy, sortDir, gameConfig]);
 
   // Group cards into rows for virtualization
   const rows = useMemo(() => {
@@ -308,6 +377,54 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     return result;
   }, [cards, cardsAsGeneric, gameConfig]);
 
+  // Toggle an option in a multi-select filter group
+  const toggleFilterOption = useCallback((groupId: string, optionId: string) => {
+    setAdvancedFilters(prev => {
+      const newFilters = { ...prev };
+      const groupSet = new Set(prev[groupId] || []);
+
+      if (groupSet.has(optionId)) {
+        groupSet.delete(optionId);
+      } else {
+        groupSet.add(optionId);
+      }
+
+      if (groupSet.size === 0) {
+        delete newFilters[groupId];
+      } else {
+        newFilters[groupId] = groupSet;
+      }
+
+      return newFilters;
+    });
+  }, []);
+
+  // Update range filter
+  const updateRangeFilter = useCallback((groupId: string, min: number, max: number) => {
+    setRangeFilters(prev => ({
+      ...prev,
+      [groupId]: [min, max],
+    }));
+  }, []);
+
+  // Clear all advanced filters
+  const clearAdvancedFilters = useCallback(() => {
+    setAdvancedFilters({});
+    setRangeFilters({});
+  }, []);
+
+  // Count active advanced filters
+  const activeAdvancedFilterCount = useMemo(() => {
+    let count = Object.values(advancedFilters).reduce((sum, set) => sum + set.size, 0);
+    count += Object.keys(rangeFilters).length;
+    return count;
+  }, [advancedFilters, rangeFilters]);
+
+  // Reset advanced filters when game changes
+  useEffect(() => {
+    clearAdvancedFilters();
+  }, [currentGameId, clearAdvancedFilters]);
+
   if (!isOpen) return null;
 
   return (
@@ -344,24 +461,33 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
         </div>
 
         {/* Filters & Sort */}
-        <div className="p-4 border-b border-yugi-border bg-yugi-dark/50">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search */}
+        <div className="p-2 sm:p-4 border-b border-yugi-border bg-yugi-dark/50">
+          {/* Search - full width on mobile */}
+          <input
+            type="text"
+            placeholder="Search cards..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full sm:hidden bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none mb-2"
+          />
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* Search - inline on desktop */}
             <input
               type="text"
               placeholder="Search cards..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none w-48"
+              className="hidden sm:block bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none w-48"
             />
 
             {/* Type Filter - Game specific */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Filter className="w-4 h-4 text-gray-400 hidden sm:block" />
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
+                className="bg-yugi-card border border-yugi-border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
               >
                 {gameConfig.filterOptions?.map(option => (
                   <option key={option.id} value={option.id}>
@@ -375,38 +501,46 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             <select
               value={tierFilter}
               onChange={(e) => setTierFilter(e.target.value as TierFilter)}
-              className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
+              className="bg-yugi-card border border-yugi-border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
             >
               <option value="all">All Tiers</option>
               <option value="S">S Tier</option>
               <option value="A">A Tier</option>
               <option value="B">B Tier</option>
               <option value="C">C Tier</option>
-              <option value="D">D Tier</option>
+              <option value="E">E Tier</option>
               <option value="F">F Tier</option>
             </select>
 
-            {/* Attribute Filter */}
-            {uniqueAttributes.length > 0 && (
-              <select
-                value={attributeFilter}
-                onChange={(e) => setAttributeFilter(e.target.value)}
-                className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
+            {/* Advanced Filters Toggle */}
+            {gameConfig.filterGroups && gameConfig.filterGroups.length > 0 && (
+              <button
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className={cn(
+                  "flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border text-sm transition-colors",
+                  showAdvancedFilters || activeAdvancedFilterCount > 0
+                    ? "border-gold-500 text-gold-400 bg-gold-500/10"
+                    : "border-yugi-border text-gray-400 hover:border-gold-500 hover:text-gold-400"
+                )}
               >
-                <option value="all">All Attributes</option>
-                {uniqueAttributes.map(attr => (
-                  <option key={attr} value={attr}>{attr}</option>
-                ))}
-              </select>
+                <Filter className="w-4 h-4" />
+                <span className="hidden sm:inline">Advanced</span>
+                {activeAdvancedFilterCount > 0 && (
+                  <span className="bg-gold-500 text-yugi-darker text-xs font-bold px-1.5 py-0.5 rounded-full">
+                    {activeAdvancedFilterCount}
+                  </span>
+                )}
+                {showAdvancedFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
             )}
 
             {/* Sort - Game specific */}
-            <div className="flex items-center gap-2 ml-auto">
-              <SortAsc className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+              <SortAsc className="w-4 h-4 text-gray-400 hidden sm:block" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
+                className="bg-yugi-card border border-yugi-border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
               >
                 {gameConfig.sortOptions?.map(option => (
                   <option key={option.id} value={option.id}>
@@ -417,7 +551,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
               <button
                 onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}
                 className={cn(
-                  "p-2 rounded-lg border border-yugi-border text-sm transition-colors",
+                  "p-1.5 sm:p-2 rounded-lg border border-yugi-border text-sm transition-colors",
                   "hover:border-gold-500 hover:text-gold-400"
                 )}
               >
@@ -426,9 +560,126 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             </div>
           </div>
 
+          {/* Advanced Filters Panel */}
+          {showAdvancedFilters && gameConfig.filterGroups && (
+            <div className="mt-2 sm:mt-4 p-2 sm:p-4 bg-yugi-card rounded-lg border border-yugi-border">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-white">Advanced Filters</h4>
+                {activeAdvancedFilterCount > 0 && (
+                  <button
+                    onClick={clearAdvancedFilters}
+                    className="text-xs text-gray-400 hover:text-gold-400 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {gameConfig.filterGroups.map((group) => (
+                  <div key={group.id} className="space-y-2">
+                    <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                      {group.label}
+                    </label>
+
+                    {/* Multi-select filter group */}
+                    {group.type === 'multi-select' && group.options && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {group.options.map((option) => {
+                          const isSelected = advancedFilters[group.id]?.has(option.id) ?? false;
+                          return (
+                            <button
+                              key={option.id}
+                              onClick={() => toggleFilterOption(group.id, option.id)}
+                              className={cn(
+                                "px-2 py-1 rounded text-xs font-medium transition-all",
+                                isSelected
+                                  ? "ring-2 ring-gold-400 ring-offset-1 ring-offset-yugi-dark"
+                                  : "hover:opacity-80"
+                              )}
+                              style={{
+                                backgroundColor: option.color
+                                  ? isSelected
+                                    ? option.color
+                                    : `${option.color}40`
+                                  : isSelected
+                                    ? '#fbbf24'
+                                    : '#374151',
+                                color: option.color && option.id !== 'B' && option.id !== 'DARK'
+                                  ? isSelected
+                                    ? getContrastColor(option.color)
+                                    : '#fff'
+                                  : '#fff',
+                              }}
+                              title={option.label}
+                            >
+                              {option.shortLabel || option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Range filter group */}
+                    {group.type === 'range' && group.rangeConfig && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={group.rangeConfig.min}
+                            max={group.rangeConfig.max}
+                            step={group.rangeConfig.step || 1}
+                            value={rangeFilters[group.id]?.[0] ?? group.rangeConfig.min}
+                            onChange={(e) => updateRangeFilter(
+                              group.id,
+                              Number(e.target.value),
+                              rangeFilters[group.id]?.[1] ?? group.rangeConfig!.max
+                            )}
+                            className="w-20 bg-yugi-darker border border-yugi-border rounded px-2 py-1 text-sm text-white focus:border-gold-500 focus:outline-none"
+                          />
+                          <span className="text-gray-400">to</span>
+                          <input
+                            type="number"
+                            min={group.rangeConfig.min}
+                            max={group.rangeConfig.max}
+                            step={group.rangeConfig.step || 1}
+                            value={rangeFilters[group.id]?.[1] ?? group.rangeConfig.max}
+                            onChange={(e) => updateRangeFilter(
+                              group.id,
+                              rangeFilters[group.id]?.[0] ?? group.rangeConfig!.min,
+                              Number(e.target.value)
+                            )}
+                            className="w-20 bg-yugi-darker border border-yugi-border rounded px-2 py-1 text-sm text-white focus:border-gold-500 focus:outline-none"
+                          />
+                          {rangeFilters[group.id] && (
+                            <button
+                              onClick={() => {
+                                setRangeFilters(prev => {
+                                  const newFilters = { ...prev };
+                                  delete newFilters[group.id];
+                                  return newFilters;
+                                });
+                              }}
+                              className="text-xs text-gray-400 hover:text-red-400"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Results count */}
-          <div className="mt-2 text-sm text-gray-400">
+          <div className="mt-2 text-xs sm:text-sm text-gray-400">
             Showing {filteredCards.length} of {cards.length} cards
+            {activeAdvancedFilterCount > 0 && (
+              <span className="text-gold-400 hidden sm:inline"> ({activeAdvancedFilterCount} filter{activeAdvancedFilterCount !== 1 ? 's' : ''} active)</span>
+            )}
           </div>
         </div>
 
@@ -437,7 +688,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
           {/* Card Grid - Virtualized */}
           <div
             ref={gridContainerRef}
-            className="flex-1 overflow-y-auto p-4 custom-scrollbar"
+            className="flex-1 overflow-y-auto p-2 sm:p-4 custom-scrollbar"
           >
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
@@ -491,15 +742,20 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             )}
           </div>
 
-          {/* Card Detail Sidebar */}
+          {/* Card Detail Sidebar - Desktop only */}
           {selectedCard && (
-            <div className="w-72 border-l border-yugi-border p-4 overflow-y-auto bg-yugi-dark/50 custom-scrollbar">
+            <div className="hidden md:block w-72 border-l border-yugi-border p-4 overflow-y-auto bg-yugi-dark/50 custom-scrollbar">
               <div className="flex justify-center mb-4">
                 <YuGiOhCard card={selectedCard} size="lg" showTier />
               </div>
 
               <h3 className="font-bold text-gold-400 text-lg mb-1">
                 {selectedCard.name}
+                {hasErrata(selectedCard.id) && (
+                  <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
+                    PRE-ERRATA
+                  </span>
+                )}
               </h3>
               <p className="text-sm text-gray-300 mb-3">{selectedCard.type}</p>
 
@@ -636,9 +892,38 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
               {/* Description (for non-Pokemon or additional text) */}
               {(gameConfig.id !== 'pokemon' || selectedCard.desc) && (
                 <div className="border-t border-yugi-border pt-3">
-                  <p className="text-xs text-gray-300 leading-relaxed">
-                    {selectedCard.desc || 'No description available.'}
-                  </p>
+                  {(() => {
+                    const errata = getErrata(selectedCard.id);
+                    if (errata) {
+                      return (
+                        <div className="space-y-3">
+                          <div className="p-2 bg-purple-900/30 border border-purple-600 rounded">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] font-bold rounded">
+                                PRE-ERRATA
+                              </span>
+                              <span className="text-purple-300 text-[10px] font-medium">Use This Text</span>
+                            </div>
+                            <p className="text-xs text-white leading-relaxed">{errata.originalText}</p>
+                            {errata.notes && (
+                              <p className="text-[10px] text-purple-300 mt-1 italic">Note: {errata.notes}</p>
+                            )}
+                          </div>
+                          {selectedCard.desc && (
+                            <div>
+                              <p className="text-[10px] text-gray-500 mb-1">Current Errata'd Text:</p>
+                              <p className="text-xs text-gray-400 leading-relaxed">{selectedCard.desc}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return (
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        {selectedCard.desc || 'No description available.'}
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -652,6 +937,165 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             </div>
           )}
         </div>
+
+        {/* Mobile Card Detail Modal */}
+        {selectedCard && (
+          <div className="md:hidden fixed inset-0 z-[60] flex items-end justify-center">
+            <div
+              className="absolute inset-0 bg-black/80"
+              onClick={() => setSelectedCard(null)}
+            />
+            <div className="relative w-full max-h-[85vh] bg-yugi-darker rounded-t-2xl border-t border-yugi-border overflow-y-auto custom-scrollbar">
+              {/* Handle bar */}
+              <div className="sticky top-0 bg-yugi-darker pt-3 pb-2 px-4 border-b border-yugi-border">
+                <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-2" />
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-gold-400 text-base truncate flex-1 mr-2">
+                    {selectedCard.name}
+                    {hasErrata(selectedCard.id) && (
+                      <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
+                        PRE-ERRATA
+                      </span>
+                    )}
+                  </h3>
+                  <button
+                    onClick={() => setSelectedCard(null)}
+                    className="p-1 text-gray-400 hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4">
+                <div className="flex gap-4">
+                  {/* Card image */}
+                  <div className="flex-shrink-0">
+                    <YuGiOhCard card={selectedCard} size="md" showTier />
+                  </div>
+
+                  {/* Card info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-300 mb-2">{selectedCard.type}</p>
+
+                    {/* Primary Stats */}
+                    {gameConfig.cardDisplay?.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2 text-sm">
+                        {gameConfig.cardDisplay?.primaryStats?.map(stat => {
+                          const genericCard: Card = {
+                            id: selectedCard.id,
+                            name: selectedCard.name,
+                            type: selectedCard.type,
+                            description: selectedCard.desc,
+                            score: selectedCard.score,
+                            attributes: selectedCard.attributes || {
+                              atk: selectedCard.atk,
+                              def: selectedCard.def,
+                              level: selectedCard.level,
+                              attribute: selectedCard.attribute,
+                              race: selectedCard.race,
+                              linkval: selectedCard.linkval,
+                            },
+                          };
+                          const value = stat.getValue(genericCard);
+                          if (!value) return null;
+                          return (
+                            <span key={stat.label} className={stat.color}>
+                              {stat.label}: {value}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Secondary Info */}
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {gameConfig.cardDisplay?.secondaryInfo?.map(info => {
+                        const genericCard: Card = {
+                          id: selectedCard.id,
+                          name: selectedCard.name,
+                          type: selectedCard.type,
+                          description: selectedCard.desc,
+                          score: selectedCard.score,
+                          attributes: selectedCard.attributes || {
+                            atk: selectedCard.atk,
+                            def: selectedCard.def,
+                            level: selectedCard.level,
+                            attribute: selectedCard.attribute,
+                            race: selectedCard.race,
+                            linkval: selectedCard.linkval,
+                          },
+                        };
+                        const value = info.getValue(genericCard);
+                        if (!value) return null;
+                        return (
+                          <span key={info.label} className="px-2 py-0.5 bg-yugi-card rounded text-xs text-gray-300">
+                            {value}
+                          </span>
+                        );
+                      })}
+                    </div>
+
+                    {/* Score */}
+                    {selectedCard.score !== undefined && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">Score:</span>
+                        <span className={cn(
+                          "text-xs font-bold",
+                          selectedCard.score >= 90 ? 'text-red-400' :
+                          selectedCard.score >= 75 ? 'text-orange-400' :
+                          selectedCard.score >= 60 ? 'text-yellow-400' :
+                          selectedCard.score >= 45 ? 'text-green-400' :
+                          selectedCard.score >= 30 ? 'text-blue-400' : 'text-gray-400'
+                        )}>
+                          {selectedCard.score}/100 ({getTierFromScore(selectedCard.score)})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description */}
+                {(gameConfig.id !== 'pokemon' || selectedCard.desc) && (
+                  <div className="mt-4 pt-3 border-t border-yugi-border">
+                    {(() => {
+                      const errata = getErrata(selectedCard.id);
+                      if (errata) {
+                        return (
+                          <div className="space-y-3">
+                            <div className="p-2 bg-purple-900/30 border border-purple-600 rounded">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] font-bold rounded">
+                                  PRE-ERRATA
+                                </span>
+                                <span className="text-purple-300 text-[10px] font-medium">Use This Text</span>
+                              </div>
+                              <p className="text-xs text-white leading-relaxed">{errata.originalText}</p>
+                              {errata.notes && (
+                                <p className="text-[10px] text-purple-300 mt-1 italic">Note: {errata.notes}</p>
+                              )}
+                            </div>
+                            {selectedCard.desc && (
+                              <div>
+                                <p className="text-[10px] text-gray-500 mb-1">Current Errata'd Text:</p>
+                                <p className="text-xs text-gray-400 leading-relaxed">{selectedCard.desc}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <p className="text-xs text-gray-300 leading-relaxed">
+                          {selectedCard.desc || 'No description available.'}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="p-4 border-t border-yugi-border flex justify-end">

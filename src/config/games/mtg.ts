@@ -1,4 +1,4 @@
-import type { GameConfig, DeckZone, ExportFormat, BasicResource } from '../gameConfig';
+import type { GameConfig, DeckZone, ExportFormat, BasicResource, FilterGroup } from '../gameConfig';
 import type { Card } from '../../types/card';
 
 /**
@@ -78,6 +78,59 @@ function isLand(card: Card): boolean {
 }
 
 /**
+ * Check if card is an artifact
+ */
+function isArtifact(card: Card): boolean {
+  return card.type.toLowerCase().includes('artifact');
+}
+
+/**
+ * Check if card is an enchantment
+ */
+function isEnchantment(card: Card): boolean {
+  return card.type.toLowerCase().includes('enchantment');
+}
+
+/**
+ * Check if card is a planeswalker
+ */
+function isPlaneswalker(card: Card): boolean {
+  return card.type.toLowerCase().includes('planeswalker');
+}
+
+/**
+ * Check if card is an instant
+ */
+function isInstant(card: Card): boolean {
+  return card.type.toLowerCase().includes('instant');
+}
+
+/**
+ * Check if card is a sorcery
+ */
+function isSorcery(card: Card): boolean {
+  return card.type.toLowerCase().includes('sorcery');
+}
+
+/**
+ * Color check helpers
+ */
+function hasColor(card: Card, color: string): boolean {
+  const attrs = card.attributes as MTGCardAttributes;
+  return attrs.colors?.includes(color) ?? false;
+}
+
+function isColorless(card: Card): boolean {
+  const attrs = card.attributes as MTGCardAttributes;
+  return !attrs.colors || attrs.colors.length === 0;
+}
+
+function isMulticolor(card: Card): boolean {
+  const attrs = card.attributes as MTGCardAttributes;
+  return (attrs.colors?.length ?? 0) > 1;
+}
+
+/**
  * Generate MTG Arena format export
  */
 function generateArenaFormat(cards: Card[]): string {
@@ -130,6 +183,52 @@ export const MTG_CARD_TYPES = [
 const MTG_BOT_NAMES = [
   'Jace Bot', 'Liliana Bot', 'Chandra Bot', 'Nissa Bot',
   'Gideon Bot', 'Ajani Bot', 'Sorin Bot', 'Elspeth Bot',
+];
+
+/**
+ * MTG Filter Groups for advanced filtering
+ */
+const mtgFilterGroups: FilterGroup[] = [
+  {
+    id: 'colors',
+    label: 'Colors',
+    type: 'multi-select',
+    options: [
+      { id: 'W', label: 'White', shortLabel: 'W', color: '#F9FAF4', filter: (c) => hasColor(c, 'W') },
+      { id: 'U', label: 'Blue', shortLabel: 'U', color: '#0E68AB', filter: (c) => hasColor(c, 'U') },
+      { id: 'B', label: 'Black', shortLabel: 'B', color: '#150B00', filter: (c) => hasColor(c, 'B') },
+      { id: 'R', label: 'Red', shortLabel: 'R', color: '#D3202A', filter: (c) => hasColor(c, 'R') },
+      { id: 'G', label: 'Green', shortLabel: 'G', color: '#00733E', filter: (c) => hasColor(c, 'G') },
+      { id: 'C', label: 'Colorless', shortLabel: 'C', color: '#A0A0A0', filter: isColorless },
+      { id: 'M', label: 'Multicolor', shortLabel: 'M', color: '#CFB53B', filter: isMulticolor },
+    ],
+  },
+  {
+    id: 'cardTypes',
+    label: 'Card Type',
+    type: 'multi-select',
+    options: [
+      { id: 'creature', label: 'Creature', filter: isCreature },
+      { id: 'instant', label: 'Instant', filter: isInstant },
+      { id: 'sorcery', label: 'Sorcery', filter: isSorcery },
+      { id: 'enchantment', label: 'Enchantment', filter: isEnchantment },
+      { id: 'artifact', label: 'Artifact', filter: isArtifact },
+      { id: 'planeswalker', label: 'Planeswalker', filter: isPlaneswalker },
+      { id: 'land', label: 'Land', filter: isLand },
+    ],
+  },
+  {
+    id: 'cmc',
+    label: 'Mana Value',
+    type: 'range',
+    rangeConfig: {
+      min: 0,
+      max: 16,
+      step: 1,
+      getValue: (card) => (card.attributes as MTGCardAttributes).cmc,
+      formatValue: (v) => v.toString(),
+    },
+  },
 ];
 
 /**
@@ -357,6 +456,8 @@ export const mtgConfig: GameConfig = {
     { id: 'spells', label: 'Spells', filter: isSpell },
     { id: 'lands', label: 'Lands', filter: isLand },
   ],
+
+  filterGroups: mtgFilterGroups,
 
   sortOptions: [
     { id: 'name', label: 'Name', compare: (a, b) => a.name.localeCompare(b.name) },

@@ -115,6 +115,49 @@ export interface SortOption {
 }
 
 /**
+ * Filter group type - determines how the filter is rendered
+ */
+export type FilterGroupType = 'multi-select' | 'single-select' | 'range';
+
+/**
+ * Option for multi-select or single-select filter groups
+ */
+export interface FilterGroupOption {
+  id: string;
+  label: string;
+  /** Short label for compact display (e.g., "W" for "White") */
+  shortLabel?: string;
+  /** Color for visual representation */
+  color?: string;
+  filter: (card: Card) => boolean;
+}
+
+/**
+ * Range filter configuration
+ */
+export interface RangeFilterConfig {
+  min: number;
+  max: number;
+  step?: number;
+  getValue: (card: Card) => number | undefined;
+  /** Format the value for display */
+  formatValue?: (value: number) => string;
+}
+
+/**
+ * Advanced filter group for game-specific filtering
+ */
+export interface FilterGroup {
+  id: string;
+  label: string;
+  type: FilterGroupType;
+  /** Options for multi-select or single-select types */
+  options?: FilterGroupOption[];
+  /** Configuration for range type */
+  rangeConfig?: RangeFilterConfig;
+}
+
+/**
  * Basic resource card (e.g., Basic Lands in MTG, Basic Energy in Pokemon)
  * These are freely available after drafting and not drafted themselves
  */
@@ -176,6 +219,9 @@ export interface GameConfig {
 
   /** Filter options for the card filter UI */
   filterOptions?: FilterOption[];
+
+  /** Advanced filter groups for detailed filtering */
+  filterGroups?: FilterGroup[];
 
   /** Sort options for the card sort UI */
   sortOptions?: SortOption[];

@@ -1,4 +1,4 @@
-import type { GameConfig, DeckZone, ExportFormat, BasicResource } from '../gameConfig';
+import type { GameConfig, DeckZone, ExportFormat, BasicResource, FilterGroup } from '../gameConfig';
 import type { Card } from '../../types/card';
 
 /**
@@ -114,6 +114,38 @@ function isBasicPokemon(card: Card): boolean {
 }
 
 /**
+ * Check if card is Stage 1 Pokemon
+ */
+function isStage1Pokemon(card: Card): boolean {
+  const attrs = card.attributes as PokemonCardAttributes;
+  return isPokemon(card) && (attrs.stage === 'Stage 1' || card.type.toLowerCase().includes('stage 1'));
+}
+
+/**
+ * Check if card is Stage 2 Pokemon
+ */
+function isStage2Pokemon(card: Card): boolean {
+  const attrs = card.attributes as PokemonCardAttributes;
+  return isPokemon(card) && (attrs.stage === 'Stage 2' || card.type.toLowerCase().includes('stage 2'));
+}
+
+/**
+ * Check if card is a V/VMAX/ex Pokemon
+ */
+function isSpecialPokemon(card: Card): boolean {
+  const type = card.type.toLowerCase();
+  return type.includes(' v') || type.includes('vmax') || type.includes(' ex');
+}
+
+/**
+ * Energy type check helper
+ */
+function hasEnergyType(card: Card, energyType: string): boolean {
+  const attrs = card.attributes as PokemonCardAttributes;
+  return attrs.energyType === energyType;
+}
+
+/**
  * Generate PTCGO format export
  */
 function generatePTCGOFormat(cards: Card[]): string {
@@ -180,6 +212,46 @@ export const POKEMON_ENERGY_TYPES = [
 const POKEMON_BOT_NAMES = [
   'Professor Oak', 'Professor Elm', 'Professor Birch', 'Professor Rowan',
   'Cynthia Bot', 'Red Bot', 'Blue Bot', 'Ash Bot',
+];
+
+/**
+ * Pokemon Filter Groups for advanced filtering
+ */
+const pokemonFilterGroups: FilterGroup[] = [
+  {
+    id: 'energyType',
+    label: 'Energy Type',
+    type: 'multi-select',
+    options: POKEMON_ENERGY_TYPES.map(type => ({
+      id: type.toLowerCase(),
+      label: type,
+      color: ENERGY_COLORS[type],
+      filter: (c: Card) => hasEnergyType(c, type),
+    })),
+  },
+  {
+    id: 'stage',
+    label: 'Stage',
+    type: 'multi-select',
+    options: [
+      { id: 'basic', label: 'Basic', color: '#4ADE80', filter: isBasicPokemon },
+      { id: 'stage1', label: 'Stage 1', color: '#60A5FA', filter: isStage1Pokemon },
+      { id: 'stage2', label: 'Stage 2', color: '#A78BFA', filter: isStage2Pokemon },
+      { id: 'special', label: 'V/VMAX/ex', color: '#F472B6', filter: isSpecialPokemon },
+    ],
+  },
+  {
+    id: 'hp',
+    label: 'HP',
+    type: 'range',
+    rangeConfig: {
+      min: 30,
+      max: 340,
+      step: 10,
+      getValue: (card) => (card.attributes as PokemonCardAttributes).hp,
+      formatValue: (v) => `${v} HP`,
+    },
+  },
 ];
 
 /**
@@ -445,6 +517,8 @@ export const pokemonConfig: GameConfig = {
     { id: 'energy', label: 'Energy', filter: isEnergy },
     { id: 'basic', label: 'Basic Pokemon', filter: isBasicPokemon },
   ],
+
+  filterGroups: pokemonFilterGroups,
 
   sortOptions: [
     { id: 'name', label: 'Name', compare: (a, b) => a.name.localeCompare(b.name) },

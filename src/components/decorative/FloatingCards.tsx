@@ -82,16 +82,22 @@ const ICONIC_CARDS: IconicCard[] = [
   { id: 'pkmn-snorlax', name: 'Snorlax', game: 'pokemon', imageUrl: 'https://images.pokemontcg.io/base2/11_hires.png' },
 ];
 
-// Lane configuration - 6 lanes avoiding center content
+// Lane configuration - 12 lanes avoiding center content (doubled from 6)
 const LANES = [
-  // Left side - 3 lanes
-  { position: 4, side: 'left' as const, depth: 'background' as const, direction: 'up' as const },
-  { position: 10, side: 'left' as const, depth: 'foreground' as const, direction: 'down' as const },
-  { position: 16, side: 'left' as const, depth: 'midground' as const, direction: 'up' as const },
-  // Right side - 3 lanes
-  { position: 84, side: 'right' as const, depth: 'midground' as const, direction: 'down' as const },
-  { position: 90, side: 'right' as const, depth: 'foreground' as const, direction: 'up' as const },
-  { position: 96, side: 'right' as const, depth: 'background' as const, direction: 'down' as const },
+  // Left side - 6 lanes
+  { position: 2, side: 'left' as const, depth: 'background' as const, direction: 'up' as const },
+  { position: 6, side: 'left' as const, depth: 'foreground' as const, direction: 'down' as const },
+  { position: 10, side: 'left' as const, depth: 'midground' as const, direction: 'up' as const },
+  { position: 14, side: 'left' as const, depth: 'background' as const, direction: 'down' as const },
+  { position: 18, side: 'left' as const, depth: 'foreground' as const, direction: 'up' as const },
+  { position: 22, side: 'left' as const, depth: 'midground' as const, direction: 'down' as const },
+  // Right side - 6 lanes
+  { position: 78, side: 'right' as const, depth: 'midground' as const, direction: 'up' as const },
+  { position: 82, side: 'right' as const, depth: 'foreground' as const, direction: 'down' as const },
+  { position: 86, side: 'right' as const, depth: 'background' as const, direction: 'up' as const },
+  { position: 90, side: 'right' as const, depth: 'midground' as const, direction: 'down' as const },
+  { position: 94, side: 'right' as const, depth: 'foreground' as const, direction: 'up' as const },
+  { position: 98, side: 'right' as const, depth: 'background' as const, direction: 'down' as const },
 ];
 
 // Layer visual properties
@@ -147,6 +153,7 @@ interface FloatingCardData {
   hasRotation: boolean;
   isCardBack: boolean;
   createdAt: number;
+  startDelay: number; // Negative value to start partway through animation
 }
 
 const FloatingCard = memo(function FloatingCard({
@@ -165,12 +172,14 @@ const FloatingCard = memo(function FloatingCard({
 
   // Trigger removal when animation completes
   useEffect(() => {
+    // Account for startDelay (negative value means we skip ahead)
+    const remainingTime = card.duration + card.startDelay; // startDelay is negative
     const timer = setTimeout(() => {
       onComplete(card.id);
-    }, (card.duration + 2) * 1000); // Add buffer for fade out
+    }, (remainingTime + 2) * 1000); // Add buffer for fade out
 
     return () => clearTimeout(timer);
-  }, [card.id, card.duration, onComplete]);
+  }, [card.id, card.duration, card.startDelay, onComplete]);
 
   // Don't render if image failed to load
   if (hasError) return null;
@@ -189,6 +198,7 @@ const FloatingCard = memo(function FloatingCard({
         transform: `translateX(-50%)`,
         zIndex: card.zIndex,
         animation: `float-${card.direction}-enhanced ${card.duration}s linear forwards`,
+        animationDelay: card.startDelay !== 0 ? `${card.startDelay}s` : undefined,
       }}
     >
       <div
@@ -230,7 +240,8 @@ export function FloatingCards() {
   const isVisible = useRef(true);
 
   // Generate a new card for a specific lane
-  const generateCard = useCallback((laneIndex: number): FloatingCardData => {
+  // startOffset: 0-1 value indicating how far through animation to start (for initial cards)
+  const generateCard = useCallback((laneIndex: number, startOffset = 0): FloatingCardData => {
     const lane = LANES[laneIndex];
     const config = LAYER_CONFIG[lane.depth];
 
@@ -247,6 +258,9 @@ export function FloatingCards() {
     }
 
     const isCardBack = Math.random() < CONFIG.cardBackChance;
+    const duration = randomInRange(config.durationRange[0], config.durationRange[1]);
+    // Negative delay makes animation start partway through
+    const startDelay = startOffset > 0 ? -(duration * startOffset) : 0;
 
     return {
       id: `${selectedCard.id}-${Date.now()}-${Math.random()}`,
@@ -260,13 +274,14 @@ export function FloatingCards() {
       direction: lane.direction,
       scale: randomInRange(config.scaleRange[0], config.scaleRange[1]),
       opacity: randomInRange(config.opacityRange[0], config.opacityRange[1]),
-      duration: randomInRange(config.durationRange[0], config.durationRange[1]),
+      duration,
       blur: config.blur,
       zIndex: config.zIndex,
       hasGlow: !isCardBack && Math.random() < config.glowChance, // No glow on card backs
       hasRotation: Math.random() < config.rotateChance,
       isCardBack,
       createdAt: Date.now(),
+      startDelay,
     };
   }, []);
 
@@ -275,9 +290,10 @@ export function FloatingCards() {
     setCards(prev => prev.filter(c => c.id !== id));
   }, []);
 
-  // Initial generation - one card per lane
+  // Initial generation - one card per lane with staggered positions
   useEffect(() => {
-    const initialCards = LANES.map((_, index) => generateCard(index));
+    // Give each initial card a random start offset (0.1-0.7) so they appear already on screen
+    const initialCards = LANES.map((_, index) => generateCard(index, randomInRange(0.1, 0.7)));
     setCards(initialCards);
   }, [generateCard]);
 
@@ -291,7 +307,7 @@ export function FloatingCards() {
         const occupiedLanes = new Set(prev.map(c => c.laneIndex));
         const emptyLanes = LANES.map((_, i) => i).filter(i => !occupiedLanes.has(i));
 
-        if (emptyLanes.length === 0 || prev.length >= 6) return prev;
+        if (emptyLanes.length === 0 || prev.length >= 12) return prev;
 
         // Balance left/right - prefer the side with fewer cards
         const leftCount = prev.filter(c => c.position < 50).length;
@@ -337,7 +353,7 @@ export function FloatingCards() {
 
   return (
     <div
-      className="fixed inset-0 overflow-hidden pointer-events-none"
+      className="hidden md:block fixed inset-0 overflow-hidden pointer-events-none"
       style={{ bottom: 80, contain: 'layout paint' }}
       aria-hidden="true"
     >

@@ -73,44 +73,87 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }), []);
 
   /**
-   * Fetch user profile from database
+   * Fetch user profile from database with timeout
    */
   const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), 5000);
+    });
 
-    if (error || !data) {
-      console.error('Failed to fetch user profile:', error);
-      return null;
-    }
+    const queryPromise = Promise.resolve(
+      supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+    )
+      .then(({ data, error }) => {
+        if (error || !data) return null;
+        return rowToProfile(data as UserProfileRow);
+      })
+      .catch(() => null);
 
-    return rowToProfile(data as UserProfileRow);
+    return Promise.race([queryPromise, timeoutPromise]);
   }, [supabase, rowToProfile]);
 
   /**
    * Handle session change
    */
   const handleSession = useCallback(async (session: Session | null) => {
-    if (session?.user) {
-      const profile = await fetchUserProfile(session.user.id);
-      setState(prev => ({
-        ...prev,
-        user: profile,
-        isLoading: false,
-        isAuthenticated: true,
-        isAdmin: profile?.role === 'admin',
-      }));
-    } else {
-      setState(prev => ({
-        ...prev,
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-        isAdmin: false,
-      }));
+    try {
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+
+        setState(prev => {
+          // If we already have a profile for this user and the new fetch failed,
+          // keep the existing profile (don't downgrade admin to user)
+          if (!profile && prev.user?.id === session.user.id) {
+            return { ...prev, isLoading: false };
+          }
+
+          // If fetch failed and no existing profile, create fallback
+          if (!profile) {
+            const meta = session.user.user_metadata;
+            const fallback = {
+              id: session.user.id,
+              email: session.user.email || null,
+              displayName: meta?.display_name || meta?.full_name || meta?.name || session.user.email?.split('@')[0] || 'User',
+              avatarUrl: meta?.avatar_url || meta?.picture || null,
+              role: 'user' as const,
+              anonymousUserId: null,
+              createdAt: session.user.created_at || new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            return {
+              ...prev,
+              user: fallback,
+              isLoading: false,
+              isAuthenticated: true,
+              isAdmin: false,
+            };
+          }
+
+          // Use the fetched profile
+          return {
+            ...prev,
+            user: profile,
+            isLoading: false,
+            isAuthenticated: true,
+            isAdmin: profile.role === 'admin',
+          };
+        });
+      } else {
+        setState(prev => ({
+          ...prev,
+          user: null,
+          isLoading: false,
+          isAuthenticated: false,
+          isAdmin: false,
+        }));
+      }
+    } catch (error) {
+      console.error('[Auth] Error handling session:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
     }
   }, [fetchUserProfile]);
 
@@ -123,9 +166,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
 
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      handleSession(session);
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        handleSession(session);
+      })
+      .catch((error) => {
+        console.error('[Auth] Error getting initial session:', error);
+        setState(prev => ({ ...prev, isLoading: false }));
+      });
 
     return () => subscription.unsubscribe();
   }, [supabase, handleSession]);

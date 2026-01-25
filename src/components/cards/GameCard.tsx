@@ -15,6 +15,7 @@ export interface GameCardProps {
   showTier?: boolean;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
   className?: string;
 }
 
@@ -31,6 +32,7 @@ export const GameCard = memo(function GameCard({
   showTier = false,
   draggable = false,
   onDragStart,
+  onDragEnd,
   className,
 }: GameCardProps) {
   const { gameConfig } = useGameConfig();
@@ -74,6 +76,7 @@ export const GameCard = memo(function GameCard({
       onClick={onClick}
       draggable={draggable}
       onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
     >
       {/* Card Image */}
       <div
@@ -139,9 +142,9 @@ export const GameCard = memo(function GameCard({
         )}
       </div>
 
-      {/* Tooltip on hover */}
+      {/* Tooltip on hover - high z-index to appear above everything */}
       {showDetails && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-yugi-card border border-yugi-border rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 w-48">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-yugi-card border border-yugi-border rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] w-48">
           <p
             className="text-sm font-semibold truncate"
             style={{ color: gameConfig.theme.primaryColor }}
