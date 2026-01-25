@@ -388,8 +388,8 @@ export const draftService = {
 
   /**
    * Toggle pause state (host only)
-   * When pausing: saves the time remaining
-   * When resuming: clears the saved time (countdown handled client-side)
+   * When pausing: saves the time remaining and clears resume_at
+   * When resuming: sets resume_at to now + 5 seconds for synchronized countdown
    */
   async togglePause(sessionId: string, currentTimeRemaining?: number): Promise<boolean> {
     const supabase = getSupabase();
@@ -417,18 +417,27 @@ export const draftService = {
 
     const newPausedState = !session.paused;
 
-    // When pausing: save the time remaining so we can restore it
-    // When resuming: clear the saved time (timer resumes from saved value after countdown)
-    const updateData: { paused: boolean; time_remaining_at_pause?: number | null } = {
+    // Build update data
+    const updateData: {
+      paused: boolean;
+      time_remaining_at_pause?: number | null;
+      resume_at?: string | null;
+      paused_at?: string | null;
+    } = {
       paused: newPausedState,
     };
 
     if (newPausedState && currentTimeRemaining !== undefined) {
-      // Pausing - save current time remaining
+      // Pausing - save current time remaining, clear resume_at, set paused_at
       updateData.time_remaining_at_pause = currentTimeRemaining;
+      updateData.resume_at = null;
+      updateData.paused_at = new Date().toISOString();
     } else if (!newPausedState) {
-      // Resuming - keep the saved time (don't clear it yet, client needs it for countdown)
-      // The time will be used by clients after the 5-second countdown
+      // Resuming - set resume_at to 5 seconds from now (server timestamp)
+      // All clients will sync to this absolute time for the countdown
+      const resumeTime = new Date(Date.now() + 5000).toISOString();
+      updateData.resume_at = resumeTime;
+      // Keep time_remaining_at_pause - clients need it after countdown ends
     }
 
     const { error } = await supabase
@@ -446,6 +455,7 @@ export const draftService = {
 
   /**
    * Make a pick
+   * Uses optimistic locking to prevent duplicate picks from race conditions
    */
   async makePick(
     sessionId: string,
@@ -482,7 +492,24 @@ export const draftService = {
       throw new Error('Card not in hand');
     }
 
+    // Use optimistic locking: only update if pick_made is still false
+    // This prevents race conditions where two picks happen simultaneously
+    const newHand = player.current_hand.filter((id: number) => id !== cardId);
+    const { data: updateResult } = await supabase
+      .from('draft_players')
+      .update({ current_hand: newHand, pick_made: true })
+      .eq('id', playerId)
+      .eq('pick_made', false) // Only update if pick wasn't already made
+      .select();
+
+    // If no rows updated, pick was already made (race condition)
+    if (!updateResult || updateResult.length === 0) {
+      console.log('[makePick] Pick already made by another process, skipping');
+      return;
+    }
+
     // Record the pick with timing metrics
+    // Use upsert to handle potential duplicate inserts gracefully
     const pickData: DraftPickInsert = {
       session_id: sessionId,
       player_id: playerId,
@@ -493,14 +520,12 @@ export const draftService = {
       was_auto_pick: wasAutoPick,
     };
 
-    await supabase.from('draft_picks').insert(pickData);
-
-    // Remove card from hand and mark pick made
-    const newHand = player.current_hand.filter((id: number) => id !== cardId);
-    await supabase
-      .from('draft_players')
-      .update({ current_hand: newHand, pick_made: true })
-      .eq('id', playerId);
+    try {
+      await supabase.from('draft_picks').insert(pickData);
+    } catch (err) {
+      // If unique constraint violation, pick already recorded
+      console.log('[makePick] Pick already recorded:', err);
+    }
 
     // Trigger bot picks if there are bots in this session
     await this.makeBotPicks(sessionId, session.cube_id, session.current_pack, session.current_pick);
@@ -580,6 +605,7 @@ export const draftService = {
 
   /**
    * Pass packs to next player (called when all players have picked)
+   * Uses optimistic locking to prevent race conditions when multiple clients call simultaneously
    */
   async passPacks(sessionId: string): Promise<void> {
     const supabase = getSupabase();
@@ -597,6 +623,10 @@ export const draftService = {
       .order('seat_position');
 
     if (!session || !players) return;
+
+    // Store current state for optimistic locking
+    const expectedPack = session.current_pack;
+    const expectedPick = session.current_pick;
 
     const playerCount = players.length;
     const isLeftDirection = session.direction === 'left';
@@ -642,14 +672,21 @@ export const draftService = {
       const packsPerPlayer = Math.ceil(session.cards_per_player / picksPerPack);
 
       if (session.current_pack >= packsPerPlayer) {
-        // Draft complete
-        await supabase
+        // Draft complete - use optimistic locking
+        const { data: completionResult } = await supabase
           .from('draft_sessions')
           .update({
             status: 'completed',
             completed_at: new Date().toISOString(),
           })
-          .eq('id', sessionId);
+          .eq('id', sessionId)
+          .eq('status', 'in_progress') // Only complete if still in progress
+          .eq('current_pack', expectedPack)
+          .select();
+
+        if (!completionResult || completionResult.length === 0) {
+          console.log('[passPacks] Draft completion already handled by another client');
+        }
         return;
       }
 
@@ -670,7 +707,8 @@ export const draftService = {
       }
 
       // Update session - alternate direction each pack and reset pick timer
-      await supabase
+      // Use optimistic locking: only update if pack/pick hasn't changed
+      const { data: updateResult } = await supabase
         .from('draft_sessions')
         .update({
           current_pack: session.current_pack + 1,
@@ -678,7 +716,16 @@ export const draftService = {
           direction: isLeftDirection ? 'right' : 'left',
           pick_started_at: new Date().toISOString(),
         })
-        .eq('id', sessionId);
+        .eq('id', sessionId)
+        .eq('current_pack', expectedPack)
+        .eq('current_pick', expectedPick)
+        .select();
+
+      // If no rows updated, another client already handled this
+      if (!updateResult || updateResult.length === 0) {
+        console.log('[passPacks] Pack transition already handled by another client');
+        return;
+      }
     } else {
       // Pass hands to next player
       const hands: { [seat: number]: number[] } = {};
@@ -686,6 +733,26 @@ export const draftService = {
         hands[p.seat_position] = p.current_hand;
       });
 
+      // Update pick number and reset pick timer FIRST with optimistic locking
+      // This ensures only one client proceeds with the hand passing
+      const { data: updateResult } = await supabase
+        .from('draft_sessions')
+        .update({
+          current_pick: session.current_pick + 1,
+          pick_started_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId)
+        .eq('current_pack', expectedPack)
+        .eq('current_pick', expectedPick)
+        .select();
+
+      // If no rows updated, another client already handled this
+      if (!updateResult || updateResult.length === 0) {
+        console.log('[passPacks] Pick increment already handled by another client');
+        return;
+      }
+
+      // Now safe to pass hands since we won the race
       for (const player of players) {
         const sourceSeat = isLeftDirection
           ? (player.seat_position + 1) % playerCount
@@ -696,15 +763,6 @@ export const draftService = {
           .update({ current_hand: hands[sourceSeat], pick_made: false })
           .eq('id', player.id);
       }
-
-      // Update pick number and reset pick timer
-      await supabase
-        .from('draft_sessions')
-        .update({
-          current_pick: session.current_pick + 1,
-          pick_started_at: new Date().toISOString(),
-        })
-        .eq('id', sessionId);
     }
   },
 
@@ -912,17 +970,42 @@ export const draftService = {
       return { autoPickedCount: 0, autoPickedNames: [] };
     }
 
+    // If we're in a resume countdown, don't auto-pick yet
+    if (session.resume_at) {
+      const resumeAt = new Date(session.resume_at).getTime();
+      if (Date.now() < resumeAt) {
+        return { autoPickedCount: 0, autoPickedNames: [] };
+      }
+    }
+
     // Check if pick has timed out
     if (!session.pick_started_at) {
       return { autoPickedCount: 0, autoPickedNames: [] };
     }
 
-    const pickStartedAt = new Date(session.pick_started_at).getTime();
     const now = Date.now();
-    const elapsedSeconds = (now - pickStartedAt) / 1000;
-    const timeoutThreshold = session.timer_seconds + GRACE_PERIOD_SECONDS;
+    const pickStartedAt = new Date(session.pick_started_at).getTime();
+    let timeRemaining: number;
 
-    if (elapsedSeconds < timeoutThreshold) {
+    // If we just resumed from pause and haven't started a new pick yet, use the saved time remaining
+    // Only use resume_at calculation if it's more recent than pick_started_at (i.e., this is the first pick after resume)
+    const resumeAt = session.resume_at ? new Date(session.resume_at).getTime() : 0;
+    const useResumeTime = session.resume_at &&
+      session.time_remaining_at_pause !== null &&
+      session.time_remaining_at_pause !== undefined &&
+      resumeAt > pickStartedAt; // Resume happened after the last pick started
+
+    if (useResumeTime) {
+      const timeSinceResume = (now - resumeAt) / 1000;
+      timeRemaining = session.time_remaining_at_pause - timeSinceResume;
+    } else {
+      // Normal case: calculate from pick_started_at
+      const elapsedSeconds = (now - pickStartedAt) / 1000;
+      timeRemaining = session.timer_seconds - elapsedSeconds;
+    }
+
+    // Only auto-pick if time has fully expired plus grace period
+    if (timeRemaining > -GRACE_PERIOD_SECONDS) {
       return { autoPickedCount: 0, autoPickedNames: [] };
     }
 
@@ -940,6 +1023,7 @@ export const draftService = {
     const autoPickedNames: string[] = [];
 
     // Auto-pick for each player who hasn't picked
+    // Use optimistic locking to prevent race conditions between clients
     for (const player of playersNeedingPick) {
       if (player.current_hand.length === 0) continue;
 
@@ -955,6 +1039,21 @@ export const draftService = {
       cardScores.sort((a, b) => b.score - a.score);
       const bestCard = cardScores[0];
 
+      // Use optimistic locking: only update if pick_made is still false
+      const newHand = player.current_hand.filter((id: number) => id !== bestCard.cardId);
+      const { data: updateResult } = await supabase
+        .from('draft_players')
+        .update({ current_hand: newHand, pick_made: true })
+        .eq('id', player.id)
+        .eq('pick_made', false) // Only update if pick wasn't already made
+        .select();
+
+      // If no rows updated, another client already handled this player
+      if (!updateResult || updateResult.length === 0) {
+        console.log(`[checkAndAutoPickTimedOut] Player ${player.name} already picked by another client`);
+        continue;
+      }
+
       // Record the pick as auto-pick with full timer duration
       const pickData: DraftPickInsert = {
         session_id: sessionId,
@@ -966,14 +1065,12 @@ export const draftService = {
         was_auto_pick: true,
       };
 
-      await supabase.from('draft_picks').insert(pickData);
-
-      // Remove card from hand and mark pick made
-      const newHand = player.current_hand.filter((id: number) => id !== bestCard.cardId);
-      await supabase
-        .from('draft_players')
-        .update({ current_hand: newHand, pick_made: true })
-        .eq('id', player.id);
+      try {
+        await supabase.from('draft_picks').insert(pickData);
+      } catch (err) {
+        // If unique constraint violation, pick already recorded
+        console.log('[checkAndAutoPickTimedOut] Pick already recorded:', err);
+      }
 
       autoPickedNames.push(player.name);
     }
@@ -1074,6 +1171,144 @@ export const draftService = {
   },
 
   /**
+   * Add a bot to a multiplayer session (host only).
+   * Returns the new bot player record.
+   */
+  async addBotToSession(sessionId: string): Promise<DraftPlayerRow> {
+    const supabase = getSupabase();
+    const userId = getUserId();
+
+    // Get session and verify host
+    const { data: session, error: sessionError } = await supabase
+      .from('draft_sessions')
+      .select()
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError || !session) {
+      throw new Error('Session not found');
+    }
+
+    if (session.host_id !== userId) {
+      throw new Error('Only the host can add bots');
+    }
+
+    if (session.status !== 'waiting') {
+      throw new Error('Can only add bots before draft starts');
+    }
+
+    // Get current player count
+    const { data: players, error: playersError } = await supabase
+      .from('draft_players')
+      .select()
+      .eq('session_id', sessionId)
+      .order('seat_position');
+
+    if (playersError) {
+      throw new Error('Failed to fetch players');
+    }
+
+    if (players.length >= session.player_count) {
+      throw new Error('Room is full');
+    }
+
+    // Find next available seat
+    const takenSeats = new Set(players.map(p => p.seat_position));
+    let nextSeat = 0;
+    while (takenSeats.has(nextSeat)) {
+      nextSeat++;
+    }
+
+    // Get bot names from game config
+    const gameConfig = getActiveGameConfig();
+    const botNames = gameConfig.botNames || [
+      'Bot 1', 'Bot 2', 'Bot 3', 'Bot 4', 'Bot 5', 'Bot 6',
+      'Bot 7', 'Bot 8', 'Bot 9', 'Bot 10', 'Bot 11', 'Bot 12'
+    ];
+
+    // Count existing bots to get a unique name
+    const existingBots = players.filter(p => p.is_bot);
+    const botIndex = existingBots.length;
+
+    const botData: DraftPlayerInsert = {
+      session_id: sessionId,
+      user_id: `bot-mp-${Date.now()}-${botIndex}`,
+      name: botNames[botIndex % botNames.length],
+      seat_position: nextSeat,
+      is_host: false,
+      is_bot: true,
+      is_connected: true,
+      current_hand: [],
+      pick_made: false,
+    };
+
+    const { data: bot, error: botError } = await supabase
+      .from('draft_players')
+      .insert(botData)
+      .select()
+      .single();
+
+    if (botError || !bot) {
+      throw new Error('Failed to add bot');
+    }
+
+    return bot;
+  },
+
+  /**
+   * Remove a bot from a multiplayer session (host only).
+   */
+  async removeBotFromSession(sessionId: string, botPlayerId: string): Promise<void> {
+    const supabase = getSupabase();
+    const userId = getUserId();
+
+    // Get session and verify host
+    const { data: session, error: sessionError } = await supabase
+      .from('draft_sessions')
+      .select()
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError || !session) {
+      throw new Error('Session not found');
+    }
+
+    if (session.host_id !== userId) {
+      throw new Error('Only the host can remove bots');
+    }
+
+    if (session.status !== 'waiting') {
+      throw new Error('Can only remove bots before draft starts');
+    }
+
+    // Verify it's actually a bot
+    const { data: player, error: playerError } = await supabase
+      .from('draft_players')
+      .select()
+      .eq('id', botPlayerId)
+      .eq('session_id', sessionId)
+      .single();
+
+    if (playerError || !player) {
+      throw new Error('Player not found');
+    }
+
+    if (!player.is_bot) {
+      throw new Error('Can only remove bot players');
+    }
+
+    // Delete the bot
+    const { error: deleteError } = await supabase
+      .from('draft_players')
+      .delete()
+      .eq('id', botPlayerId);
+
+    if (deleteError) {
+      throw new Error('Failed to remove bot');
+    }
+  },
+
+  /**
    * Cancel and delete a draft session.
    * Only the host can cancel a session.
    * This deletes all related data from the database.
@@ -1095,10 +1330,14 @@ export const draftService = {
     }
 
     // First, update session status to 'cancelled' so realtime subscribers are notified
-    await supabase
+    const { error: updateError } = await supabase
       .from('draft_sessions')
       .update({ status: 'cancelled' })
       .eq('id', sessionId);
+
+    if (updateError) {
+      throw new Error(`Failed to update session status: ${updateError.message}`);
+    }
 
     // Small delay to ensure realtime updates propagate
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -1130,5 +1369,90 @@ export const draftService = {
 
     // Clear local session storage
     clearLastSession();
+  },
+
+  /**
+   * Get completed drafts for a user (by auth user ID or anonymous user ID)
+   * Returns recent completed drafts with session and cube info
+   */
+  async getUserDraftHistory(authUserId?: string, limit: number = 10): Promise<{
+    sessionId: string;
+    roomCode: string;
+    cubeName: string;
+    cubeId: string;
+    completedAt: string;
+    playerCount: number;
+    cardsPerPlayer: number;
+  }[]> {
+    const supabase = getSupabase();
+    const anonymousId = getUserId();
+
+    // Check both auth user ID and anonymous browser ID
+    // (drafts may have been created before user logged in, or user_id might be the anonymous one)
+    const userIds = authUserId ? [authUserId, anonymousId] : [anonymousId];
+
+    // Find sessions where this user was a player and status is completed
+    const { data: playerRecords } = await supabase
+      .from('draft_players')
+      .select('session_id')
+      .in('user_id', userIds)
+      .eq('is_bot', false);
+
+    if (!playerRecords || playerRecords.length === 0) {
+      return [];
+    }
+
+    const sessionIds = playerRecords.map(p => p.session_id);
+
+    // Get completed sessions (without cube join - we'll resolve cube names separately)
+    const { data: sessions } = await supabase
+      .from('draft_sessions')
+      .select('id, room_code, cube_id, completed_at, player_count, cards_per_player')
+      .in('id', sessionIds)
+      .eq('status', 'completed')
+      .not('completed_at', 'is', null)
+      .order('completed_at', { ascending: false })
+      .limit(limit);
+
+    if (!sessions || sessions.length === 0) {
+      return [];
+    }
+
+    // Resolve cube names - handle both local cubes and database cubes
+    const results = await Promise.all(sessions.map(async (s) => {
+      let cubeName = 'Unknown Cube';
+
+      if (cubeService.isDatabaseCube(s.cube_id)) {
+        // Database cube - query the cubes table
+        const dbId = s.cube_id.replace('db:', '');
+        const { data: cube } = await supabase
+          .from('cubes')
+          .select('name')
+          .eq('id', dbId)
+          .single();
+        if (cube) {
+          cubeName = cube.name;
+        }
+      } else {
+        // Local cube - look up from available cubes list
+        const availableCubes = cubeService.getAvailableCubes();
+        const localCube = availableCubes.find(c => c.id === s.cube_id);
+        if (localCube) {
+          cubeName = localCube.name;
+        }
+      }
+
+      return {
+        sessionId: s.id,
+        roomCode: s.room_code,
+        cubeName,
+        cubeId: s.cube_id,
+        completedAt: s.completed_at!,
+        playerCount: s.player_count,
+        cardsPerPlayer: s.cards_per_player,
+      };
+    }));
+
+    return results;
   },
 };
