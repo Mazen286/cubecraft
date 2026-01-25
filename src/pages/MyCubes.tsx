@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Boxes } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getSupabase } from '../lib/supabase';
@@ -126,7 +127,9 @@ export function MyCubes() {
 
         {cubes.length === 0 ? (
           <div className="bg-yugi-dark border border-yugi-border rounded-lg p-12 text-center">
-            <div className="text-4xl mb-4">📦</div>
+            <div className="flex justify-center mb-4">
+              <Boxes className="w-12 h-12 text-gold-500" />
+            </div>
             <h2 className="text-xl font-semibold text-white mb-2">No Cubes Yet</h2>
             <p className="text-gray-400 mb-6">
               Upload your first cube to get started drafting with custom card pools.

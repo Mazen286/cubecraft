@@ -151,6 +151,7 @@ export function Draft() {
       mainDeck: 0,
       extraDeck: 0,
       monsters: 0,
+      tuners: 0,
       spells: 0,
       traps: 0,
       avgScore: 0,
@@ -179,6 +180,10 @@ export function Draft() {
         stats.traps++;
       } else {
         stats.monsters++;
+        // Count tuners (subset of monsters)
+        if (type.includes('tuner')) {
+          stats.tuners++;
+        }
       }
 
       if (card.score !== undefined) {
@@ -1361,6 +1366,10 @@ export function Draft() {
                           <div className="flex justify-between">
                             <span className="text-orange-400">Monsters</span>
                             <span className="text-white font-medium">{myCardsStats.monsters}</span>
+                          </div>
+                          <div className="flex justify-between pl-2">
+                            <span className="text-yellow-400 text-[10px]">↳ Tuners</span>
+                            <span className="text-white font-medium">{myCardsStats.tuners}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-green-400">Spells</span>
