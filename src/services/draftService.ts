@@ -1391,7 +1391,7 @@ export const draftService = {
     // (drafts may have been created before user logged in, or user_id might be the anonymous one)
     const userIds = authUserId ? [authUserId, anonymousId] : [anonymousId];
 
-    console.log('[DraftHistory] Looking up drafts for userIds:', userIds);
+    console.log('[DraftHistory] Looking up drafts for userIds:', userIds, '(auth:', authUserId, ', anon:', anonymousId, ')');
 
     // Find sessions where this user was a player and status is completed
     const { data: playerRecords, error: playerError } = await supabase
