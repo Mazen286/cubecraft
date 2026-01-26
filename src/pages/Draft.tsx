@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Pause, Play, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Layers, Pause, Play, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
+import { useCardFilters } from '../hooks/useCardFilters';
+import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
+import { CardDetailSheet } from '../components/cards/CardDetailSheet';
 import type { YuGiOhCard as YuGiOhCardType } from '../types';
 import type { Card } from '../types/card';
 import { formatTime } from '../lib/utils';
@@ -117,15 +120,20 @@ export function Draft() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showMobileCards, setShowMobileCards] = useState(false);
   const [mobileViewCard, setMobileViewCard] = useState<YuGiOhCardType | null>(null);
-  const [_draftedSortMode, _setDraftedSortMode] = useState<'pick' | 'type' | 'name'>('pick');
   const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isPausing, setIsPausing] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [myCardsFilter, setMyCardsFilter] = useState<'all' | 'monster' | 'spell' | 'trap' | 'extra'>('all');
-  const [myCardsSearch, setMyCardsSearch] = useState('');
-  const [showMyCardsStats, setShowMyCardsStats] = useState(true);
+  const [showMyCardsStats, setShowMyCardsStats] = useState(false);
+
+  // Card filters for "My Cards" drawer
+  const myCardsFilters = useCardFilters({
+    includePickSort: true,
+    includeScoreSort: true,
+    defaultSort: 'pick',
+    defaultDirection: 'asc',
+  });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -144,6 +152,43 @@ export function Draft() {
   // Keep ref in sync with hasPicked for use in timer interval
   hasPickedRef.current = hasPicked;
 
+  // Calculate pass order - who is passing to you and who you're passing to
+  const passOrder = useMemo(() => {
+    if (!currentPlayer || !session || players.length < 2) {
+      return { fromPlayer: null, toPlayer: null, direction: null };
+    }
+
+    const totalPlayers = players.length;
+    const mySeat = currentPlayer.seat_position;
+    const direction = session.direction || 'left';
+
+    // In 'left' direction: packs move clockwise (higher seat numbers)
+    // In 'right' direction: packs move counter-clockwise (lower seat numbers)
+    let fromSeat: number;
+    let toSeat: number;
+
+    if (direction === 'left') {
+      // Receiving from the player "before" me (lower seat, wrapping)
+      fromSeat = (mySeat - 1 + totalPlayers) % totalPlayers;
+      // Passing to the player "after" me (higher seat, wrapping)
+      toSeat = (mySeat + 1) % totalPlayers;
+    } else {
+      // Receiving from the player "after" me
+      fromSeat = (mySeat + 1) % totalPlayers;
+      // Passing to the player "before" me
+      toSeat = (mySeat - 1 + totalPlayers) % totalPlayers;
+    }
+
+    const fromPlayer = players.find(p => p.seat_position === fromSeat);
+    const toPlayer = players.find(p => p.seat_position === toSeat);
+
+    return {
+      fromPlayer: fromPlayer?.name || null,
+      toPlayer: toPlayer?.name || null,
+      direction,
+    };
+  }, [currentPlayer, session, players]);
+
   // Calculate drafted cards stats and apply filters
   const myCardsStats = useMemo(() => {
     const stats = {
@@ -156,6 +201,9 @@ export function Draft() {
       traps: 0,
       avgScore: 0,
       tiers: { S: 0, A: 0, B: 0, C: 0, E: 0, F: 0 } as Record<string, number>,
+      // Yu-Gi-Oh specific stats
+      attributes: {} as Record<string, number>,
+      races: {} as Record<string, number>,
     };
 
     if (draftedCards.length === 0) return stats;
@@ -184,6 +232,14 @@ export function Draft() {
         if (type.includes('tuner')) {
           stats.tuners++;
         }
+        // Count attributes (Yu-Gi-Oh specific)
+        if (card.attribute) {
+          stats.attributes[card.attribute] = (stats.attributes[card.attribute] || 0) + 1;
+        }
+        // Count races/types (Yu-Gi-Oh specific)
+        if (card.race) {
+          stats.races[card.race] = (stats.races[card.race] || 0) + 1;
+        }
       }
 
       if (card.score !== undefined) {
@@ -200,42 +256,20 @@ export function Draft() {
     return stats;
   }, [draftedCards]);
 
-  // Filter drafted cards based on current filter
+  // Filter and sort drafted cards using the reusable filter hook
   const filteredDraftedCards = useMemo(() => {
-    let filtered = draftedCards;
+    // Convert to indexed Card format for filtering
+    const indexedCards = draftedCards.map((card, index) => ({
+      card: toCardWithAttributes(card),
+      index,
+    }));
 
-    // Apply type filter
-    if (myCardsFilter !== 'all') {
-      filtered = filtered.filter((card) => {
-        const type = card.type.toLowerCase();
-        switch (myCardsFilter) {
-          case 'monster':
-            return !type.includes('spell') && !type.includes('trap');
-          case 'spell':
-            return type.includes('spell');
-          case 'trap':
-            return type.includes('trap');
-          case 'extra':
-            return type.includes('fusion') || type.includes('synchro') ||
-                   type.includes('xyz') || type.includes('link');
-          default:
-            return true;
-        }
-      });
-    }
+    // Apply filters and sorting
+    const filteredIndexed = myCardsFilters.applyFiltersWithIndex(indexedCards);
 
-    // Apply search filter
-    if (myCardsSearch.trim()) {
-      const search = myCardsSearch.toLowerCase();
-      filtered = filtered.filter((card) =>
-        card.name.toLowerCase().includes(search) ||
-        card.type.toLowerCase().includes(search) ||
-        (card.desc && card.desc.toLowerCase().includes(search))
-      );
-    }
-
-    return filtered;
-  }, [draftedCards, myCardsFilter, myCardsSearch]);
+    // Map back to original YuGiOhCard objects
+    return filteredIndexed.map(({ index }) => draftedCards[index]);
+  }, [draftedCards, myCardsFilters]);
 
   // Initialize statistics when draft starts
   useEffect(() => {
@@ -385,60 +419,67 @@ export function Draft() {
     initialTimerCalculatedRef.current = packPickKey;
   }, [session?.timer_seconds, session?.current_pick, session?.current_pack, session?.status, session?.pick_started_at, session?.paused, session?.time_remaining_at_pause]);
 
-  // Handle resume countdown when host unpauses (client-side detection)
+  // Handle resume countdown using server-side resume_at timestamp for perfect sync
   useEffect(() => {
-    // Detect transition from paused to unpaused
-    const wasPaused = prevPausedRef.current;
-    const isPaused = session?.paused;
-
-    // Update ref for next comparison
-    prevPausedRef.current = isPaused;
-
-    // Only trigger countdown when transitioning from paused (true) to unpaused (false)
-    // and the draft is in progress
-    if (wasPaused === true && isPaused === false && session?.status === 'in_progress') {
-      // Capture the saved time at the moment of resume
-      const savedTime = session?.time_remaining_at_pause;
-
-      // Start 5-second countdown
-      setResumeCountdown(5);
-
-      const countdownInterval = setInterval(() => {
-        setResumeCountdown((prev) => {
-          if (prev === null || prev <= 1) {
-            clearInterval(countdownInterval);
-            // Restore the saved time when countdown ends
-            if (savedTime && savedTime > 0) {
-              setTimeRemaining(savedTime);
-            }
-            return null;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      resumeCountdownRef.current = countdownInterval;
-
-      return () => {
-        clearInterval(countdownInterval);
-      };
-    }
+    // Update paused ref for other effects
+    prevPausedRef.current = session?.paused;
 
     // If paused, clear any existing countdown
-    if (isPaused) {
+    if (session?.paused) {
       setResumeCountdown(null);
       if (resumeCountdownRef.current) {
         clearInterval(resumeCountdownRef.current);
         resumeCountdownRef.current = null;
       }
+      return;
     }
-  }, [session?.paused, session?.status, session?.time_remaining_at_pause]);
+
+    // If not paused and we have a resume_at timestamp, sync countdown to it
+    if (!session?.paused && session?.resume_at && session?.status === 'in_progress') {
+      const resumeTime = new Date(session.resume_at).getTime();
+      const savedTime = session.time_remaining_at_pause;
+
+      // Calculate remaining countdown based on server timestamp
+      const updateCountdown = () => {
+        const now = Date.now();
+        const remaining = Math.ceil((resumeTime - now) / 1000);
+
+        if (remaining <= 0) {
+          // Countdown finished - restore the saved time and clear resume_at tracking
+          setResumeCountdown(null);
+          if (savedTime && savedTime > 0) {
+            setTimeRemaining(savedTime);
+          }
+          if (resumeCountdownRef.current) {
+            clearInterval(resumeCountdownRef.current);
+            resumeCountdownRef.current = null;
+          }
+        } else {
+          setResumeCountdown(remaining);
+        }
+      };
+
+      // Initial update
+      updateCountdown();
+
+      // Update every 100ms for smooth countdown
+      const countdownInterval = setInterval(updateCountdown, 100);
+      resumeCountdownRef.current = countdownInterval;
+
+      return () => {
+        clearInterval(countdownInterval);
+      };
+    } else {
+      // No resume_at or not in progress - clear countdown
+      setResumeCountdown(null);
+    }
+  }, [session?.paused, session?.resume_at, session?.status, session?.time_remaining_at_pause]);
 
   // Track when we last reset the timer (to avoid resetting on every render)
   const lastPackPickRef = useRef<string>('');
 
-  // Timer countdown - reset only when a NEW pack arrives for this player
-  // Respects pause state, resume countdown, and waits for pack to be ready
+  // Timer countdown - continuously synced to server's pick_started_at timestamp
+  // This ensures all clients show the same time regardless of local clock drift
   useEffect(() => {
     if (session?.status !== 'in_progress') return;
     if (session?.paused) {
@@ -469,38 +510,49 @@ export function Draft() {
     }
 
     const timerDuration = session?.timer_seconds || 60;
+    const pickStartedAt = session?.pick_started_at ? new Date(session.pick_started_at).getTime() : null;
 
-    // Track when new pack arrives (for packStartTimeRef)
+    // Track when new pack arrives (for packStartTimeRef used in pick timing)
     const currentPackPick = `${session?.current_pack}-${session?.current_pick}`;
     const isNewPack = lastPackPickRef.current !== currentPackPick;
 
     if (isNewPack) {
       lastPackPickRef.current = currentPackPick;
       // Update packStartTimeRef for pick timing calculation
-      // Timer value is set by the initial timer sync effect, not here
-      packStartTimeRef.current = Date.now();
+      packStartTimeRef.current = pickStartedAt || Date.now();
     }
 
-    timerRef.current = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          // Only auto-pick if player hasn't picked yet
-          if (!hasPickedRef.current) {
-            autoPickRef.current?.();
-          }
-          // Keep timer at 0 when waiting for others (don't reset)
-          return hasPickedRef.current ? 0 : timerDuration;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    // Timer function that calculates remaining time from server timestamp
+    // This keeps all clients in sync regardless of when they joined or local clock differences
+    const updateTimer = () => {
+      if (!pickStartedAt) {
+        setTimeRemaining(timerDuration);
+        return;
+      }
+
+      const elapsed = Math.floor((Date.now() - pickStartedAt) / 1000);
+      const remaining = Math.max(0, timerDuration - elapsed);
+
+      setTimeRemaining(remaining);
+
+      // NOTE: Client-side auto-pick has been DISABLED to fix race conditions.
+      // The server-side checkAndAutoPickTimedOut (called every 5 seconds) handles
+      // auto-picks with fresh database data, avoiding stale React state issues.
+      // See: auto-pick-race-condition fix
+    };
+
+    // Initial update
+    updateTimer();
+
+    // Update every second, recalculating from server timestamp each time
+    timerRef.current = setInterval(updateTimer, 1000);
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, [session?.status, session?.timer_seconds, session?.current_pack, session?.current_pick, session?.paused, packReady, resumeCountdown]);
+  }, [session?.status, session?.timer_seconds, session?.current_pack, session?.current_pick, session?.paused, session?.pick_started_at, packReady, resumeCountdown]);
 
   const handlePickCard = useCallback(
     async (card?: YuGiOhCardType, wasAutoPick = false) => {
@@ -837,7 +889,7 @@ export function Draft() {
           <div>
             <h1 className="text-2xl font-bold text-white">Pack Draft</h1>
             <p className="text-gray-300">
-              Pack {currentPack} of {packsPerPlayer} &bull; Pick {currentPickNum} of {packSize}
+              Pack {currentPack} of {packsPerPlayer} &bull; Pick {currentPickNum} of {picksPerPack}
             </p>
           </div>
           <div className="flex items-center gap-6">
@@ -946,6 +998,17 @@ export function Draft() {
               <span className="text-gray-400">Players:</span>
               <span className="text-white font-medium">{players.length}</span>
             </div>
+            {/* Pass order indicator */}
+            {passOrder.fromPlayer && passOrder.toPlayer && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500">|</span>
+                <span className="text-gray-400">{passOrder.fromPlayer}</span>
+                <ArrowRight className="w-4 h-4 text-yugi-accent" />
+                <span className="text-yugi-accent font-medium">You</span>
+                <ArrowRight className="w-4 h-4 text-yugi-accent" />
+                <span className="text-gray-400">{passOrder.toPlayer}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1024,15 +1087,16 @@ export function Draft() {
                 <div className="w-8 h-8 border-2 border-gold-400 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : currentPackCards.length > 0 ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 lg:gap-4">
+              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
                 {currentPackCards.map((card) => (
                   <div key={card.id} className="relative">
                     <YuGiOhCard
                       card={card}
-                      size="md"
+                      size="full"
                       isSelected={selectedCard?.id === card.id}
                       onClick={hasPicked ? undefined : () => setSelectedCard(card)}
                       showTier
+                      flush
                       draggable={!hasPicked}
                       onDragStart={(e) => handleDragStart(e, card)}
                       onDragEnd={handleDragEnd}
@@ -1439,49 +1503,21 @@ export function Draft() {
                     </div>
                   )}
 
-                  {/* Search and Filter */}
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    {/* Search */}
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                      <input
-                        type="text"
-                        placeholder="Search cards..."
-                        value={myCardsSearch}
-                        onChange={(e) => setMyCardsSearch(e.target.value)}
-                        className="w-full bg-yugi-card border border-yugi-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none"
-                      />
-                    </div>
-
-                    {/* Type Filter */}
-                    <div className="flex gap-1 overflow-x-auto">
-                      {(['all', 'monster', 'spell', 'trap', 'extra'] as const).map((filter) => (
-                        <button
-                          key={filter}
-                          onClick={() => setMyCardsFilter(filter)}
-                          className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                            myCardsFilter === filter
-                              ? 'bg-gold-500 text-black'
-                              : 'bg-yugi-card text-gray-400 hover:text-white border border-yugi-border'
-                          }`}
-                        >
-                          {filter === 'all' ? 'All' :
-                           filter === 'monster' ? `Monsters (${myCardsStats.monsters})` :
-                           filter === 'spell' ? `Spells (${myCardsStats.spells})` :
-                           filter === 'trap' ? `Traps (${myCardsStats.traps})` :
-                           `Extra (${myCardsStats.extraDeck})`}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Filter results count */}
-                  {(myCardsFilter !== 'all' || myCardsSearch) && (
-                    <div className="text-xs text-gray-500">
-                      Showing {filteredDraftedCards.length} of {draftedCards.length} cards
-                      {myCardsSearch && ` matching "${myCardsSearch}"`}
-                    </div>
-                  )}
+                  {/* Card Filters */}
+                  <CardFilterBar
+                    filters={myCardsFilters}
+                    showSearch
+                    showTypeFilter
+                    showTierFilter
+                    showAdvancedFilters
+                    showSort
+                    includePickSort
+                    includeScoreSort
+                    tierCounts={myCardsStats.tiers as Record<'S' | 'A' | 'B' | 'C' | 'E' | 'F', number>}
+                    totalCount={draftedCards.length}
+                    filteredCount={filteredDraftedCards.length}
+                    compact
+                  />
                 </div>
               )}
 
@@ -1574,14 +1610,14 @@ export function Draft() {
                 ) : draftedCards.length > 0 ? (
                   /* Cards grid - larger cards for easier tapping */
                   filteredDraftedCards.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
                       {filteredDraftedCards.map((card) => (
                         <div
                           key={card.id}
                           onClick={() => setMobileViewCard(card)}
                           className="cursor-pointer active:scale-95 transition-transform"
                         >
-                          <YuGiOhCard card={card} size="md" showTier />
+                          <YuGiOhCard card={card} size="full" showTier flush />
                         </div>
                       ))}
                     </div>
@@ -1601,139 +1637,20 @@ export function Draft() {
         )}
 
         {/* Card Selection Bottom Sheet */}
-        {selectedCard && !hasPicked && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center">
-            <div
-              className="absolute inset-0 bg-black/80"
-              onClick={() => setSelectedCard(null)}
-            />
-            <div className="relative w-full max-h-[85vh] bg-yugi-darker rounded-t-2xl border-t border-yugi-border overflow-hidden">
-              {/* Handle bar */}
-              <div className="sticky top-0 bg-yugi-darker pt-3 pb-2 px-4 border-b border-yugi-border z-10">
-                <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-2" />
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-base truncate flex-1 mr-2" style={{ color: gameConfig.theme.primaryColor }}>
-                    {selectedCard.name}
-                    {hasErrata(selectedCard.id) && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
-                        PRE-ERRATA
-                      </span>
-                    )}
-                  </h3>
-                  <button
-                    onClick={() => setSelectedCard(null)}
-                    className="p-1 text-gray-400 hover:text-white text-xl"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4 overflow-y-auto max-h-[calc(85vh-120px)]">
-                <div className="flex gap-4">
-                  {/* Card image */}
-                  <div className="flex-shrink-0">
-                    <YuGiOhCard card={selectedCard} size="md" showTier />
-                  </div>
-
-                  {/* Card info */}
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <p className="text-sm text-gray-300">{selectedCard.type}</p>
-
-                    {/* Primary Stats (ATK/DEF) */}
-                    {gameConfig.cardDisplay.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
-                      <div className="flex flex-wrap gap-3 text-sm">
-                        {gameConfig.cardDisplay.primaryStats.map((stat, index) => {
-                          const value = stat.getValue(toCardWithAttributes(selectedCard));
-                          if (!value) return null;
-                          return (
-                            <span key={index} className={`font-semibold ${stat.color || 'text-gray-300'}`}>
-                              {stat.label}: {value}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Secondary Info (Level, Attribute, Type) */}
-                    {gameConfig.cardDisplay.secondaryInfo && gameConfig.cardDisplay.secondaryInfo.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {gameConfig.cardDisplay.secondaryInfo.map((info, index) => {
-                          const value = info.getValue(toCardWithAttributes(selectedCard));
-                          if (!value) return null;
-                          return (
-                            <span key={index} className={`px-2 py-1 bg-yugi-card rounded text-xs font-medium ${info.color || 'text-gray-300'}`}>
-                              {value}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Score */}
-                    {selectedCard.score !== undefined && (
-                      <div className="flex items-center gap-2 pt-1">
-                        <span className="text-xs text-gray-400">Score:</span>
-                        <span className="text-sm font-bold text-gold-400">
-                          {selectedCard.score}/100
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Description / Errata */}
-                <div className="mt-4 pt-3 border-t border-yugi-border">
-                  {(() => {
-                    const errata = getErrata(selectedCard.id);
-                    if (errata) {
-                      return (
-                        <div className="space-y-3">
-                          <div className="p-3 bg-purple-900/30 border border-purple-600 rounded">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded">
-                                PRE-ERRATA
-                              </span>
-                              <span className="text-purple-300 text-xs font-medium">Use This Text</span>
-                            </div>
-                            <p className="text-sm text-white leading-relaxed">{errata.originalText}</p>
-                            {errata.notes && (
-                              <p className="text-xs text-purple-300 mt-2 italic">Note: {errata.notes}</p>
-                            )}
-                          </div>
-                          {selectedCard.desc && (
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
-                              <p className="text-xs text-gray-400 leading-relaxed line-through opacity-60">
-                                {selectedCard.desc}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-                    return selectedCard.desc ? (
-                      <p className="text-sm text-gray-300 leading-relaxed">
-                        {selectedCard.desc}
-                      </p>
-                    ) : null;
-                  })()}
-                </div>
-              </div>
-
-              {/* Pick Button - sticky at bottom */}
-              <div className="sticky bottom-0 p-4 bg-yugi-darker border-t border-yugi-border">
-                <Button
-                  onClick={() => handlePickCard()}
-                  className="w-full py-3 text-lg"
-                  disabled={isPicking}
-                >
-                  {isPicking ? 'Picking...' : 'Pick This Card'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <CardDetailSheet
+          card={selectedCard}
+          isOpen={!!selectedCard && !hasPicked}
+          onClose={() => setSelectedCard(null)}
+          footer={
+            <Button
+              onClick={() => handlePickCard()}
+              className="w-full py-3 text-lg"
+              disabled={isPicking}
+            >
+              {isPicking ? 'Picking...' : 'Pick This Card'}
+            </Button>
+          }
+        />
 
         {/* Leave Draft Confirmation Modal */}
         <ConfirmModal

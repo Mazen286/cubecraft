@@ -492,40 +492,62 @@ export const draftService = {
       throw new Error('Card not in hand');
     }
 
-    // Use optimistic locking: only update if pick_made is still false
-    // This prevents race conditions where two picks happen simultaneously
-    const newHand = player.current_hand.filter((id: number) => id !== cardId);
-    const { data: updateResult } = await supabase
-      .from('draft_players')
-      .update({ current_hand: newHand, pick_made: true })
-      .eq('id', playerId)
-      .eq('pick_made', false) // Only update if pick wasn't already made
-      .select();
+    // Store the pack/pick numbers we read at the start
+    const pickPack = session.current_pack;
+    const pickNumber = session.current_pick;
 
-    // If no rows updated, pick was already made (race condition)
-    if (!updateResult || updateResult.length === 0) {
-      console.log('[makePick] Pick already made by another process, skipping');
-      return;
-    }
-
-    // Record the pick with timing metrics
-    // Use upsert to handle potential duplicate inserts gracefully
+    // IMPORTANT: Insert pick record FIRST, before updating player hand
+    // This ensures we don't lose the card if the insert fails
     const pickData: DraftPickInsert = {
       session_id: sessionId,
       player_id: playerId,
       card_id: cardId,
-      pack_number: session.current_pack,
-      pick_number: session.current_pick,
+      pack_number: pickPack,
+      pick_number: pickNumber,
       pick_time_seconds: pickTimeSeconds,
       was_auto_pick: wasAutoPick,
     };
 
-    try {
-      await supabase.from('draft_picks').insert(pickData);
-    } catch (err) {
-      // If unique constraint violation, pick already recorded
-      console.log('[makePick] Pick already recorded:', err);
+    const { error: pickError } = await supabase.from('draft_picks').insert(pickData);
+
+    if (pickError) {
+      // Check if it's a unique constraint violation
+      if (pickError.code === '23505') {
+        // Unique constraint - check which one
+        if (pickError.message?.includes('card_id')) {
+          // Card was already picked by someone else - shouldn't happen with proper pack management
+          console.log('[makePick] Card already picked by another player:', cardId);
+          throw new Error('Card already picked');
+        } else {
+          // Player already has a pick for this round - this is fine, means we already recorded it
+          console.log('[makePick] Pick already recorded for this round');
+        }
+      } else {
+        // Some other error - don't proceed
+        console.error('[makePick] Failed to insert pick:', pickError);
+        throw new Error('Failed to record pick');
+      }
     }
+
+    // Re-fetch current hand to avoid race conditions where another process updated it
+    const { data: freshPlayer } = await supabase
+      .from('draft_players')
+      .select('current_hand')
+      .eq('id', playerId)
+      .single();
+
+    // Compute new hand from fresh data, removing the picked card
+    // Note: If fresh fetch fails, we still use the original data since the pick is recorded
+    // (the hand update is best-effort at this point)
+    if (!freshPlayer) {
+      console.warn('[makePick] Could not fetch fresh player data, using original hand for update');
+    }
+    const currentHand = freshPlayer?.current_hand || player.current_hand;
+    const newHand = currentHand.filter((id: number) => id !== cardId);
+    await supabase
+      .from('draft_players')
+      .update({ current_hand: newHand, pick_made: true })
+      .eq('id', playerId);
 
     // Trigger bot picks if there are bots in this session
     await this.makeBotPicks(sessionId, session.cube_id, session.current_pack, session.current_pick);
@@ -546,14 +568,32 @@ export const draftService = {
 
   /**
    * Make picks for all bot players (AI picks highest-scored card)
+   * Uses optimistic locking to prevent race conditions with multiple clients
    */
   async makeBotPicks(
     sessionId: string,
     _cubeId: string, // Reserved for future cube-specific AI strategies
-    packNumber: number,
-    pickNumber: number
+    _packNumber: number, // Deprecated - we fetch fresh state
+    _pickNumber: number  // Deprecated - we fetch fresh state
   ): Promise<void> {
     const supabase = getSupabase();
+
+    // Get session to know burn threshold, paused state, and CURRENT pack/pick
+    const { data: session } = await supabase
+      .from('draft_sessions')
+      .select('burned_per_pack, paused, status, current_pack, current_pick')
+      .eq('id', sessionId)
+      .single();
+
+    // Don't make bot picks if session is paused or not in progress
+    if (!session || session.paused || session.status !== 'in_progress') {
+      console.log('[makeBotPicks] Session paused or not in progress, skipping');
+      return;
+    }
+
+    const burnedPerPack = session?.burned_per_pack || 0;
+    const currentPack = session.current_pack;
+    const currentPick = session.current_pick;
 
     // Get all bot players who haven't picked yet
     const { data: bots } = await supabase
@@ -566,40 +606,109 @@ export const draftService = {
     if (!bots || bots.length === 0) return;
 
     for (const bot of bots) {
-      if (bot.current_hand.length === 0) continue;
+      // Re-check session paused state before each bot pick
+      const { data: currentSession } = await supabase
+        .from('draft_sessions')
+        .select('paused, status')
+        .eq('id', sessionId)
+        .single();
 
-      // Get card scores and pick the highest
-      const cardScores: { cardId: number; score: number }[] = bot.current_hand.map((cardId: number) => {
+      if (!currentSession || currentSession.paused || currentSession.status !== 'in_progress') {
+        console.log('[makeBotPicks] Session paused or ended mid-loop, stopping bot picks');
+        break;
+      }
+
+      // Re-fetch current hand to get fresh data
+      const { data: freshBot } = await supabase
+        .from('draft_players')
+        .select('current_hand, pick_made')
+        .eq('id', bot.id)
+        .single();
+
+      // Skip if already picked (another process handled it)
+      if (freshBot?.pick_made) {
+        console.log(`[makeBotPicks] Skipping ${bot.name}: already picked`);
+        continue;
+      }
+
+      // IMPORTANT: Never fall back to stale data - if fresh read fails, skip this bot
+      if (!freshBot) {
+        console.log(`[makeBotPicks] Skipping ${bot.name}: could not fetch fresh data`);
+        continue;
+      }
+      const currentHand: number[] = freshBot.current_hand;
+
+      // Skip if hand is empty (no cards to pick from)
+      if (currentHand.length === 0) {
+        console.log(`[makeBotPicks] Skipping ${bot.name}: empty hand`);
+        continue;
+      }
+
+      // Get card scores and sort by score descending
+      const cardScores: { cardId: number; score: number }[] = currentHand.map((cardId: number) => {
         const card = cubeService.getCardFromAnyCube(cardId);
         return {
           cardId,
-          score: card?.score ?? 50, // Default to 50 if no score
+          score: card?.score ?? 50,
         };
       });
-
-      // Sort by score descending and pick the best
       cardScores.sort((a, b) => b.score - a.score);
-      const bestCard = cardScores[0];
 
-      // Record the pick (bots have 0 pick time and are marked as auto-picks)
-      const pickData: DraftPickInsert = {
-        session_id: sessionId,
-        player_id: bot.id,
-        card_id: bestCard.cardId,
-        pack_number: packNumber,
-        pick_number: pickNumber,
-        pick_time_seconds: 0,
-        was_auto_pick: true,
-      };
+      // Try each card in order until one succeeds (in case some are already picked)
+      let pickedCardId: number | null = null;
+      for (const cardOption of cardScores) {
+        const pickData: DraftPickInsert = {
+          session_id: sessionId,
+          player_id: bot.id,
+          card_id: cardOption.cardId,
+          pack_number: currentPack,
+          pick_number: currentPick,
+          pick_time_seconds: 0,
+          was_auto_pick: true,
+        };
 
-      await supabase.from('draft_picks').insert(pickData);
+        const { error: pickError } = await supabase.from('draft_picks').insert(pickData);
 
-      // Remove card from hand and mark pick made
-      const newHand = bot.current_hand.filter((id: number) => id !== bestCard.cardId);
+        if (!pickError) {
+          // Success - this card was picked
+          pickedCardId = cardOption.cardId;
+          console.log(`[makeBotPicks] Bot ${bot.name} picked card ${pickedCardId}`);
+          break;
+        } else if (pickError.code === '23505') {
+          // Unique constraint violation
+          if (pickError.message?.includes('card_id')) {
+            // Card already picked by someone else - try next card
+            console.log(`[makeBotPicks] Card ${cardOption.cardId} already picked, trying next`);
+            continue;
+          } else {
+            // Bot already has a pick for this round - another process handled it
+            // IMPORTANT: Don't set pickedCardId - we don't know which card was actually picked
+            // Just skip this bot entirely since the pick was already recorded
+            console.log(`[makeBotPicks] Bot ${bot.name} pick already recorded by another process, skipping`);
+            break;
+          }
+        } else {
+          // Some other error - log and try next card
+          console.error(`[makeBotPicks] Error picking card ${cardOption.cardId}:`, pickError);
+          continue;
+        }
+      }
+
+      // Only update hand if we successfully picked a card
+      // If pickedCardId is null, either another process handled it or all cards were taken
+      if (!pickedCardId) {
+        console.log(`[makeBotPicks] Bot ${bot.name} - no card picked (already handled or all cards taken)`);
+        continue;
+      }
+
+      // Update hand to remove the picked card
+      const newHand = currentHand.filter((id: number) => id !== pickedCardId);
       await supabase
         .from('draft_players')
         .update({ current_hand: newHand, pick_made: true })
         .eq('id', bot.id);
+
+      console.log(`[makeBotPicks] Bot ${bot.name} hand updated`);
     }
   },
 
@@ -690,24 +799,8 @@ export const draftService = {
         return;
       }
 
-      // Start next pack - use pack_number to find the right pack
-      const packData = session.pack_data as PackData[];
-      const nextPackNumber = session.current_pack + 1;
-
-      for (const player of players) {
-        const playerPack = packData.find(
-          (p) => p.player_seat === player.seat_position && p.pack_number === nextPackNumber
-        );
-        if (playerPack) {
-          await supabase
-            .from('draft_players')
-            .update({ current_hand: playerPack.cards, pick_made: false })
-            .eq('id', player.id);
-        }
-      }
-
-      // Update session - alternate direction each pack and reset pick timer
-      // Use optimistic locking: only update if pack/pick hasn't changed
+      // Update session FIRST with optimistic locking
+      // This ensures only one client proceeds with distributing the next pack
       const { data: updateResult } = await supabase
         .from('draft_sessions')
         .update({
@@ -725,6 +818,22 @@ export const draftService = {
       if (!updateResult || updateResult.length === 0) {
         console.log('[passPacks] Pack transition already handled by another client');
         return;
+      }
+
+      // Now safe to distribute next pack since we won the race
+      const packData = session.pack_data as PackData[];
+      const nextPackNumber = session.current_pack + 1;
+
+      for (const player of players) {
+        const playerPack = packData.find(
+          (p) => p.player_seat === player.seat_position && p.pack_number === nextPackNumber
+        );
+        if (playerPack) {
+          await supabase
+            .from('draft_players')
+            .update({ current_hand: playerPack.cards, pick_made: false })
+            .eq('id', player.id);
+        }
       }
     } else {
       // Pass hands to next player
@@ -1009,7 +1118,7 @@ export const draftService = {
       return { autoPickedCount: 0, autoPickedNames: [] };
     }
 
-    // Get all players who haven't picked
+    // Re-fetch players fresh to get current state (avoid stale data)
     const { data: playersNeedingPick } = await supabase
       .from('draft_players')
       .select()
@@ -1025,58 +1134,117 @@ export const draftService = {
     // Auto-pick for each player who hasn't picked
     // Use optimistic locking to prevent race conditions between clients
     for (const player of playersNeedingPick) {
-      if (player.current_hand.length === 0) continue;
+      // Re-check session paused state before each auto-pick (in case pause happened mid-loop)
+      const { data: currentSession } = await supabase
+        .from('draft_sessions')
+        .select('paused, status')
+        .eq('id', sessionId)
+        .single();
 
-      // Get card scores and pick the highest
-      const cardScores: { cardId: number; score: number }[] = player.current_hand.map((cardId: number) => {
+      if (!currentSession || currentSession.paused || currentSession.status !== 'in_progress') {
+        console.log('[checkAndAutoPickTimedOut] Session paused or ended mid-loop, stopping auto-picks');
+        break;
+      }
+
+      // Re-fetch current hand to get fresh data
+      const { data: freshPlayer } = await supabase
+        .from('draft_players')
+        .select('current_hand, pick_made')
+        .eq('id', player.id)
+        .single();
+
+      // Skip if already picked (another process handled it)
+      if (freshPlayer?.pick_made) {
+        console.log(`[checkAndAutoPickTimedOut] Skipping ${player.name}: already picked`);
+        continue;
+      }
+
+      // IMPORTANT: Never fall back to stale data - if fresh read fails, skip this player
+      if (!freshPlayer) {
+        console.log(`[checkAndAutoPickTimedOut] Skipping ${player.name}: could not fetch fresh data`);
+        continue;
+      }
+      const currentHand: number[] = freshPlayer.current_hand;
+
+      // Skip if hand is empty (no cards to pick from)
+      if (currentHand.length === 0) {
+        console.log(`[checkAndAutoPickTimedOut] Skipping ${player.name}: empty hand`);
+        continue;
+      }
+
+      // Get card scores and sort by score descending
+      const cardScores: { cardId: number; score: number }[] = currentHand.map((cardId: number) => {
         const card = cubeService.getCardFromAnyCube(cardId);
         return {
           cardId,
           score: card?.score ?? 50,
         };
       });
-
       cardScores.sort((a, b) => b.score - a.score);
-      const bestCard = cardScores[0];
 
-      // Use optimistic locking: only update if pick_made is still false
-      const newHand = player.current_hand.filter((id: number) => id !== bestCard.cardId);
-      const { data: updateResult } = await supabase
-        .from('draft_players')
-        .update({ current_hand: newHand, pick_made: true })
-        .eq('id', player.id)
-        .eq('pick_made', false) // Only update if pick wasn't already made
-        .select();
+      // Try each card in order until one succeeds (in case some are already picked)
+      let pickedCardId: number | null = null;
+      for (const cardOption of cardScores) {
+        const pickData: DraftPickInsert = {
+          session_id: sessionId,
+          player_id: player.id,
+          card_id: cardOption.cardId,
+          pack_number: session.current_pack,
+          pick_number: session.current_pick,
+          pick_time_seconds: session.timer_seconds,
+          was_auto_pick: true,
+        };
 
-      // If no rows updated, another client already handled this player
-      if (!updateResult || updateResult.length === 0) {
-        console.log(`[checkAndAutoPickTimedOut] Player ${player.name} already picked by another client`);
+        const { error: pickError } = await supabase.from('draft_picks').insert(pickData);
+
+        if (!pickError) {
+          // Success - this card was picked
+          pickedCardId = cardOption.cardId;
+          console.log(`[checkAndAutoPickTimedOut] ${player.name} auto-picked card ${pickedCardId}`);
+          break;
+        } else if (pickError.code === '23505') {
+          // Unique constraint violation
+          if (pickError.message?.includes('card_id')) {
+            // Card already picked by someone else - try next card
+            console.log(`[checkAndAutoPickTimedOut] Card ${cardOption.cardId} already picked, trying next`);
+            continue;
+          } else {
+            // Player already has a pick for this round - another process handled it
+            // IMPORTANT: Don't set pickedCardId - we don't know which card was actually picked
+            // Just skip this player entirely since the pick was already recorded
+            console.log(`[checkAndAutoPickTimedOut] ${player.name} pick already recorded by another process, skipping`);
+            break;
+          }
+        } else {
+          // Some other error - log and try next card
+          console.error(`[checkAndAutoPickTimedOut] Error picking card ${cardOption.cardId}:`, pickError);
+          continue;
+        }
+      }
+
+      // Only update hand if we successfully picked a card
+      // If pickedCardId is null, either another process handled it or all cards were taken
+      if (!pickedCardId) {
+        console.log(`[checkAndAutoPickTimedOut] ${player.name} - no card picked (already handled or all cards taken)`);
         continue;
       }
 
-      // Record the pick as auto-pick with full timer duration
-      const pickData: DraftPickInsert = {
-        session_id: sessionId,
-        player_id: player.id,
-        card_id: bestCard.cardId,
-        pack_number: session.current_pack,
-        pick_number: session.current_pick,
-        pick_time_seconds: session.timer_seconds,
-        was_auto_pick: true,
-      };
-
-      try {
-        await supabase.from('draft_picks').insert(pickData);
-      } catch (err) {
-        // If unique constraint violation, pick already recorded
-        console.log('[checkAndAutoPickTimedOut] Pick already recorded:', err);
-      }
+      // Update hand to remove the picked card
+      const newHand = currentHand.filter((id: number) => id !== pickedCardId);
+      await supabase
+        .from('draft_players')
+        .update({ current_hand: newHand, pick_made: true })
+        .eq('id', player.id);
 
       autoPickedNames.push(player.name);
     }
 
-    // If we auto-picked for anyone, check if all players have now picked
+    // If we auto-picked for anyone, trigger bot picks and check completion
     if (autoPickedNames.length > 0) {
+      // IMPORTANT: Trigger bot picks - they won't pick on their own!
+      await this.makeBotPicks(sessionId, '', session.current_pack, session.current_pick);
+
+      // Now check if all players have picked
       const { data: allPlayers } = await supabase
         .from('draft_players')
         .select()
@@ -1471,6 +1639,89 @@ export const draftService = {
     }));
 
     console.log('[DraftHistory] Returning results:', results.length);
+    return results;
+  },
+
+  /**
+   * Admin: Get all recent completed drafts (regardless of user)
+   * Returns recent completed drafts with session, cube, and player info
+   */
+  async getRecentDraftsAdmin(limit: number = 20): Promise<{
+    sessionId: string;
+    roomCode: string;
+    cubeName: string;
+    cubeId: string;
+    completedAt: string;
+    playerCount: number;
+    cardsPerPlayer: number;
+    players: { id: string; name: string; isBot: boolean }[];
+  }[]> {
+    const supabase = getSupabase();
+
+    // Get recent completed sessions
+    const { data: sessions, error: sessionError } = await supabase
+      .from('draft_sessions')
+      .select('id, room_code, cube_id, completed_at, player_count, cards_per_player')
+      .eq('status', 'completed')
+      .not('completed_at', 'is', null)
+      .order('completed_at', { ascending: false })
+      .limit(limit);
+
+    if (sessionError) {
+      console.error('[AdminDrafts] Error fetching sessions:', sessionError);
+      return [];
+    }
+
+    if (!sessions || sessions.length === 0) {
+      return [];
+    }
+
+    // Resolve cube names and get players for each session
+    const results = await Promise.all(sessions.map(async (s) => {
+      let cubeName = 'Unknown Cube';
+
+      if (cubeService.isDatabaseCube(s.cube_id)) {
+        const dbId = s.cube_id.replace('db:', '');
+        const { data: cube } = await supabase
+          .from('cubes')
+          .select('name')
+          .eq('id', dbId)
+          .single();
+        if (cube) {
+          cubeName = cube.name;
+        }
+      } else {
+        const availableCubes = cubeService.getAvailableCubes();
+        const localCube = availableCubes.find(c => c.id === s.cube_id);
+        if (localCube) {
+          cubeName = localCube.name;
+        }
+      }
+
+      // Get players for this session
+      const { data: players } = await supabase
+        .from('draft_players')
+        .select('id, name, is_bot')
+        .eq('session_id', s.id)
+        .eq('is_bot', false)
+        .order('seat_position', { ascending: true });
+
+      return {
+        sessionId: s.id,
+        roomCode: s.room_code,
+        cubeName,
+        cubeId: s.cube_id,
+        completedAt: s.completed_at!,
+        playerCount: s.player_count,
+        cardsPerPlayer: s.cards_per_player,
+        players: (players || []).map(p => ({
+          id: p.id,
+          name: p.name,
+          isBot: p.is_bot,
+        })),
+      };
+    }));
+
     return results;
   },
 };
