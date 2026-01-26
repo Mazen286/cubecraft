@@ -613,11 +613,25 @@ describe('draftService', () => {
       const mockBots = [
         {
           id: 'bot-1',
+          name: 'Bot 1',
           is_bot: true,
           pick_made: false,
           current_hand: [10, 50, 30], // Card IDs, scores will be 10%, 50%, 30%
         },
       ];
+
+      const mockSession = {
+        burned_per_pack: 0,
+        paused: false,
+        status: 'in_progress',
+        current_pack: 1,
+        current_pick: 1,
+      };
+
+      const mockFreshBot = {
+        current_hand: [10, 50, 30],
+        pick_made: false,
+      };
 
       const updateMock = vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -625,11 +639,20 @@ describe('draftService', () => {
         }),
       });
 
-      let callCount = 0;
+      let playerQueryCount = 0;
       mockFrom.mockImplementation((table: string) => {
-        callCount++;
-        if (table === 'draft_players') {
-          if (callCount === 1) {
+        if (table === 'draft_sessions') {
+          // Session queries (initial + per-bot check)
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockImplementation(() => Promise.resolve({ data: mockSession, error: null })),
+              }),
+            }),
+          };
+        } else if (table === 'draft_players') {
+          playerQueryCount++;
+          if (playerQueryCount === 1) {
             // Get bots query
             return {
               select: vi.fn().mockReturnValue({
@@ -637,6 +660,15 @@ describe('draftService', () => {
                   eq: vi.fn().mockReturnValue({
                     eq: vi.fn().mockImplementation(() => Promise.resolve({ data: mockBots, error: null })),
                   }),
+                }),
+              }),
+            };
+          } else if (playerQueryCount === 2) {
+            // Fresh bot data query
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  single: vi.fn().mockImplementation(() => Promise.resolve({ data: mockFreshBot, error: null })),
                 }),
               }),
             };
@@ -648,7 +680,12 @@ describe('draftService', () => {
             insert: vi.fn().mockImplementation(() => Promise.resolve({ error: null })),
           };
         }
-        return mockFrom();
+        // Default fallback - return empty mock to avoid recursion
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockImplementation(() => Promise.resolve({ data: null, error: null })),
+          }),
+        };
       });
 
       await draftService.makeBotPicks('session-bot', 'test-cube', 1, 1);
