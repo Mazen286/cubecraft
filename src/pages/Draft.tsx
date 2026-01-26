@@ -11,7 +11,6 @@ import { CardDetailSheet } from '../components/cards/CardDetailSheet';
 import type { YuGiOhCard as YuGiOhCardType } from '../types';
 import type { Card } from '../types/card';
 import { formatTime } from '../lib/utils';
-import { hasErrata, getErrata } from '../data/cardErrata';
 
 // Helper to convert YuGiOhCard to Card format expected by game config
 function toCardWithAttributes(card: YuGiOhCardType): Card {
@@ -1378,31 +1377,21 @@ export function Draft() {
               {/* Header */}
               <div className="flex items-center justify-between px-4 pb-3 border-b border-yugi-border flex-shrink-0">
                 <h3 className="text-lg font-semibold text-white">
-                  {mobileViewCard ? 'Card Details' : `My Drafted Cards (${draftedCards.length})`}
+                  My Drafted Cards ({draftedCards.length})
                 </h3>
-                <div className="flex items-center gap-2">
-                  {mobileViewCard && (
-                    <button
-                      onClick={() => setMobileViewCard(null)}
-                      className="px-3 py-1 text-sm text-gold-400 hover:text-gold-300"
-                    >
-                      ← Back
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setShowMobileCards(false);
-                      setMobileViewCard(null);
-                    }}
-                    className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white text-xl"
-                  >
-                    ✕
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    setShowMobileCards(false);
+                    setMobileViewCard(null);
+                  }}
+                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white text-xl"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Stats and Filters - only show when not viewing a card */}
-              {!mobileViewCard && draftedCards.length > 0 && (
+              {/* Stats and Filters */}
+              {draftedCards.length > 0 && (
                 <div className="px-4 py-3 border-b border-yugi-border flex-shrink-0 space-y-3">
                   {/* Stats Toggle & Summary */}
                   <div className="flex items-center justify-between">
@@ -1523,91 +1512,7 @@ export function Draft() {
 
               {/* Content - with proper touch scrolling */}
               <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-                {mobileViewCard ? (
-                  /* Card detail view */
-                  <div className="space-y-4">
-                    <div className="flex justify-center">
-                      <YuGiOhCard card={mobileViewCard} size="lg" showTier />
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-lg font-semibold" style={{ color: gameConfig.theme.primaryColor }}>
-                        {mobileViewCard.name}
-                        {hasErrata(mobileViewCard.id) && (
-                          <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
-                            PRE-ERRATA
-                          </span>
-                        )}
-                      </h4>
-                      <p className="text-sm text-gray-300">{mobileViewCard.type}</p>
-                      {/* Primary Stats from game config */}
-                      {gameConfig.cardDisplay.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                          {gameConfig.cardDisplay.primaryStats.map((stat, index) => {
-                            const value = stat.getValue(toCardWithAttributes(mobileViewCard));
-                            if (!value) return null;
-                            return (
-                              <span key={index} className={stat.color || 'text-gray-300'}>
-                                {stat.label}: {value}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {/* Secondary Info from game config */}
-                      {gameConfig.cardDisplay.secondaryInfo && gameConfig.cardDisplay.secondaryInfo.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                          {gameConfig.cardDisplay.secondaryInfo.map((info, index) => {
-                            const value = info.getValue(toCardWithAttributes(mobileViewCard));
-                            if (!value) return null;
-                            return (
-                              <span key={index} className={info.color || 'text-gray-400'}>
-                                {info.label}: {value}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {mobileViewCard.score !== undefined && (
-                        <p className="text-sm text-gray-400">Score: {mobileViewCard.score}/100</p>
-                      )}
-                      {/* Description / Errata */}
-                      <div className="pt-3 border-t border-yugi-border">
-                        {(() => {
-                          const errata = getErrata(mobileViewCard.id);
-                          if (errata) {
-                            return (
-                              <div className="space-y-3">
-                                <div className="p-3 bg-purple-900/30 border border-purple-600 rounded">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded">
-                                      PRE-ERRATA
-                                    </span>
-                                    <span className="text-purple-300 text-xs font-medium">Use This Text</span>
-                                  </div>
-                                  <p className="text-sm text-white leading-relaxed">{errata.originalText}</p>
-                                  {errata.notes && (
-                                    <p className="text-xs text-purple-300 mt-2 italic">Note: {errata.notes}</p>
-                                  )}
-                                </div>
-                                {mobileViewCard.desc && (
-                                  <div>
-                                    <p className="text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
-                                    <p className="text-xs text-gray-400 leading-relaxed line-through opacity-60">
-                                      {mobileViewCard.desc}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          }
-                          return mobileViewCard.desc ? (
-                            <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{mobileViewCard.desc}</p>
-                          ) : null;
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                ) : draftedCards.length > 0 ? (
+                {draftedCards.length > 0 ? (
                   /* Cards grid - larger cards for easier tapping */
                   filteredDraftedCards.length > 0 ? (
                     <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
@@ -1636,7 +1541,7 @@ export function Draft() {
           </div>
         )}
 
-        {/* Card Selection Bottom Sheet */}
+        {/* Card Selection Bottom Sheet (for picking from hand) */}
         <CardDetailSheet
           card={selectedCard}
           isOpen={!!selectedCard && !hasPicked}
@@ -1650,6 +1555,13 @@ export function Draft() {
               {isPicking ? 'Picking...' : 'Pick This Card'}
             </Button>
           }
+        />
+
+        {/* Drafted Card Detail Bottom Sheet (for viewing My Cards) */}
+        <CardDetailSheet
+          card={mobileViewCard}
+          isOpen={!!mobileViewCard}
+          onClose={() => setMobileViewCard(null)}
         />
 
         {/* Leave Draft Confirmation Modal */}
