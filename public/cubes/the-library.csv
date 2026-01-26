@@ -15,7 +15,7 @@ ID,Name,Score
 1154611,Paleozoic Leanchoilia,50
 1164211,Shield of the Millennium Dynasty,50
 1224927,Malevolent Catastrophe,60
-1225009,Arianna the Labrynth Servant,76
+1225009,Arianna the Labrynth Servant,65
 1249315,Herald of Pure Light,50
 1315120,T.G. Striker,80
 1426714,Number 48: Shadow Lich,50
@@ -30,7 +30,7 @@ ID,Name,Score
 2134346,Asura Priest,60
 2263869,Ultimate Slayer,70
 2295440,One for One,80
-2347656,Lovely Labrynth of the Silver Castle,50
+2347656,Lovely Labrynth of the Silver Castle,60
 2376209,Paleozoic Eldonia,65
 2396042,Steel Cavalry of Dinon,60
 2525268,"Defender, the Magical Knight",50
@@ -49,7 +49,7 @@ ID,Name,Score
 3819470,Seven Tools of the Bandit,60
 4031928,Change of Heart,90
 4064256,Zombie World,60
-4179255,Ancient Pixie Dragon,50
+4179255,Ancient Pixie Dragon,60
 4206964,Trap Hole,80
 4280258,"Apollousa, Bow of the Goddess",60
 4417407,Mecha Phantom Beast Blackfalcon,55
@@ -170,7 +170,7 @@ ID,Name,Score
 16404809,Kuribandit,80
 16509007,Kewl Tune Mix,50
 16625614,Dark Sanctuary,80
-16893370,"Dreaming Reality of Nemleria, Realized",65
+16893370,"Dreaming Reality of Nemleria, Realized",80
 17259470,Zombie Master,70
 17330916,Performapal Monkeyboard,50
 17375316,Confiscation,90
@@ -438,7 +438,7 @@ ID,Name,Score
 41999284,Linkuriboh,70
 42009836,Fossil Dyna Pachycephalo,50
 42110434,Naturia Butterfly,50
-42216237,Angel of Zera,50
+42216237,Angel of Zera,60
 42338879,Cockadoodledoo,70
 42671151,The Golden Apples,70
 42703248,Giant Trunade,80
@@ -503,8 +503,8 @@ ID,Name,Score
 49027020,Traptrix Pudica,50
 49109013,Doomstar Ulka,80
 49202162,Black Luster Soldier - Soldier of Chaos,95
-49238328,Pot of Extravagance,70
-49565413,Chaos Beast,50
+49238328,Pot of Extravagance,80
+49565413,Chaos Beast,70
 49729312,Primineral Kongreat,80
 49776811,Shining Piecephilia,90
 49868263,Ryu Senshi,60
@@ -534,7 +534,7 @@ ID,Name,Score
 52687916,"Trishula, Dragon of the Ice Barrier",70
 52823314,Tour Bus From the Underworld,60
 52860176,Possessed Dark Soul,50
-53008933,Archfiend's Advent,50
+61822419,Guilt-Gripping Morganite,100
 53129443,Dark Hole,90
 53329234,Sinful Spoils of Slumber - Morrian,50
 53334471,Gozen Match,60
@@ -547,7 +547,7 @@ ID,Name,Score
 53839837,Vampire Lord,50
 53842431,Mythical Beast Master Cerberus,60
 53855409,Doppelwarrior,60
-53871273,Chaos Valkyria,70
+53871273,Chaos Valkyria,75
 53981499,Mighty Warrior,50
 54343893,Vice Dragon,70
 54447022,Soul Charge,95
@@ -560,7 +560,7 @@ ID,Name,Score
 54965929,Mythical Beast Medusa,50
 54974237,Eradicator Epidemic Virus,50
 55031170,K9-66b Lantern,70
-55144522,Pot of Greed,95
+55144522,Pot of Greed,100
 55285840,Time Thief Redoer,95
 55428242,Traptrix Atrax,50
 55554175,Performapal Classikuriboh,50
@@ -666,7 +666,7 @@ ID,Name,Score
 66532962,Magistus Chorozo,50
 66625883,"Karakuri Strategist mdl 248 ""Nishipachi""",50
 66712905,Runick Dispelling,50
-67169062,Pot of Avarice,70
+67169062,Pot of Avarice,75
 67284107,Scapeghost,90
 67441435,Glow-Up Bulb,90
 67556500,Phonon Pulse Dragon,50
@@ -730,7 +730,7 @@ ID,Name,Score
 71578874,Performage Mirror Conductor,50
 71607202,Muckraker From the Underworld,60
 71625222,Time Wizard,40
-71645242,Black Garden,50
+71645242,Black Garden,60
 71703785,Palladium Oracle Mahad,70
 71734607,Rikka Petal,80
 71818935,Moon of the Closed Heaven,50
@@ -761,7 +761,7 @@ ID,Name,Score
 73729209,Skill Successor,50
 73853830,Crusader of Endymion,70
 73915051,Scapegoat,95
-73979030,Angraecum Umbrella,50
+73979030,Angraecum Umbrella,55
 74003290,Lost Wind,70
 74150658,Talons of Shurilane,80
 74191942,Painful Choice,95
@@ -781,7 +781,7 @@ ID,Name,Score
 75498415,Blackwing - Sirocco the Dawn,60
 75500286,Gold Sarcophagus,80
 75672051,Black Fang Magician,55
-75730490,Ariane the Labrynth Servant,70
+75730490,Ariane the Labrynth Servant,65
 75745607,Hino-Kagu-Tsuchi,50
 75902998,Trap Hole of Spikes,60
 76067258,Number 66: Master Key Beetle,50
@@ -844,7 +844,7 @@ ID,Name,Score
 81674782,Dimensional Fissure,50
 81743801,Mighty Dino King Rex,70
 81756619,Succumbing-Song Morganite,90
-82301904,Chaos Emperor Dragon - Envoy of the End,95
+82301904,Chaos Emperor Dragon - Envoy of the End,100
 82359538,Enneacraft - Aiza.LEON,90
 82385847,Dinowrestler Pankratops,95
 82593786,Bacon Saver,70
@@ -894,7 +894,7 @@ ID,Name,Score
 87259077,Lightning Warrior,50
 87462901,Emissary from the House of Wax,90
 87621407,Dekoichi the Battlechanted Locomotive,70
-87624166,Ancient Forest,50
+87624166,Ancient Forest,60
 87769556,Magician's Right Hand,50
 87772572,Quantum Cat,70
 87837090,Kuibelt the Blade Dragon,50
@@ -930,7 +930,7 @@ ID,Name,Score
 91182675,Mythical Beast Jackal,60
 91336701,Day-Breaker the Shining Magical Warrior,50
 91575236,Immortal Dragon,50
-91706817,Angel of Blue Tears,50
+91706817,Angel of Blue Tears,60
 91812341,Traptrix Myrmeleo,60
 91949988,"Gaia Dragon, the Thunder Charger",50
 92204263,Mekk-Knight Indigo Eclipse,70
@@ -1009,8 +1009,8 @@ ID,Name,Score
 98427577,Scrap-Iron Scarecrow,70
 98462037,Sky Striker Ace - Azalea,65
 98642179,Ferocious Flame Swordsman,50
-98645731,Pot of Duality,70
-98672567,Pot of Dichotomy,70
+98645731,Pot of Duality,75
+98672567,Pot of Dichotomy,75
 98777036,Tragoedia,80
 98978921,Link Spider,90
 99011763,Beat Cop from the Underworld,80
