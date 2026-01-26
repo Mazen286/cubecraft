@@ -10,6 +10,7 @@ interface ActiveSession {
   sessionId: string;
   roomCode: string;
   status: 'waiting' | 'in_progress';
+  mode: string;
 }
 
 export function Home() {
@@ -37,7 +38,9 @@ export function Home() {
     if (activeSession.status === 'waiting') {
       navigate(`/lobby/${activeSession.sessionId}`);
     } else {
-      navigate(`/draft/${activeSession.sessionId}`);
+      // Navigate to the correct page based on draft mode
+      const draftPath = activeSession.mode === 'auction-grid' ? 'auction' : 'draft';
+      navigate(`/${draftPath}/${activeSession.sessionId}`);
     }
   };
 

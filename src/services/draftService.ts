@@ -1307,6 +1307,7 @@ export const draftService = {
     roomCode: string;
     status: 'waiting' | 'in_progress';
     cubeId: string;
+    mode: string;
   } | null> {
     const lastSession = getLastSession();
     if (!lastSession) return null;
@@ -1316,7 +1317,7 @@ export const draftService = {
       const supabase = getSupabase();
       const { data: session } = await supabase
         .from('draft_sessions')
-        .select('id, room_code, status, cube_id')
+        .select('id, room_code, status, cube_id, mode')
         .eq('id', lastSession.sessionId)
         .in('status', ['waiting', 'in_progress'])
         .single();
@@ -1327,6 +1328,7 @@ export const draftService = {
           roomCode: session.room_code,
           status: session.status,
           cubeId: session.cube_id,
+          mode: session.mode,
         };
       }
     } catch {
