@@ -13,7 +13,7 @@ import type {
   AuctionBidData,
   AuctionBidInsert,
 } from '../lib/database.types';
-import type { DraftSettings } from '../types';
+import type { DraftSettings, YuGiOhCard } from '../types';
 import { shuffleArray } from '../lib/utils';
 import { cubeService } from './cubeService';
 import { getActiveGameConfig } from '../context/GameContext';
@@ -85,21 +85,193 @@ function getNextSeat(currentSeat: number, totalPlayers: number): number {
 }
 
 /**
- * Calculate bot bid amount based on card score, remaining points, and total points
- * Bids scale as a percentage of total points based on card tier
+ * Analyze a bot's drafted cards for strategic decision making
+ */
+interface BotCollectionAnalysis {
+  archetypes: Map<string, number>; // archetype -> count
+  topArchetype: string | null;
+  monsterCount: number;
+  spellCount: number;
+  trapCount: number;
+  totalCards: number;
+  monsterRatio: number;
+  spellRatio: number;
+  trapRatio: number;
+}
+
+function analyzeBotCollection(draftedCards: YuGiOhCard[]): BotCollectionAnalysis {
+  const archetypes = new Map<string, number>();
+  let monsterCount = 0;
+  let spellCount = 0;
+  let trapCount = 0;
+
+  for (const card of draftedCards) {
+    // Count card types
+    const type = card.type.toLowerCase();
+    if (type.includes('spell')) {
+      spellCount++;
+    } else if (type.includes('trap')) {
+      trapCount++;
+    } else {
+      monsterCount++;
+    }
+
+    // Track archetypes
+    if (card.archetype) {
+      archetypes.set(card.archetype, (archetypes.get(card.archetype) || 0) + 1);
+    }
+  }
+
+  const totalCards = draftedCards.length;
+
+  // Find top archetype
+  let topArchetype: string | null = null;
+  let topCount = 0;
+  for (const [archetype, count] of archetypes) {
+    if (count > topCount && count >= 2) { // Only consider if we have 2+ cards
+      topCount = count;
+      topArchetype = archetype;
+    }
+  }
+
+  return {
+    archetypes,
+    topArchetype,
+    monsterCount,
+    spellCount,
+    trapCount,
+    totalCards,
+    monsterRatio: totalCards > 0 ? monsterCount / totalCards : 0,
+    spellRatio: totalCards > 0 ? spellCount / totalCards : 0,
+    trapRatio: totalCards > 0 ? trapCount / totalCards : 0,
+  };
+}
+
+/**
+ * Calculate bot interest modifiers based on synergy and balance
+ */
+interface BotInterestResult {
+  interested: boolean;
+  interestMultiplier: number;
+  isBluff: boolean;
+  reason: string;
+}
+
+function calculateBotInterest(
+  card: YuGiOhCard,
+  collection: BotCollectionAnalysis,
+  score: number
+): BotInterestResult {
+  let interestMultiplier = 1.0;
+  let reason = 'base interest';
+
+  // === TIER-BASED INTEREST ===
+  // Lower tier cards have a chance to be ignored entirely
+  const tierInterestChance = score >= 95 ? 1.0    // S-tier: always interested
+    : score >= 90 ? 0.95   // A-tier: 95% interested
+    : score >= 75 ? 0.80   // B-tier: 80% interested
+    : score >= 60 ? 0.55   // C-tier: 55% interested
+    : score >= 50 ? 0.30   // E-tier: 30% interested
+    : 0.15;                // F-tier: 15% interested
+
+  // Random check for low-tier disinterest
+  if (Math.random() > tierInterestChance) {
+    return { interested: false, interestMultiplier: 0, isBluff: false, reason: 'not interested in low tier' };
+  }
+
+  // === ARCHETYPE SYNERGY ===
+  if (card.archetype && collection.topArchetype) {
+    if (card.archetype === collection.topArchetype) {
+      // Card matches our archetype - very interested!
+      interestMultiplier *= 1.5;
+      reason = `synergy with ${collection.topArchetype}`;
+    } else if (collection.archetypes.has(card.archetype)) {
+      // We have some cards of this archetype
+      const count = collection.archetypes.get(card.archetype)!;
+      if (count >= 2) {
+        interestMultiplier *= 1.3;
+        reason = `building ${card.archetype}`;
+      }
+    }
+  } else if (card.archetype && collection.totalCards >= 5) {
+    // New archetype when we already have cards - slightly less interested
+    interestMultiplier *= 0.85;
+    reason = 'new archetype';
+  }
+
+  // === CARD TYPE BALANCE ===
+  const cardType = card.type.toLowerCase();
+  const isSpell = cardType.includes('spell');
+  const isTrap = cardType.includes('trap');
+  const isMonster = !isSpell && !isTrap;
+
+  // Target ratios: ~55% monsters, ~30% spells, ~15% traps
+  if (collection.totalCards >= 10) {
+    if (isSpell && collection.spellRatio < 0.25) {
+      // Need more spells
+      interestMultiplier *= 1.3;
+      reason = 'needs spells';
+    } else if (isTrap && collection.trapRatio < 0.10) {
+      // Need more traps
+      interestMultiplier *= 1.2;
+      reason = 'needs traps';
+    } else if (isMonster && collection.monsterRatio > 0.70) {
+      // Too many monsters, less interested in more
+      interestMultiplier *= 0.7;
+      reason = 'too many monsters';
+    } else if (isSpell && collection.spellRatio > 0.40) {
+      // Too many spells
+      interestMultiplier *= 0.8;
+      reason = 'enough spells';
+    }
+  }
+
+  // === BLUFFING ===
+  // Small chance to bid on cards we don't really want to drain opponent resources
+  // Only bluff on mid-tier cards (not trash, not bombs)
+  const isBluffCandidate = score >= 50 && score < 85;
+  const bluffChance = 0.08; // 8% chance to bluff
+
+  if (isBluffCandidate && Math.random() < bluffChance) {
+    return {
+      interested: true,
+      interestMultiplier: 0.5, // Won't bid too high on a bluff
+      isBluff: true,
+      reason: 'bluffing',
+    };
+  }
+
+  return { interested: true, interestMultiplier, isBluff: false, reason };
+}
+
+/**
+ * Calculate bot bid amount with intelligent decision making
+ * Considers: card tier, archetype synergy, card type balance, bluffing
  */
 function calculateBotBid(
-  cardScore: number | undefined,
+  card: YuGiOhCard | null,
   remainingPoints: number,
   currentBid: number,
   gridNumber: number,
   cardsAcquiredThisGrid: number,
-  totalPoints: number
+  totalPoints: number,
+  draftedCards: YuGiOhCard[]
 ): number | null {
-  const score = cardScore ?? 50;
+  if (!card) return null;
+
+  const score = card.score ?? 50;
+
+  // Analyze bot's collection
+  const collection = analyzeBotCollection(draftedCards);
+
+  // Determine interest level
+  const interest = calculateBotInterest(card, collection, score);
+
+  if (!interest.interested) {
+    return null; // Pass - not interested
+  }
 
   // Base willingness as percentage of total points, based on tier
-  // Uses same tier thresholds as getTierFromScore in utils.ts
   const basePercentage = score >= 95 ? 0.18  // S-tier
     : score >= 90 ? 0.14                      // A-tier
     : score >= 75 ? 0.10                      // B-tier
@@ -107,8 +279,8 @@ function calculateBotBid(
     : score >= 50 ? 0.03                      // E-tier
     : 0.02;                                   // F-tier
 
-  // Calculate base willingness scaled by total points
-  const baseWillingness = Math.floor(totalPoints * basePercentage);
+  // Calculate base willingness scaled by total points and interest
+  const baseWillingness = Math.floor(totalPoints * basePercentage * interest.interestMultiplier);
 
   // Adjust based on remaining grids (save more points for later)
   const gridMultiplier = 1 - (gridNumber - 1) * 0.05; // 1.0 to 0.75
@@ -117,7 +289,12 @@ function calculateBotBid(
   const urgency = cardsAcquiredThisGrid < 5 ? 1.1 : 1.0;
 
   // Calculate maximum bid we're willing to make
-  const maxBid = Math.floor(baseWillingness * gridMultiplier * urgency);
+  let maxBid = Math.floor(baseWillingness * gridMultiplier * urgency);
+
+  // Bluffs have a hard cap to avoid wasting too many points
+  if (interest.isBluff) {
+    maxBid = Math.min(maxBid, Math.floor(totalPoints * 0.05)); // Max 5% of total on bluffs
+  }
 
   // Calculate the minimum bid required
   const minBidRequired = currentBid + 1;
@@ -127,7 +304,7 @@ function calculateBotBid(
     return null; // Pass
   }
 
-  // Add some randomness to bot bids (50% chance to bid higher than minimum)
+  // Add some randomness to bot bids
   if (Math.random() > 0.5 && minBidRequired + 1 <= maxBid && minBidRequired + 1 <= remainingPoints) {
     return minBidRequired + Math.floor(Math.random() * 2); // +0 or +1
   }
@@ -1066,21 +1243,27 @@ export const auctionService = {
 
     if (!botPlayer) return;
 
-    // Get card info for scoring
+    // Get card info
     const card = cubeService.getCardFromAnyCube(cardId);
-    const cardScore = card?.score;
+
+    // Get bot's drafted cards for intelligent bidding
+    const draftedCardIds = await this.getPlayerDraftedCards(sessionId, botPlayer.id);
+    const draftedCards = draftedCardIds
+      .map(id => cubeService.getCardFromAnyCube(id))
+      .filter((c): c is YuGiOhCard => c !== null);
 
     // Get total bidding points from auction state (defaults to 100)
     const totalPoints = auctionState.totalBiddingPoints ?? DEFAULT_BIDDING_POINTS;
 
-    // Calculate bot bid
+    // Calculate bot bid with intelligent decision making
     const bidAmount = calculateBotBid(
-      cardScore,
+      card,
       botPlayer.bidding_points,
       auctionState.currentBid,
       gridNumber,
       botPlayer.cards_acquired_this_grid,
-      totalPoints
+      totalPoints,
+      draftedCards
     );
 
     // Add a small delay for UX
