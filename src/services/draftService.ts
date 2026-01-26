@@ -692,9 +692,12 @@ export const draftService = {
             continue;
           } else {
             // Bot already has a pick for this round - another process handled it
-            // IMPORTANT: Don't set pickedCardId - we don't know which card was actually picked
-            // Just skip this bot entirely since the pick was already recorded
-            console.log(`[makeBotPicks] Bot ${bot.name} pick already recorded by another process, skipping`);
+            // IMPORTANT: Don't update hand (we don't know which card), but DO mark pick_made = true
+            console.log(`[makeBotPicks] Bot ${bot.name} pick already recorded, marking pick_made=true`);
+            await supabase
+              .from('draft_players')
+              .update({ pick_made: true })
+              .eq('id', bot.id);
             break;
           }
         } else {
@@ -705,9 +708,8 @@ export const draftService = {
       }
 
       // Only update hand if we successfully picked a card
-      // If pickedCardId is null, either another process handled it or all cards were taken
       if (!pickedCardId) {
-        console.log(`[makeBotPicks] Bot ${bot.name} - no card picked (already handled or all cards taken)`);
+        console.log(`[makeBotPicks] Bot ${bot.name} - no card picked in this attempt`);
         continue;
       }
 
@@ -1243,9 +1245,12 @@ export const draftService = {
             continue;
           } else {
             // Player already has a pick for this round - another process handled it
-            // IMPORTANT: Don't set pickedCardId - we don't know which card was actually picked
-            // Just skip this player entirely since the pick was already recorded
-            console.log(`[checkAndAutoPickTimedOut] ${player.name} pick already recorded by another process, skipping`);
+            // IMPORTANT: Don't update hand (we don't know which card), but DO mark pick_made = true
+            console.log(`[checkAndAutoPickTimedOut] ${player.name} pick already recorded, marking pick_made=true`);
+            await supabase
+              .from('draft_players')
+              .update({ pick_made: true })
+              .eq('id', player.id);
             break;
           }
         } else {
@@ -1256,9 +1261,8 @@ export const draftService = {
       }
 
       // Only update hand if we successfully picked a card
-      // If pickedCardId is null, either another process handled it or all cards were taken
       if (!pickedCardId) {
-        console.log(`[checkAndAutoPickTimedOut] ${player.name} - no card picked (already handled or all cards taken)`);
+        console.log(`[checkAndAutoPickTimedOut] ${player.name} - no card picked in this attempt`);
         continue;
       }
 
