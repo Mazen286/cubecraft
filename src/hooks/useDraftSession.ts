@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { draftService, setLastSession, clearLastSession } from '../services/draftService';
+import { auctionService } from '../services/auctionService';
 import { cubeService } from '../services/cubeService';
 import type { DraftSessionRow, DraftPlayerRow } from '../lib/database.types';
 import type { DraftSettings } from '../types';
@@ -206,7 +207,12 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     setError(null);
 
     try {
-      await draftService.startDraft(session.id);
+      // Use appropriate service based on mode
+      if (session.mode === 'auction-grid') {
+        await auctionService.startDraft(session.id);
+      } else {
+        await draftService.startDraft(session.id);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start draft';
       setError(message);

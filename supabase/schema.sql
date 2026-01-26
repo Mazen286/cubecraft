@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS draft_sessions (
   pack_size INTEGER NOT NULL,
   burned_per_pack INTEGER NOT NULL DEFAULT 0,
   timer_seconds INTEGER NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'in_progress', 'completed')),
+  status VARCHAR(20) NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'in_progress', 'completed', 'cancelled')),
   paused BOOLEAN NOT NULL DEFAULT FALSE,
   current_pack INTEGER NOT NULL DEFAULT 1,
   current_pick INTEGER NOT NULL DEFAULT 1,
@@ -84,7 +84,9 @@ CREATE TABLE IF NOT EXISTS draft_picks (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   -- Each card can only be picked once per session
-  UNIQUE(session_id, card_id)
+  UNIQUE(session_id, card_id),
+  -- Each player can only make one pick per round
+  UNIQUE(session_id, player_id, pack_number, pick_number)
 );
 
 -- Index for player picks lookups

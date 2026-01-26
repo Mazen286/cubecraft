@@ -12,9 +12,11 @@ const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })))
 const DraftSetup = lazy(() => import('./pages/DraftSetup').then(m => ({ default: m.DraftSetup })));
 const Lobby = lazy(() => import('./pages/Lobby').then(m => ({ default: m.Lobby })));
 const Draft = lazy(() => import('./pages/Draft').then(m => ({ default: m.Draft })));
+const AuctionDraft = lazy(() => import('./pages/AuctionDraft').then(m => ({ default: m.AuctionDraft })));
 const Results = lazy(() => import('./pages/Results').then(m => ({ default: m.Results })));
 const JoinRoom = lazy(() => import('./pages/JoinRoom').then(m => ({ default: m.JoinRoom })));
 const About = lazy(() => import('./pages/About').then(m => ({ default: m.About })));
+const Rulebook = lazy(() => import('./pages/Rulebook').then(m => ({ default: m.Rulebook })));
 
 // Auth-related pages
 const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
@@ -54,9 +56,11 @@ function App() {
                 <Route path="/lobby/:sessionId" element={<Lobby />} />
                 <Route path="/draft/:sessionId" element={<Draft />} />
                 <Route path="/draft" element={<Draft />} />
+                <Route path="/auction/:sessionId" element={<AuctionDraft />} />
                 <Route path="/results" element={<Results />} />
                 <Route path="/results/:sessionId" element={<Results />} />
                 <Route path="/about" element={<About />} />
+                <Route path="/rules" element={<Rulebook />} />
 
                 {/* Auth callback */}
                 <Route path="/auth/callback" element={<AuthCallback />} />

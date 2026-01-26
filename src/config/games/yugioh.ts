@@ -78,28 +78,32 @@ function isLinkMonster(card: Card): boolean {
   return card.type.toLowerCase().includes('link');
 }
 
+function isTunerMonster(card: Card): boolean {
+  return card.type.toLowerCase().includes('tuner');
+}
+
 /**
  * Attribute check helper
  */
 function hasAttribute(card: Card, attribute: string): boolean {
-  const attrs = card.attributes as YuGiOhCardAttributes;
-  return attrs.attribute === attribute;
+  const attrs = card.attributes as YuGiOhCardAttributes | undefined;
+  return attrs?.attribute === attribute;
 }
 
 /**
  * Race/Type check helper
  */
 function hasRace(card: Card, race: string): boolean {
-  const attrs = card.attributes as YuGiOhCardAttributes;
-  return attrs.race === race;
+  const attrs = card.attributes as YuGiOhCardAttributes | undefined;
+  return attrs?.race === race;
 }
 
 /**
  * Get ATK/DEF display string
  */
 function getAtkDefDisplay(card: Card): string {
-  const attrs = card.attributes as YuGiOhCardAttributes;
-  if (attrs.atk === undefined) return '';
+  const attrs = card.attributes as YuGiOhCardAttributes | undefined;
+  if (!attrs || attrs.atk === undefined) return '';
 
   if (attrs.def === undefined) {
     // Link monster - no DEF
@@ -121,7 +125,9 @@ function formatStat(value: number | undefined): string {
  * Get level/rank/link display string
  */
 function getLevelDisplay(card: Card): string {
-  const attrs = card.attributes as YuGiOhCardAttributes;
+  const attrs = card.attributes as YuGiOhCardAttributes | undefined;
+  if (!attrs) return '';
+
   const level = attrs.level;
   const linkval = attrs.linkval;
 
@@ -140,10 +146,31 @@ function getLevelDisplay(card: Card): string {
 
 /**
  * Generate YDK format export
+ * Uses _exportZone attribute if present, otherwise falls back to auto-classification
  */
 function generateYDK(cards: Card[], _deckZones: DeckZone[]): string {
-  const mainDeck = cards.filter(c => !isExtraDeckCard(c));
-  const extraDeck = cards.filter(c => isExtraDeckCard(c));
+  const mainDeck: Card[] = [];
+  const extraDeck: Card[] = [];
+  const sideDeck: Card[] = [];
+
+  for (const card of cards) {
+    const zone = (card.attributes as Record<string, unknown>)?._exportZone as string | undefined;
+
+    if (zone === 'side') {
+      sideDeck.push(card);
+    } else if (zone === 'extra') {
+      extraDeck.push(card);
+    } else if (zone === 'main') {
+      mainDeck.push(card);
+    } else {
+      // Fallback: auto-classify based on card type
+      if (isExtraDeckCard(card)) {
+        extraDeck.push(card);
+      } else {
+        mainDeck.push(card);
+      }
+    }
+  }
 
   return `#created by CubeCraft
 #main
@@ -151,6 +178,7 @@ ${mainDeck.map(c => c.id).join('\n')}
 #extra
 ${extraDeck.map(c => c.id).join('\n')}
 !side
+${sideDeck.map(c => c.id).join('\n')}
 `;
 }
 
@@ -218,6 +246,7 @@ const yugiohFilterGroups: FilterGroup[] = [
       { id: 'xyz', label: 'XYZ', color: '#1F1F1F', filter: isXyzMonster },
       { id: 'pendulum', label: 'Pendulum', color: '#22D3EE', filter: isPendulumMonster },
       { id: 'link', label: 'Link', color: '#3B82F6', filter: isLinkMonster },
+      { id: 'tuner', label: 'Tuner', color: '#FBBF24', filter: isTunerMonster },
     ],
   },
   {
@@ -252,7 +281,7 @@ const yugiohFilterGroups: FilterGroup[] = [
       min: 1,
       max: 12,
       step: 1,
-      getValue: (card) => (card.attributes as YuGiOhCardAttributes).level,
+      getValue: (card) => (card.attributes as YuGiOhCardAttributes | undefined)?.level,
       formatValue: (v) => `Lv ${v}`,
     },
   },
@@ -328,12 +357,12 @@ export const yugiohConfig: GameConfig = {
       },
       {
         label: 'Attribute',
-        getValue: (card) => (card.attributes as YuGiOhCardAttributes).attribute || '',
+        getValue: (card) => (card.attributes as YuGiOhCardAttributes | undefined)?.attribute || '',
         color: 'text-gray-300',
       },
       {
         label: 'Type',
-        getValue: (card) => (card.attributes as YuGiOhCardAttributes).race || '',
+        getValue: (card) => (card.attributes as YuGiOhCardAttributes | undefined)?.race || '',
         color: 'text-gray-400',
       },
     ],
@@ -347,13 +376,13 @@ export const yugiohConfig: GameConfig = {
     detailFields: [
       {
         label: 'ATK',
-        getValue: (card) => formatStat((card.attributes as YuGiOhCardAttributes).atk),
+        getValue: (card) => formatStat((card.attributes as YuGiOhCardAttributes | undefined)?.atk),
         color: 'text-red-400',
       },
       {
         label: 'DEF',
         getValue: (card) => {
-          const def = (card.attributes as YuGiOhCardAttributes).def;
+          const def = (card.attributes as YuGiOhCardAttributes | undefined)?.def;
           return def === undefined ? 'LINK' : formatStat(def);
         },
         color: 'text-blue-400',
@@ -406,8 +435,8 @@ export const yugiohConfig: GameConfig = {
       id: 'level',
       label: 'Level',
       compare: (a, b) => {
-        const aLevel = (a.attributes as YuGiOhCardAttributes).level || 0;
-        const bLevel = (b.attributes as YuGiOhCardAttributes).level || 0;
+        const aLevel = (a.attributes as YuGiOhCardAttributes | undefined)?.level || 0;
+        const bLevel = (b.attributes as YuGiOhCardAttributes | undefined)?.level || 0;
         return bLevel - aLevel;
       },
     },
@@ -415,8 +444,8 @@ export const yugiohConfig: GameConfig = {
       id: 'atk',
       label: 'ATK',
       compare: (a, b) => {
-        const aAtk = (a.attributes as YuGiOhCardAttributes).atk ?? -1;
-        const bAtk = (b.attributes as YuGiOhCardAttributes).atk ?? -1;
+        const aAtk = (a.attributes as YuGiOhCardAttributes | undefined)?.atk ?? -1;
+        const bAtk = (b.attributes as YuGiOhCardAttributes | undefined)?.atk ?? -1;
         return bAtk - aAtk;
       },
     },
@@ -424,8 +453,8 @@ export const yugiohConfig: GameConfig = {
       id: 'def',
       label: 'DEF',
       compare: (a, b) => {
-        const aDef = (a.attributes as YuGiOhCardAttributes).def ?? -1;
-        const bDef = (b.attributes as YuGiOhCardAttributes).def ?? -1;
+        const aDef = (a.attributes as YuGiOhCardAttributes | undefined)?.def ?? -1;
+        const bDef = (b.attributes as YuGiOhCardAttributes | undefined)?.def ?? -1;
         return bDef - aDef;
       },
     },

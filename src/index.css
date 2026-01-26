@@ -52,6 +52,17 @@
     box-sizing: border-box;
   }
 
+  /* Scroll offset for anchor links (accounts for fixed header) */
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+  }
+
+  /* Target all sections with IDs for anchor scroll offset */
+  [id] {
+    scroll-margin-top: 6rem;
+  }
+
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-synthesis: none;

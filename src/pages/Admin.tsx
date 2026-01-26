@@ -1,10 +1,13 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { useAuth } from '../context/AuthContext';
 import { getSupabase } from '../lib/supabase';
 import { getGameConfig } from '../config/games';
 import { cubeService, type CubeInfo } from '../services/cubeService';
+import { draftService } from '../services/draftService';
 import { scoreService } from '../services/scoreService';
 import { getTierFromScore } from '../lib/utils';
 import { hasErrata, getErrata } from '../data/cardErrata';
@@ -20,7 +23,7 @@ const GRADE_COLORS: Record<string, string> = {
   F: 'bg-gray-500 text-white',
 };
 
-type Tab = 'users' | 'cubes' | 'scores';
+type Tab = 'users' | 'cubes' | 'scores' | 'drafts' | 'database';
 
 interface UserItem {
   id: string;
@@ -81,12 +84,26 @@ export function Admin() {
             </svg>
             Scores
           </TabButton>
+          <TabButton active={activeTab === 'drafts'} onClick={() => setActiveTab('drafts')}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Drafts
+          </TabButton>
+          <TabButton active={activeTab === 'database'} onClick={() => setActiveTab('database')}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+            </svg>
+            Database
+          </TabButton>
         </div>
 
         {/* Content */}
         {activeTab === 'users' && <UserManagement currentUserId={user?.id} />}
         {activeTab === 'cubes' && <CubeManagement />}
         {activeTab === 'scores' && <ScoreManagement />}
+        {activeTab === 'drafts' && <DraftManagement />}
+        {activeTab === 'database' && <DatabaseManagement />}
       </div>
     </Layout>
   );
@@ -837,6 +854,7 @@ function ScoreManagement() {
         isOpen={!!previewCard}
         onClose={() => setPreviewCard(null)}
         title={previewCard?.name}
+        centerTitle
         titleBadge={previewCard && hasErrata(previewCard.id) && (
           <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
             PRE-ERRATA
@@ -845,110 +863,613 @@ function ScoreManagement() {
       >
         {previewCard && (
           <div className="p-4 md:p-6">
-            <div className="flex gap-4 md:gap-6">
-              {/* Card image */}
-              <div className="flex-shrink-0">
-                <img
-                  src={getCardImageUrl(previewCard, 'lg')}
-                  alt={previewCard.name}
-                  className="w-32 md:w-40 h-auto rounded-lg shadow-lg"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/images/card-back.jpg';
-                  }}
-                />
-              </div>
+            {/* Constrain content width for readability */}
+            <div className="max-w-3xl mx-auto">
+              <div className="flex gap-4 md:gap-6">
+                {/* Card image */}
+                <div className="flex-shrink-0">
+                  <img
+                    src={getCardImageUrl(previewCard, 'lg')}
+                    alt={previewCard.name}
+                    className="w-28 md:w-36 lg:w-44 h-auto rounded-lg shadow-lg"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/card-back.jpg';
+                    }}
+                  />
+                </div>
 
-              {/* Card info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-400 mb-3">{previewCard.type}</p>
+                {/* Card info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm md:text-base text-gray-400 mb-2 md:mb-3">{previewCard.type}</p>
 
-                {/* Stats - compact grid */}
-                <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm max-w-xs">
-                  <span className="text-gray-500">ID</span>
-                  <span className="text-white font-mono">#{previewCard.id}</span>
+                  {/* Stats - compact grid */}
+                  <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm md:text-base">
+                    <span className="text-gray-500">ID</span>
+                    <span className="text-white font-mono">#{previewCard.id}</span>
 
-                  <span className="text-gray-500">Score</span>
-                  <span className="flex items-center gap-2">
-                    <span className="text-gold-400 font-medium">{getCardScore(previewCard.id)}</span>
-                    {(() => {
-                      const grade = getTierFromScore(getCardScore(previewCard.id));
-                      return (
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${GRADE_COLORS[grade]}`}>
-                          {grade}
-                        </span>
-                      );
-                    })()}
-                  </span>
+                    <span className="text-gray-500">Score</span>
+                    <span className="flex items-center gap-2">
+                      <span className="text-gold-400 font-medium">{getCardScore(previewCard.id)}</span>
+                      {(() => {
+                        const grade = getTierFromScore(getCardScore(previewCard.id));
+                        return (
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${GRADE_COLORS[grade]}`}>
+                            {grade}
+                          </span>
+                        );
+                      })()}
+                    </span>
 
-                  {previewCard.atk !== undefined && (
-                    <>
-                      <span className="text-gray-500">ATK/DEF</span>
-                      <span className="text-white">{previewCard.atk} / {previewCard.def ?? '?'}</span>
-                    </>
-                  )}
+                    {previewCard.atk !== undefined && (
+                      <>
+                        <span className="text-gray-500">ATK/DEF</span>
+                        <span className="text-white">{previewCard.atk} / {previewCard.def ?? '?'}</span>
+                      </>
+                    )}
 
-                  {previewCard.level !== undefined && (
-                    <>
-                      <span className="text-gray-500">Level</span>
-                      <span className="text-white">{previewCard.level}</span>
-                    </>
-                  )}
+                    {previewCard.level !== undefined && (
+                      <>
+                        <span className="text-gray-500">Level</span>
+                        <span className="text-white">{previewCard.level}</span>
+                      </>
+                    )}
 
-                  {previewCard.attribute && (
-                    <>
-                      <span className="text-gray-500">Attribute</span>
-                      <span className="text-white">{previewCard.attribute}</span>
-                    </>
-                  )}
+                    {previewCard.attribute && (
+                      <>
+                        <span className="text-gray-500">Attribute</span>
+                        <span className="text-white">{previewCard.attribute}</span>
+                      </>
+                    )}
 
-                  {previewCard.race && (
-                    <>
-                      <span className="text-gray-500">Race</span>
-                      <span className="text-white">{previewCard.race}</span>
-                    </>
-                  )}
+                    {previewCard.race && (
+                      <>
+                        <span className="text-gray-500">Race</span>
+                        <span className="text-white">{previewCard.race}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Description / Errata */}
-            <div className="mt-4 pt-4 border-t border-yugi-border">
-              {(() => {
-                const errata = getErrata(previewCard.id);
-                if (errata) {
-                  return (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-purple-900/30 border border-purple-600 rounded">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded">
-                            PRE-ERRATA
-                          </span>
-                          <span className="text-purple-300 text-xs font-medium">Original Text (Use This)</span>
+              {/* Description / Errata */}
+              <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border">
+                {(() => {
+                  const errata = getErrata(previewCard.id);
+                  if (errata) {
+                    return (
+                      <div className="space-y-3">
+                        <div className="p-2 md:p-3 bg-purple-900/30 border border-purple-600 rounded">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] md:text-[10px] font-bold rounded">
+                              PRE-ERRATA
+                            </span>
+                            <span className="text-purple-300 text-[10px] md:text-xs font-medium">Use This Text</span>
+                          </div>
+                          <p className="text-xs md:text-sm text-white leading-relaxed">{errata.originalText}</p>
+                          {errata.notes && (
+                            <p className="text-[10px] md:text-xs text-purple-300 mt-1 italic">Note: {errata.notes}</p>
+                          )}
                         </div>
-                        <p className="text-sm text-white leading-relaxed">{errata.originalText}</p>
-                        {errata.notes && (
-                          <p className="text-xs text-purple-300 mt-2 italic">Note: {errata.notes}</p>
+                        {previewCard.desc && (
+                          <div>
+                            <p className="text-[10px] md:text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
+                            <p className="text-xs md:text-sm text-gray-400 leading-relaxed line-through opacity-60">{previewCard.desc}</p>
+                          </div>
                         )}
                       </div>
-                      {previewCard.desc && (
-                        <div className="p-3 bg-yugi-darker rounded">
-                          <p className="text-xs text-gray-500 mb-1">Current Errata'd Text (Reference Only):</p>
-                          <p className="text-sm text-gray-400 leading-relaxed">{previewCard.desc}</p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                return previewCard.desc ? (
-                  <p className="text-sm text-gray-300 leading-relaxed">
-                    {previewCard.desc}
-                  </p>
-                ) : null;
-              })()}
+                    );
+                  }
+                  return previewCard.desc ? (
+                    <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
+                      {previewCard.desc}
+                    </p>
+                  ) : null;
+                })()}
+              </div>
             </div>
           </div>
         )}
       </BottomSheet>
+    </div>
+  );
+}
+
+interface RecentDraft {
+  sessionId: string;
+  roomCode: string;
+  cubeName: string;
+  cubeId: string;
+  completedAt: string;
+  playerCount: number;
+  cardsPerPlayer: number;
+  players: { id: string; name: string; isBot: boolean }[];
+}
+
+function DraftManagement() {
+  const [drafts, setDrafts] = useState<RecentDraft[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const navigate = useNavigate();
+
+  const loadDrafts = async () => {
+    setIsLoading(true);
+    try {
+      const recentDrafts = await draftService.getRecentDraftsAdmin(20);
+      setDrafts(recentDrafts);
+    } catch (error) {
+      console.error('Failed to load drafts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDrafts();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!openDropdown) return;
+
+    const handleClickOutside = () => setOpenDropdown(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openDropdown]);
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="w-6 h-6 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-yugi-dark border border-yugi-border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-yugi-border flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold text-white">Recent Completed Drafts</h2>
+          <p className="text-sm text-gray-400">{drafts.length} drafts</p>
+        </div>
+        <button
+          onClick={loadDrafts}
+          className="px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-yugi-border rounded hover:border-gray-500 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+
+      {drafts.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          No completed drafts found
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="text-left text-sm text-gray-400 border-b border-yugi-border">
+                <th className="px-4 py-3 font-medium">Room</th>
+                <th className="px-4 py-3 font-medium">Cube</th>
+                <th className="px-4 py-3 font-medium">Players</th>
+                <th className="px-4 py-3 font-medium">Cards</th>
+                <th className="px-4 py-3 font-medium">Completed</th>
+                <th className="px-4 py-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {drafts.map((draft) => (
+                <tr key={draft.sessionId} className="border-b border-yugi-border/50 hover:bg-white/5">
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-gold-400 font-medium">{draft.roomCode}</span>
+                  </td>
+                  <td className="px-4 py-3 text-white">{draft.cubeName}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {draft.players.map((player) => (
+                        <span
+                          key={player.id}
+                          className="px-2 py-0.5 bg-yugi-darker text-gray-300 text-xs rounded"
+                        >
+                          {player.name}
+                        </span>
+                      ))}
+                      {draft.players.length === 0 && (
+                        <span className="text-gray-500 text-sm">No players</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-400">{draft.cardsPerPlayer}/player</td>
+                  <td className="px-4 py-3 text-gray-400 text-sm">
+                    {formatRelativeTime(draft.completedAt)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => navigate(`/results/${draft.sessionId}`)}
+                        className="px-2 py-1 text-xs bg-gold-600/20 text-gold-400 rounded hover:bg-gold-600/30 transition-colors"
+                      >
+                        View Results
+                      </button>
+                      {draft.players.length > 0 && (
+                        <div className="relative">
+                          <button
+                            ref={(el) => {
+                              if (el) buttonRefs.current.set(draft.sessionId, el);
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (openDropdown === draft.sessionId) {
+                                setOpenDropdown(null);
+                              } else {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setDropdownPosition({
+                                  top: rect.bottom + 4,
+                                  left: rect.right - 192, // 192px = w-48
+                                });
+                                setOpenDropdown(draft.sessionId);
+                              }
+                            }}
+                            className="px-2 py-1 text-xs bg-blue-600/20 text-blue-400 rounded hover:bg-blue-600/30 transition-colors"
+                          >
+                            Player Results
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Portal dropdown for player results */}
+      {openDropdown && createPortal(
+        <div
+          className="fixed w-48 bg-yugi-dark border border-yugi-border rounded-lg shadow-xl py-1 z-[100]"
+          style={{
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {drafts.find(d => d.sessionId === openDropdown)?.players.map((player) => (
+            <button
+              key={player.id}
+              onClick={() => {
+                navigate(`/results/${openDropdown}?player=${player.id}`);
+                setOpenDropdown(null);
+              }}
+              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-white/5"
+            >
+              {player.name}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+interface DraftStats {
+  total_sessions: number;
+  waiting_sessions: number;
+  in_progress_sessions: number;
+  completed_sessions: number;
+  cancelled_sessions: number;
+  total_picks: number;
+  total_players: number;
+  oldest_session_days: number;
+}
+
+interface RetentionSettings {
+  retention_completed_hours: number;
+  retention_abandoned_hours: number;
+  retention_cancelled_hours: number;
+}
+
+function DatabaseManagement() {
+  const [stats, setStats] = useState<DraftStats | null>(null);
+  const [settings, setSettings] = useState<RetentionSettings>({
+    retention_completed_hours: 72,
+    retention_abandoned_hours: 6,
+    retention_cancelled_hours: 24,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<{ completed: number; abandoned: number; cancelled: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const supabase = getSupabase();
+
+    try {
+      // Load stats using the function
+      const { data: statsData, error: statsError } = await supabase.rpc('get_draft_stats');
+      if (statsError) {
+        // If function doesn't exist, calculate manually
+        if (statsError.code === '42883') {
+          const { count: totalSessions } = await supabase.from('draft_sessions').select('*', { count: 'exact', head: true });
+          const { count: waitingSessions } = await supabase.from('draft_sessions').select('*', { count: 'exact', head: true }).eq('status', 'waiting');
+          const { count: inProgressSessions } = await supabase.from('draft_sessions').select('*', { count: 'exact', head: true }).eq('status', 'in_progress');
+          const { count: completedSessions } = await supabase.from('draft_sessions').select('*', { count: 'exact', head: true }).eq('status', 'completed');
+          const { count: cancelledSessions } = await supabase.from('draft_sessions').select('*', { count: 'exact', head: true }).eq('status', 'cancelled');
+          const { count: totalPicks } = await supabase.from('draft_picks').select('*', { count: 'exact', head: true });
+          const { count: totalPlayers } = await supabase.from('draft_players').select('*', { count: 'exact', head: true });
+          const { data: oldestSession } = await supabase.from('draft_sessions').select('created_at').order('created_at', { ascending: true }).limit(1).single();
+
+          const oldestDays = oldestSession
+            ? (Date.now() - new Date(oldestSession.created_at).getTime()) / (1000 * 60 * 60 * 24)
+            : 0;
+
+          setStats({
+            total_sessions: totalSessions || 0,
+            waiting_sessions: waitingSessions || 0,
+            in_progress_sessions: inProgressSessions || 0,
+            completed_sessions: completedSessions || 0,
+            cancelled_sessions: cancelledSessions || 0,
+            total_picks: totalPicks || 0,
+            total_players: totalPlayers || 0,
+            oldest_session_days: Math.round(oldestDays * 10) / 10,
+          });
+        } else {
+          throw statsError;
+        }
+      } else if (statsData && statsData[0]) {
+        setStats(statsData[0]);
+      }
+
+      // Load retention settings
+      const { data: settingsData } = await supabase
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['retention_completed_hours', 'retention_abandoned_hours', 'retention_cancelled_hours']);
+
+      if (settingsData) {
+        const newSettings = { ...settings };
+        settingsData.forEach((row) => {
+          const key = row.key as keyof RetentionSettings;
+          newSettings[key] = typeof row.value === 'number' ? row.value : parseInt(row.value as string, 10);
+        });
+        setSettings(newSettings);
+      }
+    } catch (err) {
+      console.error('Failed to load database stats:', err);
+      setError('Failed to load database statistics. The migration may need to be run.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleCleanup = async () => {
+    setIsCleaning(true);
+    setCleanupResult(null);
+    setError(null);
+    const supabase = getSupabase();
+
+    try {
+      const { data, error: cleanupError } = await supabase.rpc('cleanup_old_sessions');
+
+      if (cleanupError) {
+        // If function doesn't exist, show migration needed message
+        if (cleanupError.code === '42883') {
+          setError('Cleanup function not found. Please run the retention migration first.');
+        } else {
+          throw cleanupError;
+        }
+      } else if (data && data[0]) {
+        setCleanupResult({
+          completed: data[0].deleted_completed,
+          abandoned: data[0].deleted_abandoned,
+          cancelled: data[0].deleted_cancelled,
+        });
+        // Refresh stats
+        loadData();
+      }
+    } catch (err) {
+      console.error('Cleanup failed:', err);
+      setError('Failed to run cleanup. Check console for details.');
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    setError(null);
+    const supabase = getSupabase();
+
+    try {
+      // Update each setting
+      for (const [key, value] of Object.entries(settings)) {
+        const { error: updateError } = await supabase
+          .from('app_settings')
+          .upsert({ key, value: value, updated_at: new Date().toISOString() });
+
+        if (updateError) throw updateError;
+      }
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      setError('Failed to save settings. The app_settings table may not exist - run the migration first.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <div className="p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* Database Statistics */}
+      <div className="glass-card p-6">
+        <h2 className="text-xl font-bold text-white mb-4">Database Statistics</h2>
+        {stats ? (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <StatCard label="Total Sessions" value={stats.total_sessions} />
+            <StatCard label="Waiting" value={stats.waiting_sessions} color="text-yellow-400" />
+            <StatCard label="In Progress" value={stats.in_progress_sessions} color="text-blue-400" />
+            <StatCard label="Completed" value={stats.completed_sessions} color="text-green-400" />
+            <StatCard label="Cancelled" value={stats.cancelled_sessions} color="text-red-400" />
+            <StatCard label="Total Picks" value={stats.total_picks} />
+            <StatCard label="Total Players" value={stats.total_players} />
+            <StatCard label="Oldest (days)" value={stats.oldest_session_days} />
+          </div>
+        ) : (
+          <p className="text-gray-400">No statistics available</p>
+        )}
+        <button
+          onClick={loadData}
+          className="mt-4 px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+        >
+          Refresh Stats
+        </button>
+      </div>
+
+      {/* Retention Settings */}
+      <div className="glass-card p-6">
+        <h2 className="text-xl font-bold text-white mb-4">Retention Settings</h2>
+        <p className="text-gray-400 text-sm mb-4">
+          Configure how long draft data is kept before automatic cleanup.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Completed Drafts</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max="720"
+                value={settings.retention_completed_hours}
+                onChange={(e) => setSettings({ ...settings, retention_completed_hours: parseInt(e.target.value) || 72 })}
+                className="w-20 px-3 py-2 bg-yugi-card border border-yugi-border rounded text-white text-center"
+              />
+              <span className="text-gray-400 text-sm">hours ({Math.round(settings.retention_completed_hours / 24)} days)</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Abandoned (Waiting)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max="168"
+                value={settings.retention_abandoned_hours}
+                onChange={(e) => setSettings({ ...settings, retention_abandoned_hours: parseInt(e.target.value) || 6 })}
+                className="w-20 px-3 py-2 bg-yugi-card border border-yugi-border rounded text-white text-center"
+              />
+              <span className="text-gray-400 text-sm">hours</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Cancelled</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max="168"
+                value={settings.retention_cancelled_hours}
+                onChange={(e) => setSettings({ ...settings, retention_cancelled_hours: parseInt(e.target.value) || 24 })}
+                className="w-20 px-3 py-2 bg-yugi-card border border-yugi-border rounded text-white text-center"
+              />
+              <span className="text-gray-400 text-sm">hours</span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleSaveSettings}
+          disabled={isSaving}
+          className="px-4 py-2 bg-gold-500 hover:bg-gold-400 disabled:bg-gold-500/50 text-black font-semibold rounded transition-colors"
+        >
+          {isSaving ? 'Saving...' : 'Save Settings'}
+        </button>
+      </div>
+
+      {/* Manual Cleanup */}
+      <div className="glass-card p-6">
+        <h2 className="text-xl font-bold text-white mb-4">Manual Cleanup</h2>
+        <p className="text-gray-400 text-sm mb-4">
+          Run cleanup manually to delete old sessions based on current retention settings.
+          This will permanently delete sessions and all associated data (picks, players, burned cards).
+        </p>
+
+        {cleanupResult && (
+          <div className="mb-4 p-4 bg-green-500/20 border border-green-500 rounded-lg text-green-400">
+            <p className="font-semibold">Cleanup Complete!</p>
+            <ul className="text-sm mt-2">
+              <li>Completed sessions deleted: {cleanupResult.completed}</li>
+              <li>Abandoned sessions deleted: {cleanupResult.abandoned}</li>
+              <li>Cancelled sessions deleted: {cleanupResult.cancelled}</li>
+            </ul>
+          </div>
+        )}
+
+        <button
+          onClick={handleCleanup}
+          disabled={isCleaning}
+          className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 text-white font-semibold rounded transition-colors"
+        >
+          {isCleaning ? 'Cleaning...' : 'Run Cleanup Now'}
+        </button>
+
+        <div className="mt-4 p-4 bg-yugi-card rounded-lg">
+          <h3 className="text-sm font-semibold text-gray-300 mb-2">Automatic Cleanup</h3>
+          <p className="text-xs text-gray-500">
+            To enable automatic cleanup, set up a scheduled job to call the <code className="text-gold-400">cleanup_old_sessions()</code> function.
+            Options include pg_cron, Supabase Edge Functions with cron triggers, or an external scheduler.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, color = 'text-white' }: { label: string; value: number; color?: string }) {
+  return (
+    <div className="bg-yugi-card rounded-lg p-4">
+      <p className="text-xs text-gray-400 mb-1">{label}</p>
+      <p className={`text-2xl font-bold ${color}`}>{value.toLocaleString()}</p>
     </div>
   );
 }

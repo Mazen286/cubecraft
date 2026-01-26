@@ -104,7 +104,7 @@ const LANES = [
 const LAYER_CONFIG = {
   background: {
     scaleRange: [0.15, 0.22],
-    opacityRange: [0.30, 0.45],
+    opacityRange: [1, 1],
     durationRange: [55, 75],
     blur: 2,
     zIndex: 5,
@@ -113,7 +113,7 @@ const LAYER_CONFIG = {
   },
   midground: {
     scaleRange: [0.22, 0.30],
-    opacityRange: [0.50, 0.70],
+    opacityRange: [1, 1],
     durationRange: [40, 55],
     blur: 0,
     zIndex: 10,
@@ -122,7 +122,7 @@ const LAYER_CONFIG = {
   },
   foreground: {
     scaleRange: [0.30, 0.45],
-    opacityRange: [0.70, 0.90],
+    opacityRange: [1, 1],
     durationRange: [30, 45],
     blur: 0,
     zIndex: 15,

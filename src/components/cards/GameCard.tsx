@@ -8,7 +8,7 @@ const loadedImages = new Set<string>();
 
 export interface GameCardProps {
   card: Card;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   onClick?: () => void;
   isSelected?: boolean;
   showDetails?: boolean;
@@ -17,6 +17,8 @@ export interface GameCardProps {
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
   className?: string;
+  /** Remove rounded corners and shadows for edge-to-edge grid display */
+  flush?: boolean;
 }
 
 /**
@@ -34,11 +36,12 @@ export const GameCard = memo(function GameCard({
   onDragStart,
   onDragEnd,
   className,
+  flush = false,
 }: GameCardProps) {
   const { gameConfig } = useGameConfig();
 
-  // Get image URL from game config (map 'xl' to 'lg' for API requests)
-  const imageSizeForUrl = size === 'xl' ? 'lg' : size;
+  // Get image URL from game config (map sizes for API requests)
+  const imageSizeForUrl = (size === 'xl' || size === '2xl' || size === 'full') ? 'lg' : (size === 'xs' ? 'sm' : size);
   const imageUrl = gameConfig.getCardImageUrl(card, imageSizeForUrl);
 
   // Check if image was already loaded (cached globally)
@@ -47,10 +50,13 @@ export const GameCard = memo(function GameCard({
   const [imageError, setImageError] = useState(false);
 
   const sizeClasses = {
+    xs: 'w-12 h-[4.5rem]',
     sm: 'w-16 h-24',
     md: 'w-24 h-36',
     lg: 'w-32 h-48',
     xl: 'w-40 h-60',
+    '2xl': 'w-48 h-72',
+    full: 'w-full aspect-[2/3]', // Fill container width, maintain card aspect ratio
   };
 
   // Get indicators from game config
@@ -83,9 +89,9 @@ export const GameCard = memo(function GameCard({
       {/* Card Image */}
       <div
         className={cn(
-          'relative w-full h-full rounded-lg overflow-hidden',
-          'shadow-lg shadow-black/50',
-          isSelected && 'shadow-gold-500/50',
+          'relative w-full h-full overflow-hidden',
+          !flush && 'rounded-lg shadow-lg shadow-black/50',
+          !flush && isSelected && 'shadow-gold-500/50',
           !imageLoaded && 'bg-yugi-card animate-pulse'
         )}
       >

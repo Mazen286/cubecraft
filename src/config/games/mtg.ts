@@ -132,35 +132,77 @@ function isMulticolor(card: Card): boolean {
 
 /**
  * Generate MTG Arena format export
+ * Uses _exportZone attribute if present to separate main deck from sideboard
  */
 function generateArenaFormat(cards: Card[]): string {
-  const counts = new Map<string, number>();
+  const mainCounts = new Map<string, number>();
+  const sideCounts = new Map<string, number>();
+
   for (const card of cards) {
     const name = card.name;
-    counts.set(name, (counts.get(name) || 0) + 1);
+    const zone = (card.attributes as Record<string, unknown>)?._exportZone as string | undefined;
+
+    if (zone === 'side') {
+      sideCounts.set(name, (sideCounts.get(name) || 0) + 1);
+    } else {
+      mainCounts.set(name, (mainCounts.get(name) || 0) + 1);
+    }
   }
 
   const lines: string[] = [];
-  for (const [name, count] of counts) {
+
+  // Main deck
+  for (const [name, count] of mainCounts) {
     lines.push(`${count} ${name}`);
   }
+
+  // Sideboard (if any)
+  if (sideCounts.size > 0) {
+    lines.push('');
+    lines.push('Sideboard');
+    for (const [name, count] of sideCounts) {
+      lines.push(`${count} ${name}`);
+    }
+  }
+
   return lines.join('\n');
 }
 
 /**
  * Generate MTGO format export
+ * Uses _exportZone attribute if present to separate main deck from sideboard
  */
 function generateMTGOFormat(cards: Card[]): string {
-  const counts = new Map<string, number>();
+  const mainCounts = new Map<string, number>();
+  const sideCounts = new Map<string, number>();
+
   for (const card of cards) {
     const name = card.name;
-    counts.set(name, (counts.get(name) || 0) + 1);
+    const zone = (card.attributes as Record<string, unknown>)?._exportZone as string | undefined;
+
+    if (zone === 'side') {
+      sideCounts.set(name, (sideCounts.get(name) || 0) + 1);
+    } else {
+      mainCounts.set(name, (mainCounts.get(name) || 0) + 1);
+    }
   }
 
   const lines: string[] = [];
-  for (const [name, count] of counts) {
+
+  // Main deck
+  for (const [name, count] of mainCounts) {
     lines.push(`${count} ${name}`);
   }
+
+  // Sideboard (if any)
+  if (sideCounts.size > 0) {
+    lines.push('');
+    lines.push('Sideboard');
+    for (const [name, count] of sideCounts) {
+      lines.push(`${count} ${name}`);
+    }
+  }
+
   return lines.join('\n');
 }
 

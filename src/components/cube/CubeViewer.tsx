@@ -1,31 +1,19 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { X, Filter, SortAsc, ChevronDown, ChevronUp } from 'lucide-react';
+import { X } from 'lucide-react';
 import { YuGiOhCard } from '../cards/YuGiOhCard';
+import { CardDetailSheet } from '../cards/CardDetailSheet';
 import { Button } from '../ui/Button';
-import { BottomSheet } from '../ui/BottomSheet';
+import { CardFilterBar } from '../filters/CardFilterBar';
+import { CubeStats } from './CubeStats';
+import { ArchetypeFilter } from '../filters/ArchetypeFilter';
 import { cubeService } from '../../services/cubeService';
 import { useGameConfig } from '../../context/GameContext';
+import { useCardFilters, type Tier } from '../../hooks/useCardFilters';
 import type { YuGiOhCard as YuGiOhCardType } from '../../types';
 import type { Card } from '../../types/card';
-import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
-import { ENERGY_COLORS } from '../../config/games/pokemon';
+import type { YuGiOhCardAttributes } from '../../types/card';
 import { cn, getTierFromScore } from '../../lib/utils';
-import { hasErrata, getErrata } from '../../data/cardErrata';
-
-/**
- * Get contrast color (black or white) based on background color luminance
- */
-function getContrastColor(hexColor: string): string {
-  // Remove # if present
-  const hex = hexColor.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  // Calculate relative luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.5 ? '#000000' : '#ffffff';
-}
 
 interface CubeViewerProps {
   cubeId: string;
@@ -33,8 +21,6 @@ interface CubeViewerProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-type TierFilter = 'all' | 'S' | 'A' | 'B' | 'C' | 'E' | 'F';
 
 // Card dimensions for grid calculation
 const CARD_WIDTH = 72; // w-16 + gap
@@ -49,19 +35,55 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter state - using game config filter options
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [tierFilter, setTierFilter] = useState<TierFilter>('all');
+  // Card filters using the reusable hook
+  const filters = useCardFilters({
+    includeScoreSort: true,
+    defaultSort: 'name',
+    defaultDirection: 'asc',
+  });
 
-  // Advanced filter state
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [advancedFilters, setAdvancedFilters] = useState<Record<string, Set<string>>>({});
-  const [rangeFilters, setRangeFilters] = useState<Record<string, [number, number]>>({});
+  // Stats-based filters (for cross-filtering from CubeStats)
+  const [statsFilters, setStatsFilters] = useState<Record<string, Set<string>>>({});
 
-  // Sort state - using game config sort options
-  const [sortBy, setSortBy] = useState<string>('name');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  // Toggle a stats filter value
+  // additive = true (Ctrl/Cmd held): add/remove to existing selection
+  // additive = false (normal click): select only this value, or deselect if already selected
+  const handleStatsFilterClick = useCallback((groupId: string, value: string, additive: boolean = false) => {
+    setStatsFilters(prev => {
+      const current = prev[groupId] || new Set<string>();
+
+      if (additive) {
+        // Ctrl/Cmd click: toggle this value while keeping others
+        const newSet = new Set(current);
+        if (newSet.has(value)) {
+          newSet.delete(value);
+        } else {
+          newSet.add(value);
+        }
+        // If the set is empty, remove the key entirely
+        if (newSet.size === 0) {
+          const { [groupId]: _, ...rest } = prev;
+          return rest;
+        }
+        return { ...prev, [groupId]: newSet };
+      } else {
+        // Normal click: select only this value, or deselect if already the only selection
+        if (current.has(value) && current.size === 1) {
+          // Already selected and it's the only one - deselect
+          const { [groupId]: _, ...rest } = prev;
+          return rest;
+        } else {
+          // Select only this value
+          return { ...prev, [groupId]: new Set([value]) };
+        }
+      }
+    });
+  }, []);
+
+  // Clear all stats filters
+  const clearStatsFilters = useCallback(() => {
+    setStatsFilters({});
+  }, []);
 
   // Selected card for detail view
   const [selectedCard, setSelectedCard] = useState<YuGiOhCardType | null>(null);
@@ -145,186 +167,125 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
       setCubeGameId(null);
       setPendingCards([]);
       setCards([]);
+      setStatsFilters({});
     }
   }, [isOpen, previousGameId, setGame]);
 
+  // Helper to convert YuGiOhCard to Card format for filtering
+  const toCardWithAttributes = useCallback((card: YuGiOhCardType): Card => ({
+    id: card.id,
+    name: card.name,
+    type: card.type,
+    description: card.desc,
+    imageUrl: card.imageUrl,
+    score: card.score,
+    attributes: card.attributes || {
+      atk: card.atk,
+      def: card.def,
+      level: card.level,
+      attribute: card.attribute,
+      race: card.race,
+      linkval: card.linkval,
+    },
+  }), []);
+
   // Convert cards to generic Card type for filtering
-  const cardsAsGeneric = useMemo(() => {
-    return cards.map(card => ({
-      id: card.id,
-      name: card.name,
-      type: card.type,
-      description: card.desc,
-      imageUrl: card.imageUrl,
-      score: card.score,
-      attributes: card.attributes || {
-        atk: card.atk,
-        def: card.def,
-        level: card.level,
-        attribute: card.attribute,
-        race: card.race,
-        linkval: card.linkval,
-      },
-    } as Card));
-  }, [cards]);
+  const cardsAsGeneric = useMemo(() => cards.map(toCardWithAttributes), [cards, toCardWithAttributes]);
 
-  // Filter and sort cards
+  // Filter and sort cards using the reusable hook + stats filters
   const filteredCards = useMemo(() => {
-    let result = [...cards];
+    let filteredGeneric = filters.applyFilters(cardsAsGeneric);
 
-    // Search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      result = result.filter(card =>
-        card.name.toLowerCase().includes(searchLower) ||
-        card.desc?.toLowerCase().includes(searchLower) ||
-        card.type?.toLowerCase().includes(searchLower)
-      );
-    }
+    // Apply stats-based filters
+    for (const [groupId, selectedValues] of Object.entries(statsFilters)) {
+      if (selectedValues.size === 0) continue;
 
-    // Type filter - use game config filter options
-    if (typeFilter !== 'all' && gameConfig.filterOptions) {
-      const filterOption = gameConfig.filterOptions.find(f => f.id === typeFilter);
-      if (filterOption) {
-        result = result.filter(card => {
-          // Convert to generic Card for the filter function
-          const genericCard: Card = {
-            id: card.id,
-            name: card.name,
-            type: card.type,
-            description: card.desc,
-            score: card.score,
-            attributes: card.attributes || {
-              atk: card.atk,
-              def: card.def,
-              level: card.level,
-              attribute: card.attribute,
-              race: card.race,
-              linkval: card.linkval,
-            },
-          };
-          return filterOption.filter(genericCard);
-        });
-      }
-    }
+      filteredGeneric = filteredGeneric.filter(card => {
+        const attrs = card.attributes as Record<string, unknown> | undefined;
+        const type = card.type.toLowerCase();
 
-    // Tier filter
-    if (tierFilter !== 'all') {
-      result = result.filter(card => getTierFromScore(card.score) === tierFilter);
-    }
+        switch (groupId) {
+          // Yu-Gi-Oh filters
+          case 'cardType': {
+            // Match card type (monster/spell/trap for yugioh, creature/instant/etc for mtg)
+            return Array.from(selectedValues).some(val => type.includes(val));
+          }
+          case 'level': {
+            // Match level/rank (Yu-Gi-Oh)
+            const level = (attrs as YuGiOhCardAttributes)?.level;
+            return level !== undefined && selectedValues.has(String(level));
+          }
+          case 'attribute': {
+            // Match attribute (Yu-Gi-Oh)
+            const attribute = (attrs as YuGiOhCardAttributes)?.attribute;
+            return attribute !== undefined && selectedValues.has(attribute);
+          }
+          case 'race': {
+            // Match race/monster type (Yu-Gi-Oh)
+            const race = (attrs as YuGiOhCardAttributes)?.race;
+            return race !== undefined && selectedValues.has(race);
+          }
+          case 'archetype': {
+            // Match archetype (Yu-Gi-Oh)
+            const archetype = (attrs as YuGiOhCardAttributes)?.archetype;
+            return archetype !== undefined && selectedValues.has(archetype);
+          }
 
-    // Advanced filters - multi-select groups
-    if (gameConfig.filterGroups && Object.keys(advancedFilters).length > 0) {
-      for (const [groupId, selectedOptions] of Object.entries(advancedFilters)) {
-        if (selectedOptions.size === 0) continue;
+          // MTG filters
+          case 'color': {
+            // Match color (MTG) - values are full names like 'White', 'Blue', 'Multicolor', 'Colorless'
+            const colors = attrs?.colors as string[] | undefined;
+            return Array.from(selectedValues).some(colorName => {
+              if (colorName === 'Colorless') {
+                return !colors || colors.length === 0;
+              }
+              if (colorName === 'Multicolor') {
+                return colors && colors.length > 1;
+              }
+              // Map color name back to code
+              const colorCode = { White: 'W', Blue: 'U', Black: 'B', Red: 'R', Green: 'G' }[colorName];
+              return colorCode && colors?.includes(colorCode);
+            });
+          }
+          case 'cmc': {
+            // Match mana value (MTG)
+            const cmc = attrs?.cmc as number | undefined;
+            return cmc !== undefined && selectedValues.has(String(cmc));
+          }
 
-        const group = gameConfig.filterGroups.find(g => g.id === groupId);
-        if (!group || !group.options) continue;
+          // Pokemon filters
+          case 'stage': {
+            // Match stage/category (Pokemon)
+            const stage = attrs?.stage as string | undefined;
+            if (stage && selectedValues.has(stage)) return true;
+            // Also check for Trainer/Energy in card type
+            if (selectedValues.has('Trainer') && card.type.includes('Trainer')) return true;
+            if (selectedValues.has('Energy') && card.type.includes('Energy')) return true;
+            return false;
+          }
+          case 'pokemonType': {
+            // Match pokemon type
+            const types = attrs?.types as string[] | undefined;
+            return types && Array.from(selectedValues).some(t => types.includes(t));
+          }
 
-        // Filter: card must match at least one selected option (OR logic within group)
-        result = result.filter(card => {
-          const genericCard: Card = {
-            id: card.id,
-            name: card.name,
-            type: card.type,
-            description: card.desc,
-            score: card.score,
-            attributes: card.attributes || {
-              atk: card.atk,
-              def: card.def,
-              level: card.level,
-              attribute: card.attribute,
-              race: card.race,
-              linkval: card.linkval,
-            },
-          };
-
-          return Array.from(selectedOptions).some(optionId => {
-            const option = group.options?.find(o => o.id === optionId);
-            return option ? option.filter(genericCard) : false;
-          });
-        });
-      }
-    }
-
-    // Advanced filters - range groups
-    if (gameConfig.filterGroups && Object.keys(rangeFilters).length > 0) {
-      for (const [groupId, [min, max]] of Object.entries(rangeFilters)) {
-        const group = gameConfig.filterGroups.find(g => g.id === groupId);
-        if (!group || !group.rangeConfig) continue;
-
-        result = result.filter(card => {
-          const genericCard: Card = {
-            id: card.id,
-            name: card.name,
-            type: card.type,
-            description: card.desc,
-            score: card.score,
-            attributes: card.attributes || {
-              atk: card.atk,
-              def: card.def,
-              level: card.level,
-              attribute: card.attribute,
-              race: card.race,
-              linkval: card.linkval,
-            },
-          };
-
-          const value = group.rangeConfig!.getValue(genericCard);
-          if (value === undefined) return false;
-          return value >= min && value <= max;
-        });
-      }
-    }
-
-    // Sort - use game config sort options
-    const sortOption = gameConfig.sortOptions?.find(s => s.id === sortBy);
-    if (sortOption) {
-      result.sort((a, b) => {
-        // Convert to generic Card for the compare function
-        const aGeneric: Card = {
-          id: a.id,
-          name: a.name,
-          type: a.type,
-          description: a.desc,
-          score: a.score,
-          attributes: a.attributes || {
-            atk: a.atk,
-            def: a.def,
-            level: a.level,
-            attribute: a.attribute,
-            race: a.race,
-            linkval: a.linkval,
-          },
-        };
-        const bGeneric: Card = {
-          id: b.id,
-          name: b.name,
-          type: b.type,
-          description: b.desc,
-          score: b.score,
-          attributes: b.attributes || {
-            atk: b.atk,
-            def: b.def,
-            level: b.level,
-            attribute: b.attribute,
-            race: b.race,
-            linkval: b.linkval,
-          },
-        };
-        const comparison = sortOption.compare(aGeneric, bGeneric);
-        return sortDir === 'asc' ? comparison : -comparison;
-      });
-    } else {
-      // Default sort by name
-      result.sort((a, b) => {
-        const comparison = a.name.localeCompare(b.name);
-        return sortDir === 'asc' ? comparison : -comparison;
+          default:
+            return true;
+        }
       });
     }
 
-    return result;
-  }, [cards, search, typeFilter, tierFilter, advancedFilters, rangeFilters, sortBy, sortDir, gameConfig]);
+    // Map back to original YuGiOhCard objects
+    return filteredGeneric.map(genericCard =>
+      cards.find(c => c.id === genericCard.id)!
+    ).filter(Boolean);
+  }, [cards, cardsAsGeneric, filters, statsFilters]);
+
+  // Filtered cards as generic for CubeStats
+  const filteredCardsAsGeneric = useMemo(() =>
+    filteredCards.map(toCardWithAttributes),
+    [filteredCards, toCardWithAttributes]
+  );
 
   // Group cards into rows for virtualization
   const rows = useMemo(() => {
@@ -367,53 +328,23 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     return result;
   }, [cards, cardsAsGeneric, gameConfig]);
 
-  // Toggle an option in a multi-select filter group
-  const toggleFilterOption = useCallback((groupId: string, optionId: string) => {
-    setAdvancedFilters(prev => {
-      const newFilters = { ...prev };
-      const groupSet = new Set(prev[groupId] || []);
-
-      if (groupSet.has(optionId)) {
-        groupSet.delete(optionId);
-      } else {
-        groupSet.add(optionId);
+  // Calculate tier counts for filter display
+  const tierCounts = useMemo(() => {
+    const counts: Record<Tier, number> = { S: 0, A: 0, B: 0, C: 0, E: 0, F: 0 };
+    for (const card of cardsAsGeneric) {
+      const tier = getTierFromScore(card.score) as Tier;
+      if (tier in counts) {
+        counts[tier]++;
       }
+    }
+    return counts;
+  }, [cardsAsGeneric]);
 
-      if (groupSet.size === 0) {
-        delete newFilters[groupId];
-      } else {
-        newFilters[groupId] = groupSet;
-      }
-
-      return newFilters;
-    });
-  }, []);
-
-  // Update range filter
-  const updateRangeFilter = useCallback((groupId: string, min: number, max: number) => {
-    setRangeFilters(prev => ({
-      ...prev,
-      [groupId]: [min, max],
-    }));
-  }, []);
-
-  // Clear all advanced filters
-  const clearAdvancedFilters = useCallback(() => {
-    setAdvancedFilters({});
-    setRangeFilters({});
-  }, []);
-
-  // Count active advanced filters
-  const activeAdvancedFilterCount = useMemo(() => {
-    let count = Object.values(advancedFilters).reduce((sum, set) => sum + set.size, 0);
-    count += Object.keys(rangeFilters).length;
-    return count;
-  }, [advancedFilters, rangeFilters]);
-
-  // Reset advanced filters when game changes
+  // Reset filters when game changes
   useEffect(() => {
-    clearAdvancedFilters();
-  }, [currentGameId, clearAdvancedFilters]);
+    filters.clearAllFilters();
+    setStatsFilters({});
+  }, [currentGameId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -533,7 +464,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   // Reset selection when filters change
   useEffect(() => {
     setSelectedIndex(-1);
-  }, [search, typeFilter, tierFilter, advancedFilters, rangeFilters, sortBy, sortDir]);
+  }, [filters.filterState, filters.sortState, statsFilters]);
 
   if (!isOpen) return null;
 
@@ -626,227 +557,73 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
         )}
 
         {/* Filters & Sort */}
-        <div className="p-2 sm:p-4 border-b border-yugi-border bg-yugi-dark/50">
-          {/* Search - full width on mobile */}
-          <input
-            type="text"
-            placeholder="Search cards..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:hidden bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none mb-2"
+        <div className="p-2 sm:p-4 border-b border-yugi-border bg-yugi-dark/50 space-y-2">
+          <CardFilterBar
+            filters={filters}
+            showSearch
+            showTypeFilter
+            showTierFilter
+            showAdvancedFilters
+            showSort
+            includeScoreSort
+            tierCounts={tierCounts}
+            totalCount={cards.length}
+            filteredCount={filteredCards.length}
           />
-
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Search - inline on desktop */}
-            <input
-              type="text"
-              placeholder="Search cards..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="hidden sm:block bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none w-48"
-            />
-
-            {/* Type Filter - Game specific */}
-            <div className="flex items-center gap-1 sm:gap-2">
-              <Filter className="w-4 h-4 text-gray-400 hidden sm:block" />
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="bg-yugi-card border border-yugi-border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
-              >
-                {gameConfig.filterOptions?.map(option => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}{option.id !== 'all' ? ` (${stats[option.id] ?? 0})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Tier Filter */}
-            <select
-              value={tierFilter}
-              onChange={(e) => setTierFilter(e.target.value as TierFilter)}
-              className="bg-yugi-card border border-yugi-border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
-            >
-              <option value="all">All Tiers</option>
-              <option value="S">S Tier</option>
-              <option value="A">A Tier</option>
-              <option value="B">B Tier</option>
-              <option value="C">C Tier</option>
-              <option value="E">E Tier</option>
-              <option value="F">F Tier</option>
-            </select>
-
-            {/* Advanced Filters Toggle */}
-            {gameConfig.filterGroups && gameConfig.filterGroups.length > 0 && (
-              <button
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className={cn(
-                  "flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border text-sm transition-colors",
-                  showAdvancedFilters || activeAdvancedFilterCount > 0
-                    ? "border-gold-500 text-gold-400 bg-gold-500/10"
-                    : "border-yugi-border text-gray-400 hover:border-gold-500 hover:text-gold-400"
-                )}
-              >
-                <Filter className="w-4 h-4" />
-                <span className="hidden sm:inline">Advanced</span>
-                {activeAdvancedFilterCount > 0 && (
-                  <span className="bg-gold-500 text-yugi-darker text-xs font-bold px-1.5 py-0.5 rounded-full">
-                    {activeAdvancedFilterCount}
-                  </span>
-                )}
-                {showAdvancedFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-            )}
-
-            {/* Sort - Game specific */}
-            <div className="flex items-center gap-1 sm:gap-2 ml-auto">
-              <SortAsc className="w-4 h-4 text-gray-400 hidden sm:block" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-yugi-card border border-yugi-border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm text-white focus:border-gold-500 focus:outline-none"
-              >
-                {gameConfig.sortOptions?.map(option => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}
-                className={cn(
-                  "p-1.5 sm:p-2 rounded-lg border border-yugi-border text-sm transition-colors",
-                  "hover:border-gold-500 hover:text-gold-400"
-                )}
-              >
-                {sortDir === 'asc' ? '↑' : '↓'}
-              </button>
-            </div>
-          </div>
-
-          {/* Advanced Filters Panel */}
-          {showAdvancedFilters && gameConfig.filterGroups && (
-            <div className="mt-2 sm:mt-4 p-2 sm:p-4 bg-yugi-card rounded-lg border border-yugi-border">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-white">Advanced Filters</h4>
-                {activeAdvancedFilterCount > 0 && (
+          {/* Stats filters row */}
+          {(gameConfig.id === 'yugioh' || Object.keys(statsFilters).length > 0) && cards.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Archetype filter for Yu-Gi-Oh */}
+              {gameConfig.id === 'yugioh' && (
+                <ArchetypeFilter
+                  cards={cardsAsGeneric}
+                  selectedArchetypes={statsFilters['archetype'] || new Set()}
+                  onToggleArchetype={(archetype) => handleStatsFilterClick('archetype', archetype, true)}
+                  onClearArchetypes={() => {
+                    setStatsFilters(prev => {
+                      const { archetype: _, ...rest } = prev;
+                      return rest;
+                    });
+                  }}
+                />
+              )}
+              {/* Active stats filter chips */}
+              {Object.entries(statsFilters).map(([groupId, values]) => {
+                if (groupId === 'archetype') return null; // Handled by ArchetypeFilter
+                return Array.from(values).map(value => (
                   <button
-                    onClick={clearAdvancedFilters}
-                    className="text-xs text-gray-400 hover:text-gold-400 transition-colors"
+                    key={`${groupId}-${value}`}
+                    onClick={() => handleStatsFilterClick(groupId, value)}
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-gold-500/20 text-gold-400 rounded-lg ring-1 ring-gold-500"
                   >
-                    Clear All
+                    <span className="text-gray-400 capitalize">{groupId}:</span>
+                    <span>{value}</span>
+                    <X className="w-3 h-3" />
                   </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {gameConfig.filterGroups.map((group) => (
-                  <div key={group.id} className="space-y-2">
-                    <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">
-                      {group.label}
-                    </label>
-
-                    {/* Multi-select filter group */}
-                    {group.type === 'multi-select' && group.options && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {group.options.map((option) => {
-                          const isSelected = advancedFilters[group.id]?.has(option.id) ?? false;
-                          return (
-                            <button
-                              key={option.id}
-                              onClick={() => toggleFilterOption(group.id, option.id)}
-                              className={cn(
-                                "px-2 py-1 rounded text-xs font-medium transition-all",
-                                isSelected
-                                  ? "ring-2 ring-gold-400 ring-offset-1 ring-offset-yugi-dark"
-                                  : "hover:opacity-80"
-                              )}
-                              style={{
-                                backgroundColor: option.color
-                                  ? isSelected
-                                    ? option.color
-                                    : `${option.color}40`
-                                  : isSelected
-                                    ? '#fbbf24'
-                                    : '#374151',
-                                color: option.color && option.id !== 'B' && option.id !== 'DARK'
-                                  ? isSelected
-                                    ? getContrastColor(option.color)
-                                    : '#fff'
-                                  : '#fff',
-                              }}
-                              title={option.label}
-                            >
-                              {option.shortLabel || option.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Range filter group */}
-                    {group.type === 'range' && group.rangeConfig && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={group.rangeConfig.min}
-                            max={group.rangeConfig.max}
-                            step={group.rangeConfig.step || 1}
-                            value={rangeFilters[group.id]?.[0] ?? group.rangeConfig.min}
-                            onChange={(e) => updateRangeFilter(
-                              group.id,
-                              Number(e.target.value),
-                              rangeFilters[group.id]?.[1] ?? group.rangeConfig!.max
-                            )}
-                            className="w-20 bg-yugi-darker border border-yugi-border rounded px-2 py-1 text-sm text-white focus:border-gold-500 focus:outline-none"
-                          />
-                          <span className="text-gray-400">to</span>
-                          <input
-                            type="number"
-                            min={group.rangeConfig.min}
-                            max={group.rangeConfig.max}
-                            step={group.rangeConfig.step || 1}
-                            value={rangeFilters[group.id]?.[1] ?? group.rangeConfig.max}
-                            onChange={(e) => updateRangeFilter(
-                              group.id,
-                              rangeFilters[group.id]?.[0] ?? group.rangeConfig!.min,
-                              Number(e.target.value)
-                            )}
-                            className="w-20 bg-yugi-darker border border-yugi-border rounded px-2 py-1 text-sm text-white focus:border-gold-500 focus:outline-none"
-                          />
-                          {rangeFilters[group.id] && (
-                            <button
-                              onClick={() => {
-                                setRangeFilters(prev => {
-                                  const newFilters = { ...prev };
-                                  delete newFilters[group.id];
-                                  return newFilters;
-                                });
-                              }}
-                              className="text-xs text-gray-400 hover:text-red-400"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                ));
+              })}
+              {/* Clear all stats filters button */}
+              {Object.keys(statsFilters).length > 0 && (
+                <button
+                  onClick={clearStatsFilters}
+                  className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
             </div>
           )}
-
-          {/* Results count */}
-          <div className="mt-2 text-xs sm:text-sm text-gray-400">
-            Showing {filteredCards.length} of {cards.length} cards
-            {activeAdvancedFilterCount > 0 && (
-              <span className="text-gold-400 hidden sm:inline"> ({activeAdvancedFilterCount} filter{activeAdvancedFilterCount !== 1 ? 's' : ''} active)</span>
-            )}
-          </div>
         </div>
+
+        {/* Cube Statistics Dashboard */}
+        {!isLoading && cards.length > 0 && (
+          <CubeStats
+            cards={cardsAsGeneric}
+            filteredCards={filteredCardsAsGeneric}
+            onFilterClick={handleStatsFilterClick}
+            activeFilters={statsFilters}
+          />
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex">
@@ -913,249 +690,11 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
         </div>
 
         {/* Card Detail Bottom Sheet */}
-        <BottomSheet
+        <CardDetailSheet
+          card={selectedCard}
           isOpen={!!selectedCard}
           onClose={() => setSelectedCard(null)}
-          title={selectedCard?.name}
-          titleBadge={selectedCard && hasErrata(selectedCard.id) && (
-            <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
-              PRE-ERRATA
-            </span>
-          )}
-        >
-          {selectedCard && (
-            <div className="p-4 md:p-6">
-              <div className="flex gap-4 md:gap-6">
-                {/* Card image - larger on desktop */}
-                <div className="flex-shrink-0">
-                  <div className="md:hidden">
-                    <YuGiOhCard card={selectedCard} size="lg" showTier />
-                  </div>
-                  <div className="hidden md:block">
-                    <YuGiOhCard card={selectedCard} size="xl" showTier />
-                  </div>
-                </div>
-
-                {/* Card info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm md:text-base text-gray-300 mb-2 md:mb-3">{selectedCard.type}</p>
-
-                  {/* Primary Stats */}
-                  {gameConfig.cardDisplay?.primaryStats && gameConfig.cardDisplay.primaryStats.length > 0 && (
-                    <div className="flex flex-wrap gap-2 md:gap-3 mb-2 md:mb-3 text-sm md:text-base">
-                      {gameConfig.cardDisplay?.primaryStats?.map(stat => {
-                        const genericCard: Card = {
-                          id: selectedCard.id,
-                          name: selectedCard.name,
-                          type: selectedCard.type,
-                          description: selectedCard.desc,
-                          score: selectedCard.score,
-                          attributes: selectedCard.attributes || {
-                            atk: selectedCard.atk,
-                            def: selectedCard.def,
-                            level: selectedCard.level,
-                            attribute: selectedCard.attribute,
-                            race: selectedCard.race,
-                            linkval: selectedCard.linkval,
-                          },
-                        };
-                        const value = stat.getValue(genericCard);
-                        if (!value) return null;
-                        return (
-                          <span key={stat.label} className={stat.color}>
-                            {stat.label}: {value}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Secondary Info */}
-                  <div className="flex flex-wrap gap-1 md:gap-2 mb-2 md:mb-3">
-                    {gameConfig.cardDisplay?.secondaryInfo?.map(info => {
-                      const genericCard: Card = {
-                        id: selectedCard.id,
-                        name: selectedCard.name,
-                        type: selectedCard.type,
-                        description: selectedCard.desc,
-                        score: selectedCard.score,
-                        attributes: selectedCard.attributes || {
-                          atk: selectedCard.atk,
-                          def: selectedCard.def,
-                          level: selectedCard.level,
-                          attribute: selectedCard.attribute,
-                          race: selectedCard.race,
-                          linkval: selectedCard.linkval,
-                        },
-                      };
-                      const value = info.getValue(genericCard);
-                      if (!value) return null;
-                      return (
-                        <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-yugi-card rounded text-xs md:text-sm text-gray-300">
-                          {value}
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  {/* Score */}
-                  {selectedCard.score !== undefined && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs md:text-sm text-gray-400">Score:</span>
-                      <span className={cn(
-                        "text-xs md:text-sm font-bold",
-                        selectedCard.score >= 90 ? 'text-red-400' :
-                        selectedCard.score >= 75 ? 'text-orange-400' :
-                        selectedCard.score >= 60 ? 'text-yellow-400' :
-                        selectedCard.score >= 45 ? 'text-green-400' :
-                        selectedCard.score >= 30 ? 'text-blue-400' : 'text-gray-400'
-                      )}>
-                        {selectedCard.score}/100 ({getTierFromScore(selectedCard.score)})
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Pokemon-specific: Abilities, Attacks, or Card Effect */}
-              {gameConfig.id === 'pokemon' && (() => {
-                const attrs = selectedCard.attributes as PokemonCardAttributes;
-                const abilities = attrs?.abilities as PokemonAbility[] | undefined;
-                const attacks = attrs?.attacks as PokemonAttack[] | undefined;
-                const hasAbilitiesOrAttacks = (abilities?.length || 0) > 0 || (attacks?.length || 0) > 0;
-                // Only Pokemon cards have weakness/resistance/retreat - not Trainers or Energy
-                const isPokemonCard = selectedCard.type?.toLowerCase().includes('pokémon') ||
-                  selectedCard.type?.toLowerCase().includes('pokemon') ||
-                  attrs?.stage !== undefined;
-                const hasStats = isPokemonCard && (attrs?.weakness || attrs?.resistance || attrs?.retreatCost !== undefined);
-
-                // Show section if there's anything to display
-                if (!hasAbilitiesOrAttacks && !selectedCard.desc && !hasStats) return null;
-
-                return (
-                  <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border space-y-4">
-                    {/* Pokemon Abilities */}
-                    {abilities && abilities.length > 0 && (
-                      <div className="space-y-2">
-                        {abilities.map((ability, idx) => (
-                          <div key={idx} className="p-2 md:p-3 bg-red-900/20 border border-red-700/50 rounded">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="px-1.5 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded">
-                                {ability.type || 'Ability'}
-                              </span>
-                              <span className="text-red-300 text-sm font-medium">{ability.name}</span>
-                            </div>
-                            <p className="text-xs md:text-sm text-gray-300 leading-relaxed">{ability.text}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Pokemon Attacks */}
-                    {attacks && attacks.length > 0 && (
-                      <div className="space-y-2">
-                        {attacks.map((attack, idx) => (
-                          <div key={idx} className="p-2 md:p-3 bg-yugi-card rounded">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                {/* Energy cost */}
-                                <div className="flex gap-0.5">
-                                  {attack.cost?.map((energy, i) => (
-                                    <span
-                                      key={i}
-                                      className="w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center text-[8px] md:text-[10px] font-bold text-white"
-                                      style={{ backgroundColor: ENERGY_COLORS[energy] || '#A8A878' }}
-                                      title={energy}
-                                    >
-                                      {energy.charAt(0)}
-                                    </span>
-                                  ))}
-                                </div>
-                                <span className="text-white text-sm font-medium">{attack.name}</span>
-                              </div>
-                              {attack.damage && (
-                                <span className="text-yellow-400 font-bold text-sm">{attack.damage}</span>
-                              )}
-                            </div>
-                            {attack.text && (
-                              <p className="text-xs md:text-sm text-gray-400 leading-relaxed">{attack.text}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Trainer/Energy card effect (when no abilities or attacks) */}
-                    {!hasAbilitiesOrAttacks && selectedCard.desc && (
-                      <div className="p-2 md:p-3 bg-yugi-card rounded">
-                        <p className="text-xs md:text-sm text-gray-300 leading-relaxed">{selectedCard.desc}</p>
-                      </div>
-                    )}
-
-                    {/* Weakness / Resistance / Retreat (only for Pokemon with stats) */}
-                    {hasStats && (
-                      <div className="flex flex-wrap gap-3 text-xs md:text-sm">
-                        {attrs?.weakness && (
-                          <span className="text-gray-400">
-                            <span className="text-red-400">Weakness:</span> {attrs.weakness}
-                          </span>
-                        )}
-                        {attrs?.resistance && (
-                          <span className="text-gray-400">
-                            <span className="text-green-400">Resistance:</span> {attrs.resistance}
-                          </span>
-                        )}
-                        {attrs?.retreatCost !== undefined && (
-                          <span className="text-gray-400">
-                            <span className="text-blue-400">Retreat:</span> {attrs.retreatCost}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Description (Yu-Gi-Oh / non-Pokemon) */}
-              {gameConfig.id !== 'pokemon' && (
-                <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border">
-                  {(() => {
-                    const errata = getErrata(selectedCard.id);
-                    if (errata) {
-                      return (
-                        <div className="space-y-3">
-                          <div className="p-2 md:p-3 bg-purple-900/30 border border-purple-600 rounded">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] md:text-[10px] font-bold rounded">
-                                PRE-ERRATA
-                              </span>
-                              <span className="text-purple-300 text-[10px] md:text-xs font-medium">Use This Text</span>
-                            </div>
-                            <p className="text-xs md:text-sm text-white leading-relaxed">{errata.originalText}</p>
-                            {errata.notes && (
-                              <p className="text-[10px] md:text-xs text-purple-300 mt-1 italic">Note: {errata.notes}</p>
-                            )}
-                          </div>
-                          {selectedCard.desc && (
-                            <div>
-                              <p className="text-[10px] md:text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
-                              <p className="text-xs md:text-sm text-gray-400 leading-relaxed">{selectedCard.desc}</p>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-                    return (
-                      <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
-                        {selectedCard.desc || 'No description available.'}
-                      </p>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
-        </BottomSheet>
+        />
 
         {/* Footer */}
         <div className="p-4 border-t border-yugi-border flex justify-end">

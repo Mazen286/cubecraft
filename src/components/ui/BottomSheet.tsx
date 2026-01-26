@@ -15,6 +15,8 @@ interface BottomSheetProps {
   showHandle?: boolean;
   /** Custom header content (replaces title) */
   header?: ReactNode;
+  /** Center the title text, default false */
+  centerTitle?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ export function BottomSheet({
   zIndex = 60,
   showHandle = true,
   header,
+  centerTitle = false,
 }: BottomSheetProps) {
   if (!isOpen) return null;
 
@@ -58,6 +61,19 @@ export function BottomSheet({
 
           {header ? (
             header
+          ) : centerTitle ? (
+            <div className="relative flex items-center justify-center">
+              <h3 className="font-bold text-gold-400 text-base truncate max-w-[80%] text-center">
+                {title}
+                {titleBadge}
+              </h3>
+              <button
+                onClick={onClose}
+                className="absolute right-0 p-1 text-gray-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           ) : (
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-gold-400 text-base truncate flex-1 mr-2">

@@ -45,6 +45,12 @@ function Header() {
               Home
             </a>
             <a
+              href="/rules"
+              className="text-sm text-gray-300 hover:text-gold-400 transition-colors"
+            >
+              Rules
+            </a>
+            <a
               href="/about"
               className="text-sm text-gray-300 hover:text-gold-400 transition-colors"
             >

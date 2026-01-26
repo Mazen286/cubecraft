@@ -3,18 +3,43 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
-import type { CardFilter, SortOption, YuGiOhCard as YuGiOhCardType } from '../types';
-import { cn, formatTime, isExtraDeckCard, isMonsterCard, isSpellCard, isTrapCard } from '../lib/utils';
-import { Download, Filter, SortAsc, BarChart3, Clock, Zap, ChevronDown, ChevronUp, Flame, Trophy, RotateCcw, Plus, Minus, Layers } from 'lucide-react';
+import { CardDetailSheet } from '../components/cards/CardDetailSheet';
+import { CardFilterBar } from '../components/filters';
+import type { YuGiOhCard as YuGiOhCardType } from '../types';
+import { cn, formatTime, isExtraDeckCard, isMonsterCard, isSpellCard, isTrapCard, getTierFromScore } from '../lib/utils';
+import { Download, BarChart3, Clock, Zap, ChevronDown, ChevronUp, Flame, Trophy, RotateCcw, Plus, Minus, Layers, Archive } from 'lucide-react';
 import { useDraftSession } from '../hooks/useDraftSession';
 import { useCards } from '../hooks/useCards';
+import { useCardFilters, type Tier } from '../hooks/useCardFilters';
 import { statisticsService } from '../services/statisticsService';
 import { draftService } from '../services/draftService';
 import { useGameConfig } from '../context/GameContext';
-import type { DeckZone as _DeckZoneConfig } from '../config/gameConfig';
+import type { Card } from '../types/card';
 
 // Type alias for zone IDs
 type DeckZone = string;
+
+// Helper to convert YuGiOhCard to Card format with proper attributes
+function toCardWithAttributes(card: YuGiOhCardType): Card {
+  return {
+    id: card.id,
+    name: card.name,
+    type: card.type,
+    description: card.desc,
+    score: card.score,
+    imageUrl: card.imageUrl,
+    attributes: {
+      atk: card.atk,
+      def: card.def,
+      level: card.level,
+      attribute: card.attribute,
+      race: card.race,
+      linkval: card.linkval,
+      archetype: card.archetype,
+      ...(card.attributes || {}),
+    },
+  };
+}
 
 interface DeckCard {
   card: YuGiOhCardType;
@@ -28,7 +53,7 @@ export function Results() {
   const { gameConfig } = useGameConfig();
 
   // Fetch session data and drafted card IDs
-  const { draftedCardIds, currentPlayer, session: _session, isLoading: sessionLoading, error: sessionError } = useDraftSession(sessionId);
+  const { draftedCardIds, currentPlayer, isLoading: sessionLoading, error: sessionError } = useDraftSession(sessionId);
 
   // Get unique card IDs for fetching card data
   const uniqueCardIds = useMemo(() => [...new Set(draftedCardIds)], [draftedCardIds]);
@@ -46,48 +71,54 @@ export function Results() {
 
   const isLoading = sessionLoading || cardsLoading;
 
-  // Deck zones including pool zone for unused cards
-  const deckZonesWithPool = useMemo(() => {
-    const zones = [...gameConfig.deckZones];
-    // Add pool zone for unused cards if not already present
-    if (!zones.find(z => z.id === 'pool')) {
-      zones.push({
-        id: 'pool',
-        name: 'Unused Pool',
-        cardBelongsTo: () => false,
-      });
-    }
-    return zones;
-  }, [gameConfig.deckZones]);
-
-  // Suppress unused warning - this is for future use
-  void deckZonesWithPool;
-
   // Deck builder state - track which zone each card is in
   const [deckAssignments, setDeckAssignments] = useState<Map<number, string>>(new Map());
   const [selectedCard, setSelectedCard] = useState<DeckCard | null>(null);
+  const [showCardDetail, setShowCardDetail] = useState(false);
 
   // Initialize deck assignments when cards load
   useEffect(() => {
     if (allDraftedCards.length > 0 && deckAssignments.size === 0) {
       const initialAssignments = new Map<number, string>();
+
+      // First pass: determine natural zone for each card
+      const cardZones: { card: YuGiOhCardType; index: number; naturalZone: string }[] = [];
       allDraftedCards.forEach(({ card, index }) => {
-        // Find the first zone that claims this card, or default to 'main'
         const zone = gameConfig.deckZones.find(z => z.cardBelongsTo(card as unknown as import('../types/card').Card));
-        initialAssignments.set(index, zone?.id || 'main');
+        cardZones.push({ card, index, naturalZone: zone?.id || 'main' });
       });
+
+      // Find the extra deck zone config to check max cards
+      const extraZone = gameConfig.deckZones.find(z => z.id === 'extra');
+      const extraDeckMax = extraZone?.maxCards ?? 15;
+
+      // Count extra deck cards and handle overflow
+      let extraDeckCount = 0;
+      cardZones.forEach(({ index, naturalZone }) => {
+        if (naturalZone === 'extra') {
+          if (extraDeckCount < extraDeckMax) {
+            initialAssignments.set(index, 'extra');
+            extraDeckCount++;
+          } else {
+            // Overflow goes to side deck
+            initialAssignments.set(index, 'side');
+          }
+        } else {
+          initialAssignments.set(index, naturalZone);
+        }
+      });
+
       setDeckAssignments(initialAssignments);
     }
   }, [allDraftedCards, deckAssignments.size, gameConfig.deckZones]);
 
-  const [filter, setFilter] = useState<CardFilter>({
-    search: '',
-    type: null,
-    attribute: null,
-    level: null,
-    race: null,
+  // Use the shared filter hook
+  const filters = useCardFilters({
+    includeScoreSort: true,
+    defaultSort: 'name',
+    defaultDirection: 'asc',
   });
-  const [sortBy, setSortBy] = useState<SortOption>('name');
+
   const [showStats, setShowStats] = useState(false);
   const [showBurnedCards, setShowBurnedCards] = useState(false);
   const [showFirstPicks, setShowFirstPicks] = useState(false);
@@ -155,86 +186,113 @@ export function Results() {
     };
   }, [sessionId]);
 
-  // Get cards by zone
+  // Get cards by zone with filters applied
   const getCardsByZone = useCallback((zone: DeckZone) => {
-    return allDraftedCards
+    // Convert YuGiOhCard to Card format with proper attributes for filtering
+    const zoneCards = allDraftedCards
       .filter(({ index }) => deckAssignments.get(index) === zone)
-      .filter(({ card }) => {
-        if (filter.search && !card.name.toLowerCase().includes(filter.search.toLowerCase())) {
-          return false;
-        }
-        if (filter.type && !card.type.includes(filter.type)) {
-          return false;
-        }
-        return true;
-      })
-      .sort((a, b) => {
-        let comparison = 0;
-        switch (sortBy) {
-          case 'name':
-            comparison = a.card.name.localeCompare(b.card.name);
-            break;
-          case 'level':
-            comparison = (a.card.level ?? 0) - (b.card.level ?? 0);
-            break;
-          case 'atk':
-            comparison = (a.card.atk ?? 0) - (b.card.atk ?? 0);
-            break;
-          case 'def':
-            comparison = (a.card.def ?? 0) - (b.card.def ?? 0);
-            break;
-          case 'type':
-            comparison = a.card.type.localeCompare(b.card.type);
-            break;
-        }
-        return comparison;
-      });
-  }, [allDraftedCards, deckAssignments, filter, sortBy]);
+      .map(({ card, index }) => ({ card: toCardWithAttributes(card), index }));
+
+    // Apply filters and map back to YuGiOhCard type (original cards from allDraftedCards)
+    return filters.applyFiltersWithIndex(zoneCards).map(({ index }) => ({
+      card: allDraftedCards.find(c => c.index === index)!.card,
+      index,
+    }));
+  }, [allDraftedCards, deckAssignments, filters]);
 
   const mainDeckCards = useMemo(() => getCardsByZone('main'), [getCardsByZone]);
   const sideDeckCards = useMemo(() => getCardsByZone('side'), [getCardsByZone]);
   const extraDeckCards = useMemo(() => getCardsByZone('extra'), [getCardsByZone]);
+  const poolCards = useMemo(() => getCardsByZone('pool'), [getCardsByZone]);
 
   // Count stats from all drafted cards (not filtered)
   const monsterCount = allDraftedCards.filter(({ card }) => isMonsterCard(card.type)).length;
   const spellCount = allDraftedCards.filter(({ card }) => isSpellCard(card.type)).length;
   const trapCount = allDraftedCards.filter(({ card }) => isTrapCard(card.type)).length;
 
+  // Calculate tier counts for filter bar
+  const tierCounts = useMemo(() => {
+    const counts: Record<Tier, number> = { S: 0, A: 0, B: 0, C: 0, E: 0, F: 0 };
+    allDraftedCards.forEach(({ card }) => {
+      const tier = getTierFromScore(card.score) as Tier;
+      if (tier in counts) counts[tier]++;
+    });
+    return counts;
+  }, [allDraftedCards]);
+
   // Move card to a different zone
+  // Get extra deck max from config
+  const extraZone = gameConfig.deckZones.find(z => z.id === 'extra');
+  const extraDeckMax = extraZone?.maxCards ?? 15;
+
   const moveCard = useCallback((cardIndex: number, toZone: DeckZone) => {
     setDeckAssignments(prev => {
       const newAssignments = new Map(prev);
+
+      // If moving to extra deck, check if it's at max capacity
+      if (toZone === 'extra') {
+        const currentExtraCount = Array.from(prev.values()).filter(z => z === 'extra').length;
+        const isAlreadyInExtra = prev.get(cardIndex) === 'extra';
+
+        // If extra deck is full and this card isn't already in it, send to side deck instead
+        if (currentExtraCount >= extraDeckMax && !isAlreadyInExtra) {
+          newAssignments.set(cardIndex, 'side');
+          return newAssignments;
+        }
+      }
+
       newAssignments.set(cardIndex, toZone);
       return newAssignments;
     });
+    setShowCardDetail(false);
     setSelectedCard(null);
-  }, []);
+  }, [extraDeckMax]);
 
-  // Handle card click - show move options
+  // Handle card click - show bottom sheet with details and move options
   const handleCardClick = useCallback((card: YuGiOhCardType, index: number) => {
     const currentZone = deckAssignments.get(index) || 'main';
-    if (selectedCard?.index === index) {
+    if (selectedCard?.index === index && showCardDetail) {
+      setShowCardDetail(false);
       setSelectedCard(null);
     } else {
       setSelectedCard({ card, zone: currentZone, index });
+      setShowCardDetail(true);
     }
-  }, [deckAssignments, selectedCard]);
+  }, [deckAssignments, selectedCard, showCardDetail]);
 
-  // Reset deck to initial state
+  // Close card detail
+  const handleCloseCardDetail = useCallback(() => {
+    setShowCardDetail(false);
+    setSelectedCard(null);
+  }, []);
+
+  // Reset deck to initial state (with extra deck limit)
   const resetDeck = useCallback(() => {
     const initialAssignments = new Map<number, DeckZone>();
+    let extraDeckCount = 0;
+
     allDraftedCards.forEach(({ card, index }) => {
-      const zone: DeckZone = isExtraDeckCard(card.type) ? 'extra' : 'main';
-      initialAssignments.set(index, zone);
+      if (isExtraDeckCard(card.type)) {
+        if (extraDeckCount < extraDeckMax) {
+          initialAssignments.set(index, 'extra');
+          extraDeckCount++;
+        } else {
+          // Overflow goes to side deck
+          initialAssignments.set(index, 'side');
+        }
+      } else {
+        initialAssignments.set(index, 'main');
+      }
     });
     setDeckAssignments(initialAssignments);
     setSelectedCard(null);
-  }, [allDraftedCards]);
+  }, [allDraftedCards, extraDeckMax]);
 
   // Get unfiltered counts for each zone
   const mainCount = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'main').length;
   const sideCount = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'side').length;
   const extraCount = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'extra').length;
+  const poolCount = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'pool').length;
 
   // Update basic resource count
   const updateBasicResourceCount = useCallback((resourceId: string | number, delta: number) => {
@@ -263,13 +321,26 @@ export function Results() {
     const exportFormat = gameConfig.exportFormats[0];
 
     if (exportFormat && exportFormat.generate) {
-      // Build cards array including drafted cards and basic resources
-      const cards: import('../types/card').Card[] = [];
+      // Build cards array including ALL drafted cards with zone info in attributes
+      const cards: Card[] = [];
 
-      // Add drafted cards in main deck
+      // Add all drafted cards (except 'unused') with their zone assignment
       allDraftedCards
-        .filter(({ index }) => deckAssignments.get(index) === 'main')
-        .forEach(({ card }) => cards.push(card as unknown as import('../types/card').Card));
+        .filter(({ index }) => {
+          const zone = deckAssignments.get(index);
+          return zone && zone !== 'unused';
+        })
+        .forEach(({ card, index }) => {
+          const zone = deckAssignments.get(index) || 'main';
+          const cardWithAttrs = toCardWithAttributes(card);
+          cards.push({
+            ...cardWithAttrs,
+            attributes: {
+              ...cardWithAttrs.attributes,
+              _exportZone: zone, // Add zone info for export
+            },
+          });
+        });
 
       // Add basic resources to main deck
       if (gameConfig.basicResources) {
@@ -281,8 +352,11 @@ export function Results() {
               name: resource.name,
               type: resource.type,
               description: resource.description,
-              attributes: resource.attributes,
-            } as import('../types/card').Card);
+              attributes: {
+                ...(resource.attributes || {}),
+                _exportZone: 'main',
+              },
+            });
           }
         });
       }
@@ -367,11 +441,7 @@ ${sideDeck}
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={resetDeck} title="Reset to default zones">
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset
-            </Button>
-            <Button variant="secondary" onClick={() => navigate('/')}>
+            <Button variant="secondary" onClick={() => navigate('/')} className="whitespace-nowrap">
               New Draft
             </Button>
             <Button onClick={handleExport} disabled={allDraftedCards.length === 0}>
@@ -391,38 +461,6 @@ ${sideDeck}
           <StatCard label="Traps" value={trapCount} color="text-pink-400" />
         </div>
 
-        {/* Selected Card Move Options */}
-        {selectedCard && (
-          <div className="glass-card p-4 mb-6 border-gold-500/50">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-white font-medium truncate max-w-[200px]">{selectedCard.card.name}</span>
-                <span className="text-gray-400 text-sm">in {selectedCard.zone === 'main' ? 'Main' : selectedCard.zone === 'extra' ? 'Extra' : 'Side'}</span>
-              </div>
-              <div className="flex items-center gap-2 ml-auto">
-                <span className="text-gray-400 text-sm">Move to:</span>
-                {selectedCard.zone !== 'main' && (
-                  <Button size="sm" variant="secondary" onClick={() => moveCard(selectedCard.index, 'main')}>
-                    Main
-                  </Button>
-                )}
-                {selectedCard.zone !== 'extra' && isExtraDeckCard(selectedCard.card.type) && (
-                  <Button size="sm" variant="secondary" onClick={() => moveCard(selectedCard.index, 'extra')}>
-                    Extra
-                  </Button>
-                )}
-                {selectedCard.zone !== 'side' && (
-                  <Button size="sm" variant="secondary" onClick={() => moveCard(selectedCard.index, 'side')}>
-                    Side
-                  </Button>
-                )}
-                <Button size="sm" variant="ghost" onClick={() => setSelectedCard(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Draft Statistics (collapsible) */}
         {draftStats && (
@@ -625,10 +663,10 @@ ${sideDeck}
               )}
             </button>
             {showFirstPicks && (
-              <div className="p-4 pt-0 border-t border-yugi-border">
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 sm:gap-3 mt-4">
+              <div className="pt-0 border-t border-yugi-border">
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 mt-4">
                   {firstPickCards.map((card, idx) => (
-                    <YuGiOhCard key={`first-${card.id}-${idx}`} card={card} size="sm" showDetails showTier />
+                    <YuGiOhCard key={`first-${card.id}-${idx}`} card={card} size="full" showTier flush />
                   ))}
                 </div>
               </div>
@@ -655,13 +693,13 @@ ${sideDeck}
               )}
             </button>
             {showBurnedCards && (
-              <div className="p-4 pt-0 border-t border-yugi-border">
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 sm:gap-3 mt-4">
+              <div className="pt-0 border-t border-yugi-border">
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 mt-4">
                   {burnedCards.map(({ card, packNumber }, index) => (
                     <div key={`${card.id}-pack${packNumber}-${index}`} className="relative">
-                      <YuGiOhCard card={card} size="sm" showDetails showTier />
-                      <div className="absolute inset-0 bg-red-900/30 rounded pointer-events-none" />
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-xs text-center py-0.5 text-gray-300">
+                      <YuGiOhCard card={card} size="full" showTier flush />
+                      <div className="absolute inset-0 bg-red-900/30 pointer-events-none" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-[10px] text-center py-0.5 text-gray-300">
                         Pack {packNumber}
                       </div>
                     </div>
@@ -745,49 +783,35 @@ ${sideDeck}
 
         {/* Filters */}
         <div className="glass-card p-4 mb-6">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-2 text-gray-300">
-              <Filter className="w-4 h-4" />
-              <span className="text-sm">Filter:</span>
-            </div>
-            <input
-              type="text"
-              placeholder="Search cards..."
-              value={filter.search}
-              onChange={(e) => setFilter({ ...filter, search: e.target.value })}
-              className="bg-yugi-dark border border-yugi-border rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none flex-1 min-w-[150px] max-w-xs"
-            />
-            <select
-              value={filter.type || ''}
-              onChange={(e) => setFilter({ ...filter, type: e.target.value || null })}
-              className="bg-yugi-dark border border-yugi-border rounded-lg px-3 py-1.5 text-sm text-white focus:border-gold-500 focus:outline-none"
-            >
-              <option value="">All Types</option>
-              <option value="Monster">Monsters</option>
-              <option value="Spell">Spells</option>
-              <option value="Trap">Traps</option>
-            </select>
-            <div className="flex items-center gap-2 sm:ml-auto">
-              <SortAsc className="w-4 h-4 text-gray-300" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="bg-yugi-dark border border-yugi-border rounded-lg px-3 py-1.5 text-sm text-white focus:border-gold-500 focus:outline-none"
-              >
-                <option value="name">Name</option>
-                <option value="type">Type</option>
-                <option value="level">Level</option>
-                <option value="atk">ATK</option>
-                <option value="def">DEF</option>
-              </select>
-            </div>
-          </div>
+          <CardFilterBar
+            filters={filters}
+            showSearch
+            showTypeFilter
+            showTierFilter
+            showAdvancedFilters
+            showSort
+            includeScoreSort
+            tierCounts={tierCounts}
+            totalCount={allDraftedCards.length}
+            filteredCount={mainDeckCards.length + extraDeckCards.length + sideDeckCards.length + poolCards.length}
+          />
         </div>
 
         {/* Deck Zones */}
         {allDraftedCards.length > 0 ? (
           <div className="space-y-8">
             {/* Main Deck */}
+            <div className="flex items-center justify-between mb-2">
+              <div /> {/* Spacer */}
+              <button
+                onClick={resetDeck}
+                className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
+                title="Reset all cards to default zones"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset Zones
+              </button>
+            </div>
             <DeckZoneSection
               title="Main Deck"
               count={mainCount}
@@ -826,6 +850,21 @@ ${sideDeck}
               onCardDrop={moveCard}
               emptyMessage="Drag cards here or click to move"
             />
+
+            {/* Unused Pool */}
+            <DeckZoneSection
+              title="Unused Pool"
+              count={poolCount}
+              filteredCount={poolCards.length}
+              color="text-gray-400"
+              zone="pool"
+              cards={poolCards}
+              selectedIndex={selectedCard?.index}
+              onCardClick={handleCardClick}
+              onCardDrop={moveCard}
+              emptyMessage="Drag cards here to exclude from deck"
+              icon={<Archive className="w-5 h-5" />}
+            />
           </div>
         ) : (
           <div className="glass-card p-12 text-center">
@@ -833,6 +872,67 @@ ${sideDeck}
             <Button onClick={() => navigate('/setup')}>Start a Draft</Button>
           </div>
         )}
+
+        {/* Card Detail Bottom Sheet */}
+        <CardDetailSheet
+          card={selectedCard?.card || null}
+          isOpen={showCardDetail && selectedCard !== null}
+          onClose={handleCloseCardDetail}
+          zoneLabel={
+            selectedCard?.zone === 'main' ? 'Main Deck' :
+            selectedCard?.zone === 'extra' ? 'Extra Deck' :
+            selectedCard?.zone === 'side' ? 'Side Deck' : 'Unused Pool'
+          }
+          zoneColor={
+            selectedCard?.zone === 'main' ? 'text-blue-400' :
+            selectedCard?.zone === 'extra' ? 'text-purple-400' :
+            selectedCard?.zone === 'side' ? 'text-orange-400' : 'text-gray-400'
+          }
+          footer={selectedCard && (
+            <div>
+              <p className="text-xs text-gray-400 mb-2">Move to:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {selectedCard.zone !== 'main' && !isExtraDeckCard(selectedCard.card.type) && (
+                  <Button
+                    onClick={() => moveCard(selectedCard.index, 'main')}
+                    variant="secondary"
+                    className="justify-center"
+                  >
+                    Main Deck
+                  </Button>
+                )}
+                {selectedCard.zone !== 'extra' && isExtraDeckCard(selectedCard.card.type) && (
+                  <Button
+                    onClick={() => moveCard(selectedCard.index, 'extra')}
+                    variant="secondary"
+                    className="justify-center"
+                  >
+                    Extra Deck
+                  </Button>
+                )}
+                {selectedCard.zone !== 'side' && (
+                  <Button
+                    onClick={() => moveCard(selectedCard.index, 'side')}
+                    variant="secondary"
+                    className="justify-center"
+                  >
+                    Side Deck
+                  </Button>
+                )}
+                {selectedCard.zone !== 'pool' && (
+                  <Button
+                    onClick={() => moveCard(selectedCard.index, 'pool')}
+                    variant="ghost"
+                    className="justify-center text-gray-400"
+                  >
+                    <Archive className="w-4 h-4 mr-1" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        />
       </div>
     </Layout>
   );
@@ -866,6 +966,7 @@ function DeckZoneSection({
   onCardClick,
   onCardDrop,
   emptyMessage,
+  icon,
 }: {
   title: string;
   count: number;
@@ -877,6 +978,7 @@ function DeckZoneSection({
   onCardClick: (card: YuGiOhCardType, index: number) => void;
   onCardDrop: (cardIndex: number, toZone: DeckZone) => void;
   emptyMessage?: string;
+  icon?: React.ReactNode;
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const showFilteredCount = filteredCount !== count;
@@ -918,6 +1020,7 @@ function DeckZoneSection({
       )}
     >
       <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        {icon && <span className={color}>{icon}</span>}
         <span className={color}>{title}</span>
         <span className="text-gray-300">
           ({count}{showFilteredCount && ` • ${filteredCount} shown`})
@@ -926,7 +1029,7 @@ function DeckZoneSection({
       </h2>
       {cards.length > 0 || isDragOver ? (
         <div className={cn(
-          "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-2 sm:gap-3",
+          "grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12",
           cards.length === 0 && "min-h-[120px] items-center justify-center"
         )}>
           {cards.map(({ card, index }) => (
@@ -935,12 +1038,12 @@ function DeckZoneSection({
               draggable
               onDragStart={(e) => handleDragStart(e, index)}
               className={cn(
-                'cursor-grab active:cursor-grabbing transition-all rounded-lg',
-                selectedIndex === index && 'ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-darker'
+                'cursor-grab active:cursor-grabbing transition-all',
+                selectedIndex === index && 'ring-2 ring-gold-400 z-10'
               )}
               onClick={() => onCardClick(card, index)}
             >
-              <YuGiOhCard card={card} size="sm" showDetails />
+              <YuGiOhCard card={card} size="full" showTier flush />
             </div>
           ))}
           {cards.length === 0 && isDragOver && (
@@ -952,7 +1055,7 @@ function DeckZoneSection({
       ) : (
         <div
           className={cn(
-            "glass-card p-6 text-center text-gray-400",
+            "glass-card p-4 text-center text-gray-400 text-sm",
             isDragOver && "border-gold-400 bg-gold-400/10"
           )}
         >

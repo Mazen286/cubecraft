@@ -5,13 +5,16 @@ import { Button } from '../components/ui/Button';
 import { useDraftSession } from '../hooks/useDraftSession';
 import { draftService, clearLastSession } from '../services/draftService';
 import { cn } from '../lib/utils';
-import { Copy, Check, Users } from 'lucide-react';
+import { Copy, Check, Users, Bot, Plus, X } from 'lucide-react';
 
 export function Lobby() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isAddingBot, setIsAddingBot] = useState(false);
+  const [removingBotId, setRemovingBotId] = useState<string | null>(null);
+  const [botError, setBotError] = useState<string | null>(null);
 
   const {
     session,
@@ -22,12 +25,16 @@ export function Lobby() {
     startDraft,
   } = useDraftSession(sessionId);
 
-  // Redirect to draft when session starts
+  // Redirect to draft when session starts (use correct route based on mode)
   useEffect(() => {
     if (session?.status === 'in_progress') {
-      navigate(`/draft/${sessionId}`);
+      if (session.mode === 'auction-grid') {
+        navigate(`/auction/${sessionId}`);
+      } else {
+        navigate(`/draft/${sessionId}`);
+      }
     }
-  }, [session?.status, sessionId, navigate]);
+  }, [session?.status, session?.mode, sessionId, navigate]);
 
   // Handle session cancellation
   useEffect(() => {
@@ -71,6 +78,34 @@ export function Lobby() {
         alert('Failed to cancel session. Please try again.');
         setIsCancelling(false);
       }
+    }
+  };
+
+  const handleAddBot = async () => {
+    if (!sessionId) return;
+    setBotError(null);
+    setIsAddingBot(true);
+    try {
+      await draftService.addBotToSession(sessionId);
+    } catch (err) {
+      console.error('Failed to add bot:', err);
+      setBotError(err instanceof Error ? err.message : 'Failed to add bot');
+    } finally {
+      setIsAddingBot(false);
+    }
+  };
+
+  const handleRemoveBot = async (botPlayerId: string) => {
+    if (!sessionId) return;
+    setBotError(null);
+    setRemovingBotId(botPlayerId);
+    try {
+      await draftService.removeBotFromSession(sessionId, botPlayerId);
+    } catch (err) {
+      console.error('Failed to remove bot:', err);
+      setBotError(err instanceof Error ? err.message : 'Failed to remove bot');
+    } finally {
+      setRemovingBotId(null);
     }
   };
 
@@ -136,6 +171,13 @@ export function Lobby() {
             </span>
           </div>
 
+          {/* Bot Error */}
+          {botError && (
+            <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/50 text-red-400 text-sm">
+              {botError}
+            </div>
+          )}
+
           <div className="space-y-3">
             {/* Connected Players */}
             {players.map((player, index) => (
@@ -143,32 +185,61 @@ export function Lobby() {
                 key={player.id}
                 className={cn(
                   'flex items-center justify-between p-3 rounded-lg',
-                  'bg-yugi-dark border border-yugi-border'
+                  'bg-yugi-dark border',
+                  player.is_bot ? 'border-purple-500/50' : 'border-yugi-border'
                 )}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
                       'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold',
-                      index === 0 ? 'bg-gold-500 text-yugi-dark' : 'bg-yugi-card text-white'
+                      player.is_host
+                        ? 'bg-gold-500 text-yugi-dark'
+                        : player.is_bot
+                          ? 'bg-purple-500/20 text-purple-400'
+                          : 'bg-yugi-card text-white'
                     )}
                   >
-                    {index + 1}
+                    {player.is_bot ? <Bot className="w-4 h-4" /> : index + 1}
                   </div>
                   <div>
-                    <p className="font-medium text-white">{player.name}</p>
+                    <p className={cn(
+                      'font-medium',
+                      player.is_bot ? 'text-purple-300' : 'text-white'
+                    )}>
+                      {player.name}
+                    </p>
                     {player.is_host && (
                       <span className="text-xs text-gold-400">Host</span>
                     )}
+                    {player.is_bot && (
+                      <span className="text-xs text-purple-400">AI Bot</span>
+                    )}
                   </div>
                 </div>
-                <div
-                  className={cn(
-                    'w-2 h-2 rounded-full',
-                    player.is_connected ? 'bg-green-400' : 'bg-gray-500'
+                <div className="flex items-center gap-2">
+                  {/* Remove bot button (host only) */}
+                  {isHost && player.is_bot && (
+                    <button
+                      onClick={() => handleRemoveBot(player.id)}
+                      disabled={removingBotId === player.id}
+                      className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-50"
+                      title="Remove bot"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   )}
-                  title={player.is_connected ? 'Connected' : 'Disconnected'}
-                />
+                  {/* Connection indicator (not for bots) */}
+                  {!player.is_bot && (
+                    <div
+                      className={cn(
+                        'w-2 h-2 rounded-full',
+                        player.is_connected ? 'bg-green-400' : 'bg-gray-500'
+                      )}
+                      title={player.is_connected ? 'Connected' : 'Disconnected'}
+                    />
+                  )}
+                </div>
               </div>
             ))}
 
@@ -184,6 +255,19 @@ export function Lobby() {
                   </div>
                   <p className="text-gray-500">Waiting for player...</p>
                 </div>
+                {/* Add bot button (host only, first empty slot) */}
+                {isHost && index === 0 && (
+                  <button
+                    onClick={handleAddBot}
+                    disabled={isAddingBot}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 text-purple-400 text-sm transition-colors disabled:opacity-50"
+                    title="Add AI bot"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <Bot className="w-4 h-4" />
+                    {isAddingBot ? 'Adding...' : 'Add Bot'}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -196,20 +280,37 @@ export function Lobby() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
               <div>
                 <span className="text-gray-400">Mode:</span>
-                <span className="text-white ml-2 capitalize">{session.mode}</span>
+                <span className="text-white ml-2 capitalize">
+                  {session.mode === 'auction-grid' ? 'Auction Grid' : session.mode}
+                </span>
               </div>
               <div>
                 <span className="text-gray-400">Cards per Player:</span>
                 <span className="text-white ml-2">{session.cards_per_player}</span>
               </div>
-              <div>
-                <span className="text-gray-400">Pack Size:</span>
-                <span className="text-white ml-2">{session.pack_size}</span>
-              </div>
-              <div>
-                <span className="text-gray-400">Timer:</span>
-                <span className="text-white ml-2">{session.timer_seconds}s</span>
-              </div>
+              {session.mode === 'auction-grid' ? (
+                <>
+                  <div>
+                    <span className="text-gray-400">Bidding Points:</span>
+                    <span className="text-white ml-2">100</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Selection Timer:</span>
+                    <span className="text-white ml-2">{session.timer_seconds}s</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <span className="text-gray-400">Pack Size:</span>
+                    <span className="text-white ml-2">{session.pack_size}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Timer:</span>
+                    <span className="text-white ml-2">{session.timer_seconds}s</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
