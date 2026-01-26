@@ -1085,7 +1085,18 @@ export const draftService = {
       .eq('id', sessionId)
       .single();
 
-    if (!session || session.status !== 'in_progress' || session.paused) {
+    if (!session) {
+      console.log('[checkAndAutoPickTimedOut] No session found');
+      return { autoPickedCount: 0, autoPickedNames: [] };
+    }
+
+    if (session.status !== 'in_progress') {
+      console.log(`[checkAndAutoPickTimedOut] Session not in_progress: ${session.status}`);
+      return { autoPickedCount: 0, autoPickedNames: [] };
+    }
+
+    if (session.paused) {
+      console.log('[checkAndAutoPickTimedOut] Session is paused');
       return { autoPickedCount: 0, autoPickedNames: [] };
     }
 
@@ -1093,12 +1104,14 @@ export const draftService = {
     if (session.resume_at) {
       const resumeAt = new Date(session.resume_at).getTime();
       if (Date.now() < resumeAt) {
+        console.log('[checkAndAutoPickTimedOut] In resume countdown');
         return { autoPickedCount: 0, autoPickedNames: [] };
       }
     }
 
     // Check if pick has timed out
     if (!session.pick_started_at) {
+      console.log('[checkAndAutoPickTimedOut] No pick_started_at');
       return { autoPickedCount: 0, autoPickedNames: [] };
     }
 
@@ -1124,16 +1137,26 @@ export const draftService = {
     }
 
     // Only auto-pick if time has fully expired plus grace period
+    console.log(`[checkAndAutoPickTimedOut] timeRemaining=${timeRemaining.toFixed(1)}s, grace=${GRACE_PERIOD_SECONDS}s`);
     if (timeRemaining > -GRACE_PERIOD_SECONDS) {
       return { autoPickedCount: 0, autoPickedNames: [] };
     }
 
+    console.log('[checkAndAutoPickTimedOut] Time expired, checking players...');
+
     // Re-fetch players fresh to get current state (avoid stale data)
-    const { data: playersNeedingPick } = await supabase
+    const { data: playersNeedingPick, error: playersError } = await supabase
       .from('draft_players')
       .select()
       .eq('session_id', sessionId)
       .eq('pick_made', false);
+
+    if (playersError) {
+      console.error('[checkAndAutoPickTimedOut] Error fetching players:', playersError);
+      return { autoPickedCount: 0, autoPickedNames: [] };
+    }
+
+    console.log(`[checkAndAutoPickTimedOut] Found ${playersNeedingPick?.length || 0} players needing pick`);
 
     if (!playersNeedingPick || playersNeedingPick.length === 0) {
       return { autoPickedCount: 0, autoPickedNames: [] };
