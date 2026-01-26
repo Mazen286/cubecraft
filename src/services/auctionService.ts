@@ -85,23 +85,30 @@ function getNextSeat(currentSeat: number, totalPlayers: number): number {
 }
 
 /**
- * Calculate bot bid amount based on card score and remaining points
+ * Calculate bot bid amount based on card score, remaining points, and total points
+ * Bids scale as a percentage of total points based on card tier
  */
 function calculateBotBid(
   cardScore: number | undefined,
   remainingPoints: number,
   currentBid: number,
   gridNumber: number,
-  cardsAcquiredThisGrid: number
+  cardsAcquiredThisGrid: number,
+  totalPoints: number
 ): number | null {
   const score = cardScore ?? 50;
 
-  // Base willingness based on card tier
-  const baseWillingness = score >= 90 ? 18  // S-tier
-    : score >= 75 ? 12                       // A-tier
-    : score >= 60 ? 8                        // B-tier
-    : score >= 40 ? 4                        // C-tier
-    : 2;                                     // Lower tier
+  // Base willingness as percentage of total points, based on tier
+  // Uses same tier thresholds as getTierFromScore in utils.ts
+  const basePercentage = score >= 95 ? 0.18  // S-tier
+    : score >= 90 ? 0.14                      // A-tier
+    : score >= 75 ? 0.10                      // B-tier
+    : score >= 60 ? 0.06                      // C-tier
+    : score >= 50 ? 0.03                      // E-tier
+    : 0.02;                                   // F-tier
+
+  // Calculate base willingness scaled by total points
+  const baseWillingness = Math.floor(totalPoints * basePercentage);
 
   // Adjust based on remaining grids (save more points for later)
   const gridMultiplier = 1 - (gridNumber - 1) * 0.05; // 1.0 to 0.75
@@ -199,6 +206,7 @@ export const auctionService = {
       passedPlayerIds: [],
       nextBidderSeat: null,
       bidTimerSeconds: bidTimer, // Store bid timer setting
+      totalBiddingPoints: biddingPoints, // Store total points for bot bid scaling
     };
 
     // Create the session
@@ -1046,13 +1054,17 @@ export const auctionService = {
     const card = cubeService.getCardFromAnyCube(cardId);
     const cardScore = card?.score;
 
+    // Get total bidding points from auction state (defaults to 100)
+    const totalPoints = auctionState.totalBiddingPoints ?? DEFAULT_BIDDING_POINTS;
+
     // Calculate bot bid
     const bidAmount = calculateBotBid(
       cardScore,
       botPlayer.bidding_points,
       auctionState.currentBid,
       gridNumber,
-      botPlayer.cards_acquired_this_grid
+      botPlayer.cards_acquired_this_grid,
+      totalPoints
     );
 
     // Add a small delay for UX

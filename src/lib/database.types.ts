@@ -307,6 +307,7 @@ export interface AuctionStateData {
   passedPlayerIds: string[]; // Players who have passed
   nextBidderSeat: number | null; // Next player to bid
   bidTimerSeconds?: number; // Seconds per bid turn (default 15)
+  totalBiddingPoints?: number; // Total points each player started with (for bot bid scaling)
 }
 
 // Draft Auction Bids table

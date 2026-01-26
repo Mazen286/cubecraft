@@ -96,9 +96,10 @@ export function DraftSetup() {
         : settings.cardsPerPlayer;
 
       // Validate cube has enough cards (this also loads and caches the cube)
+      // For auction mode, cardsNeeded is already the total (not per-player), so pass 1 as playerCount
       const validation = await cubeService.validateCubeForDraft(
         selectedCube,
-        totalPlayers,
+        settings.mode === 'auction-grid' ? 1 : totalPlayers,
         cardsNeeded
       );
 
@@ -340,7 +341,11 @@ export function DraftSetup() {
                 }
                 className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
               >
-                {Array.from({ length: Math.max(1, settings.packSize + 1) }, (_, i) => i).map((n) => (
+                {/* For auction mode, allow more burn options (0-30). For pack mode, limit to pack size */}
+                {Array.from(
+                  { length: settings.mode === 'auction-grid' ? 31 : Math.max(1, settings.packSize + 1) },
+                  (_, i) => i
+                ).map((n) => (
                   <option key={n} value={n}>
                     {n} Card{n !== 1 ? 's' : ''}
                   </option>
