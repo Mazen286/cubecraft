@@ -245,13 +245,22 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
             .then(cards => setDraftedCardIds(cards))
             .catch(() => {});
         }
+      },
+      // When a pick is inserted, refresh the current player's drafted cards
+      () => {
+        const player = players.find(p => p.user_id === userId);
+        if (player) {
+          auctionService.getPlayerDraftedCards(sessionId, player.id)
+            .then(cards => setDraftedCardIds(cards))
+            .catch(() => {});
+        }
       }
     );
 
     return () => {
       unsubscribe();
     };
-  }, [sessionId, userId]);
+  }, [sessionId, userId, players]);
 
   // Selection timer
   useEffect(() => {

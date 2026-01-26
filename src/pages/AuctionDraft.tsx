@@ -84,19 +84,35 @@ export function AuctionDraft() {
     }
   }, [session?.cube_id, isCubeReady, gameConfig.id, setGame]);
 
-  // Auto-start for solo mode
+  // Auto-start for solo mode with retry
   useEffect(() => {
     const humanPlayers = players.filter(p => !p.isBot);
-    if (
-      session?.status === 'waiting' &&
+    const shouldAutoStart = session?.status === 'waiting' &&
       humanPlayers.length === 1 &&
       isHost &&
-      isCubeReady
-    ) {
+      isCubeReady;
+
+    if (shouldAutoStart) {
       startDraft().catch(err => {
         console.error('[AuctionDraft] Auto-start failed:', err);
       });
     }
+  }, [session?.status, players, isHost, isCubeReady, startDraft]);
+
+  // Retry auto-start if stuck in waiting for too long
+  useEffect(() => {
+    if (session?.status !== 'waiting' || !isHost) return;
+
+    const retryTimer = setTimeout(() => {
+      const humanPlayers = players.filter(p => !p.isBot);
+      if (session?.status === 'waiting' && humanPlayers.length === 1 && isHost && isCubeReady) {
+        startDraft().catch(err => {
+          console.error('[AuctionDraft] Retry auto-start failed:', err);
+        });
+      }
+    }, 3000); // Retry after 3 seconds if still waiting
+
+    return () => clearTimeout(retryTimer);
   }, [session?.status, players, isHost, isCubeReady, startDraft]);
 
   // Handle draft completion

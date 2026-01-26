@@ -36,11 +36,12 @@ export function PlayerBidStatus({
         {/* Player indicator */}
         <div className="flex items-center gap-1">
           {player.isBot && (
-            <Bot className="w-3 h-3 text-gray-500" />
+            <Bot className={cn('w-3 h-3', hasPassed ? 'text-gray-600' : 'text-gray-500')} />
           )}
           <span
             className={cn(
               'font-medium truncate max-w-[100px]',
+              hasPassed ? 'text-gray-500 line-through' :
               isCurrentBidder ? 'text-gold-400' : 'text-white'
             )}
           >
@@ -53,9 +54,11 @@ export function PlayerBidStatus({
           <Trophy className="w-4 h-4 text-green-400" />
         )}
         {hasPassed && (
-          <XCircle className="w-4 h-4 text-red-400" />
+          <span className="text-xs text-red-400 bg-red-500/20 px-1.5 py-0.5 rounded">
+            Passed
+          </span>
         )}
-        {isCurrentBidder && (
+        {isCurrentBidder && !hasPassed && (
           <Pointer className="w-4 h-4 text-gold-400 animate-pulse" />
         )}
         {isSelector && (

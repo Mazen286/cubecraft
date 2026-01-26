@@ -174,6 +174,7 @@ export const auctionService = {
     const cardsPerGrid = calculateCardsPerGrid(totalPlayers, cardsAcquiredPerGrid, burnedPerGrid);
     const totalCardsNeeded = calculateTotalCardsNeeded(totalPlayers, cardsPerPlayer, cardsAcquiredPerGrid, burnedPerGrid);
 
+
     if (cubeCardIds.length < totalCardsNeeded) {
       throw new Error(
         `Cube has ${cubeCardIds.length} cards but needs ${totalCardsNeeded} for auction grid draft ` +
@@ -195,6 +196,7 @@ export const auctionService = {
         graveyardCards: [],
       });
     }
+
 
     // Initial auction state with settings (phase will change when draft starts)
     const initialAuctionState: AuctionStateData = {
@@ -304,6 +306,15 @@ export const auctionService = {
   async startDraft(sessionId: string): Promise<void> {
     const supabase = getSupabase();
 
+    // Get session to preserve auction state settings
+    const { data: existingSession } = await supabase
+      .from('draft_sessions')
+      .select('auction_state')
+      .eq('id', sessionId)
+      .single();
+
+    const existingAuctionState = existingSession?.auction_state as AuctionStateData | null;
+
     // Get all players sorted by seat
     const { data: players, error: playersError } = await supabase
       .from('draft_players')
@@ -319,7 +330,7 @@ export const auctionService = {
     // First selector is seat 0 (can be randomized later via die roll)
     const firstSelectorSeat = 0;
 
-    // Initialize auction state for selection phase
+    // Initialize auction state for selection phase, preserving settings from createSession
     const initialAuctionState: AuctionStateData = {
       phase: 'selecting',
       cardId: null,
@@ -328,6 +339,8 @@ export const auctionService = {
       bids: [],
       passedPlayerIds: [],
       nextBidderSeat: null,
+      bidTimerSeconds: existingAuctionState?.bidTimerSeconds,
+      totalBiddingPoints: existingAuctionState?.totalBiddingPoints,
     };
 
     // Update session to start draft
@@ -754,18 +767,21 @@ export const auctionService = {
       })
       .eq('id', winnerId);
 
-    // Record the pick
+    // Record the pick - use cards_acquired as pick_number to ensure uniqueness
     const pickData: DraftPickInsert = {
       session_id: sessionId,
       player_id: winnerId,
       card_id: cardId,
       pack_number: session.current_grid, // Using pack_number for grid_number
-      pick_number: 1, // Not really applicable for auction
+      pick_number: newCardsAcquired, // Use card count as pick number for uniqueness
       pick_time_seconds: 0,
       was_auto_pick: false,
     };
 
-    await supabase.from('draft_picks').insert(pickData);
+    const { error: pickError } = await supabase.from('draft_picks').insert(pickData);
+    if (pickError) {
+      console.error('[resolveAuction] Failed to insert pick:', pickError);
+    }
 
     // Remove card from remaining cards
     const gridData = [...(session.grid_data as GridData[])];
@@ -1118,11 +1134,14 @@ export const auctionService = {
 
   /**
    * Subscribe to auction session updates
+   * Note: We re-fetch the full session on updates because Supabase Realtime
+   * doesn't always include large JSONB columns (like grid_data) in the payload
    */
   subscribeToSession(
     sessionId: string,
     onSessionUpdate: (session: DraftSessionRow) => void,
-    onPlayersUpdate: (players: DraftPlayerRow[]) => void
+    onPlayersUpdate: (players: DraftPlayerRow[]) => void,
+    onPicksUpdate?: () => void
   ) {
     const supabase = getSupabase();
 
@@ -1136,9 +1155,11 @@ export const auctionService = {
           table: 'draft_sessions',
           filter: `id=eq.${sessionId}`,
         },
-        (payload) => {
-          if (payload.new) {
-            onSessionUpdate(payload.new as DraftSessionRow);
+        async () => {
+          // Re-fetch the full session to ensure we have all JSONB data (grid_data, auction_state)
+          const session = await this.getSession(sessionId);
+          if (session) {
+            onSessionUpdate(session);
           }
         }
       )
@@ -1153,6 +1174,19 @@ export const auctionService = {
         async () => {
           const players = await this.getPlayers(sessionId);
           onPlayersUpdate(players);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'draft_picks',
+          filter: `session_id=eq.${sessionId}`,
+        },
+        () => {
+          // Notify when new picks are inserted (card won)
+          onPicksUpdate?.();
         }
       )
       .subscribe();

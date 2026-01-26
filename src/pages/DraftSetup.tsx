@@ -112,6 +112,7 @@ export function DraftSetup() {
       // Get the card IDs (now cached from validation)
       const cubeCardIds = cubeService.getCubeCardIds(selectedCube);
 
+
       // Use appropriate service based on mode
       if (settings.mode === 'auction-grid') {
         const result = await auctionService.createSession(settings, selectedCube, cubeCardIds);
