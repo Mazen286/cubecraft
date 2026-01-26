@@ -692,12 +692,33 @@ export const draftService = {
             continue;
           } else {
             // Bot already has a pick for this round - another process handled it
-            // IMPORTANT: Don't update hand (we don't know which card), but DO mark pick_made = true
-            console.log(`[makeBotPicks] Bot ${bot.name} pick already recorded, marking pick_made=true`);
-            await supabase
-              .from('draft_players')
-              .update({ pick_made: true })
-              .eq('id', bot.id);
+            // Find the actual pick and update hand properly
+            console.log(`[makeBotPicks] Bot ${bot.name} pick already recorded, finding actual pick...`);
+            const { data: existingPick } = await supabase
+              .from('draft_picks')
+              .select('card_id')
+              .eq('session_id', sessionId)
+              .eq('player_id', bot.id)
+              .eq('pack_number', currentPack)
+              .eq('pick_number', currentPick)
+              .single();
+
+            if (existingPick) {
+              // Remove the actual picked card from hand
+              const correctedHand = currentHand.filter((id: number) => id !== existingPick.card_id);
+              await supabase
+                .from('draft_players')
+                .update({ current_hand: correctedHand, pick_made: true })
+                .eq('id', bot.id);
+              console.log(`[makeBotPicks] Bot ${bot.name} hand corrected, removed card ${existingPick.card_id}`);
+            } else {
+              // Fallback: just mark as picked
+              await supabase
+                .from('draft_players')
+                .update({ pick_made: true })
+                .eq('id', bot.id);
+              console.log(`[makeBotPicks] Bot ${bot.name} pick_made set but couldn't find pick to correct hand`);
+            }
             break;
           }
         } else {
@@ -1245,12 +1266,33 @@ export const draftService = {
             continue;
           } else {
             // Player already has a pick for this round - another process handled it
-            // IMPORTANT: Don't update hand (we don't know which card), but DO mark pick_made = true
-            console.log(`[checkAndAutoPickTimedOut] ${player.name} pick already recorded, marking pick_made=true`);
-            await supabase
-              .from('draft_players')
-              .update({ pick_made: true })
-              .eq('id', player.id);
+            // Find the actual pick and update hand properly
+            console.log(`[checkAndAutoPickTimedOut] ${player.name} pick already recorded, finding actual pick...`);
+            const { data: existingPick } = await supabase
+              .from('draft_picks')
+              .select('card_id')
+              .eq('session_id', sessionId)
+              .eq('player_id', player.id)
+              .eq('pack_number', session.current_pack)
+              .eq('pick_number', session.current_pick)
+              .single();
+
+            if (existingPick) {
+              // Remove the actual picked card from hand
+              const correctedHand = currentHand.filter((id: number) => id !== existingPick.card_id);
+              await supabase
+                .from('draft_players')
+                .update({ current_hand: correctedHand, pick_made: true })
+                .eq('id', player.id);
+              console.log(`[checkAndAutoPickTimedOut] ${player.name} hand corrected, removed card ${existingPick.card_id}`);
+            } else {
+              // Fallback: just mark as picked
+              await supabase
+                .from('draft_players')
+                .update({ pick_made: true })
+                .eq('id', player.id);
+              console.log(`[checkAndAutoPickTimedOut] ${player.name} pick_made set but couldn't find pick to correct hand`);
+            }
             break;
           }
         } else {
