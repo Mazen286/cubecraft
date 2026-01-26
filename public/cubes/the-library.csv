@@ -78,7 +78,7 @@ ID,Name,Score
 6180710,Dream Shark,80
 6351147,Transaction Rollback,60
 6511113,Traptrix Rafflesia,50
-6589707,Terrors in the Hidden City,92
+6589707,Terrors in the Hidden City,90
 6637331,Bystial Druiswurm,90
 6691855,Spikeshield with Chain,60
 6908161,Ragnaraika Chain Coils,65
@@ -119,7 +119,7 @@ ID,Name,Score
 10604644,"Therion ""King"" Regulus",80
 10669138,Five-Headed Link Dragon,50
 10802915,Tour Guide From the Underworld,80
-11232355,Destructotron,60
+11232355,Destructotron,55
 11366199,Dark Simorgh,60
 11662742,Gellenduo,70
 11747708,Spore,60
@@ -290,7 +290,7 @@ ID,Name,Score
 28985331,Armageddon Knight,80
 29071332,Armory Arm,60
 29143726,"Samsara, Dragon of Rebirth",60
-29267084,Shadow Spell,70
+29267084,Shadow Spell,65
 29301450,S:P Little Knight,95
 29302858,Vanquish Soul Razen,70
 29401950,Bottomless Trap Hole,80
@@ -407,7 +407,7 @@ ID,Name,Score
 39238953,Lullaby of Obedience,90
 39475024,"Gashadokuro, the Skeletal Mayakashi",50
 39537362,Ordeal of a Traveler,60
-39730727,Flawless Perfection of the Tenyi,50
+39730727,Flawless Perfection of the Tenyi,65
 39767432,Sorcerer of Sebek,60
 39910367,Magical Citadel of Endymion,50
 39973386,Duality,50
@@ -436,7 +436,7 @@ ID,Name,Score
 41613948,Destiny HERO - Doom Lord,60
 41924516,"Silvera, Wolf Tamer of the White Forest",50
 41999284,Linkuriboh,70
-42009836,Fossil Dyna Pachycephalo,50
+42009836,Fossil Dyna Pachycephalo,75
 42110434,Naturia Butterfly,50
 42216237,Angel of Zera,60
 42338879,Cockadoodledoo,70
@@ -534,7 +534,6 @@ ID,Name,Score
 52687916,"Trishula, Dragon of the Ice Barrier",70
 52823314,Tour Bus From the Underworld,60
 52860176,Possessed Dark Soul,50
-61822419,Guilt-Gripping Morganite,100
 53129443,Dark Hole,90
 53329234,Sinful Spoils of Slumber - Morrian,50
 53334471,Gozen Match,60
@@ -555,7 +554,7 @@ ID,Name,Score
 54512827,Ghostrick Lantern,50
 54594017,Blackwing - Sharnga the Waning Moon,50
 54719828,Number 16: Shock Master,50
-54757758,Mudragon of the Swamp,55
+54757758,Mudragon of the Swamp,50
 54919528,"K9-ØØ ""Hound""",65
 54965929,Mythical Beast Medusa,50
 54974237,Eradicator Epidemic Virus,50
@@ -576,7 +575,7 @@ ID,Name,Score
 56741506,Sky Striker Ace - Azalea Temperance,80
 56747793,United We Stand,60
 56809158,Mekk-Knight Red Moon,80
-57139487,Chain Disappearance,50
+57139487,Chain Disappearance,60
 57143342,"Cir, Malebranche of the Burning Abyss",70
 57421866,Level Eater,90
 57568840,Delta Flyer,70
@@ -585,7 +584,7 @@ ID,Name,Score
 57869175,Fortune Lady Past,70
 57953380,Card of Safe Return,70
 58092907,Performapal Celestial Magician,50
-58120309,Starlight Road,50
+58120309,Starlight Road,60
 58139997,Witchcrafter Edel,50
 58143852,Nightmare Apprentice,85
 58169731,Wall of Disruption,60
@@ -617,6 +616,7 @@ ID,Name,Score
 61583217,Cynet Universe,50
 61665245,Summon Sorceress,50
 61740673,Imperial Order,75
+61822419,Guilt-Gripping Morganite,100
 61831093,Greenkappa,60
 61901281,Black Dragon Collapserpent,90
 61936647,Phantom Knights' Sword,65
@@ -662,7 +662,7 @@ ID,Name,Score
 66104644,Magister of Endymion,50
 66200210,Mecha Phantom Beast Hamstrat,55
 66499018,Flame Tiger,55
-66518841,Prideful Roar,50
+66518841,Prideful Roar,60
 66532962,Magistus Chorozo,50
 66625883,"Karakuri Strategist mdl 248 ""Nishipachi""",50
 66712905,Runick Dispelling,50
@@ -707,7 +707,7 @@ ID,Name,Score
 70074904,D.D. Assailant,70
 70095154,Cyber Dragon,80
 70155677,Dreaming Nemleria,40
-70252926,Fortune Lady Every,50
+70252926,Fortune Lady Every,70
 70271583,"Karakuri Watchdog mdl 313 ""Saizan""",50
 70342110,Dimensional Prison,80
 70368879,Upstart Goblin,70
@@ -855,9 +855,9 @@ ID,Name,Score
 82956214,Dogmatika Punishment,80
 82962242,Vampire Vamp,60
 83011278,Mystic Tomato,80
-83135907,Scrap Goblin,70
+83135907,Scrap Goblin,65
 83152482,Union Carrier,60
-83257450,The Unstoppable Exodia Incarnate,65
+83257450,The Unstoppable Exodia Incarnate,60
 83438826,Noble Arms - Arfeudutyr,50
 83518674,Danger! Ogopogo!,70
 83531441,"Dante, Traveler of the Burning Abyss",75
