@@ -596,14 +596,24 @@ export const draftService = {
     const currentPick = session.current_pick;
 
     // Get all bot players who haven't picked yet
-    const { data: bots } = await supabase
+    const { data: bots, error: botsError } = await supabase
       .from('draft_players')
       .select()
       .eq('session_id', sessionId)
       .eq('is_bot', true)
       .eq('pick_made', false);
 
-    if (!bots || bots.length === 0) return;
+    if (botsError) {
+      console.error('[makeBotPicks] Error fetching bots:', botsError);
+      return;
+    }
+
+    if (!bots || bots.length === 0) {
+      console.log('[makeBotPicks] No bots needing picks');
+      return;
+    }
+
+    console.log(`[makeBotPicks] Found ${bots.length} bots needing picks`);
 
     for (const bot of bots) {
       // Re-check session paused state before each bot pick
@@ -1239,23 +1249,21 @@ export const draftService = {
       autoPickedNames.push(player.name);
     }
 
-    // If we auto-picked for anyone, trigger bot picks and check completion
-    if (autoPickedNames.length > 0) {
-      // IMPORTANT: Trigger bot picks - they won't pick on their own!
-      await this.makeBotPicks(sessionId, '', session.current_pack, session.current_pick);
+    // Always trigger bot picks and check completion
+    // (bots might not have picked even if no human was auto-picked)
+    await this.makeBotPicks(sessionId, '', session.current_pack, session.current_pick);
 
-      // Now check if all players have picked
-      const { data: allPlayers } = await supabase
-        .from('draft_players')
-        .select()
-        .eq('session_id', sessionId);
+    // Now check if all players have picked
+    const { data: allPlayers } = await supabase
+      .from('draft_players')
+      .select()
+      .eq('session_id', sessionId);
 
-      const allPicked = allPlayers?.every((p) => p.pick_made);
+    const allPicked = allPlayers?.every((p) => p.pick_made);
 
-      if (allPicked) {
-        // Pass packs to next player
-        await this.passPacks(sessionId);
-      }
+    if (allPicked) {
+      // Pass packs to next player
+      await this.passPacks(sessionId);
     }
 
     return {
