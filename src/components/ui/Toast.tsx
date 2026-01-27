@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { X, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -13,16 +13,22 @@ interface ToastProps {
 
 export function Toast({ message, type = 'info', duration = 3000, onClose }: ToastProps) {
   const [isVisible, setIsVisible] = useState(true);
+  const onCloseRef = useRef(onClose);
+
+  // Keep ref updated
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
         setIsVisible(false);
-        setTimeout(onClose, 300); // Wait for fade out animation
+        setTimeout(() => onCloseRef.current(), 300); // Wait for fade out animation
       }, duration);
       return () => clearTimeout(timer);
     }
-  }, [duration, onClose]);
+  }, [duration]); // Only depend on duration, not onClose
 
   const icons = {
     error: <AlertCircle className="w-5 h-5 text-red-400" />,
