@@ -1,9 +1,9 @@
 // Grid-based Draft Page
 // Main UI for grid draft modes: auction-grid (with bidding) and open (no bidding)
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer } from 'lucide-react';
+import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer, Crown } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -69,6 +69,8 @@ export function AuctionDraft() {
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   // Card being previewed during selection phase (before confirming auction)
   const [previewCard, setPreviewCard] = useState<YuGiOhCardType | null>(null);
+  // Show turn order panel (for Open mode)
+  const [showTurnOrder, setShowTurnOrder] = useState(true);
 
   // Toast notifications
   const { showToast, ToastContainer } = useToast();
@@ -92,6 +94,9 @@ export function AuctionDraft() {
 
   // Fetch drafted card data
   const { cards: draftedCards } = useCards(draftedCardIds);
+
+  // Track selected card index for keyboard navigation
+  const [selectedCardIndex, setSelectedCardIndex] = useState(0);
 
   // Sort grid cards using the filter hook
   const sortedGridCards = useMemo(() => {
@@ -123,6 +128,75 @@ export function AuctionDraft() {
       gridCards.find(c => c.id === sortedCard.id)!
     ).filter(Boolean);
   }, [gridCards, gridFilters]);
+
+  // Get only remaining cards (available for selection) in sorted order
+  const availableCards = useMemo(() => {
+    return sortedGridCards.filter(card => remainingCardIds.includes(card.id));
+  }, [sortedGridCards, remainingCardIds]);
+
+  // Keyboard navigation handlers
+  const handleKeyboardNavigation = useCallback((e: KeyboardEvent) => {
+    // Don't handle if typing in an input
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    // Only allow navigation during selection phase when it's in_progress
+    if (session?.status !== 'in_progress') return;
+
+    // For selection phase, navigate available cards
+    if (auctionState?.phase === 'selecting') {
+      const cardsCount = availableCards.length;
+      if (cardsCount === 0) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          setSelectedCardIndex(prev => (prev - 1 + cardsCount) % cardsCount);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          setSelectedCardIndex(prev => (prev + 1) % cardsCount);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          // Move up one row (assume ~6 cards per row on desktop)
+          setSelectedCardIndex(prev => (prev - 6 + cardsCount) % cardsCount);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          // Move down one row
+          setSelectedCardIndex(prev => (prev + 6) % cardsCount);
+          break;
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          // If preview card is open, select it (if selector)
+          if (previewCard && isSelector && !isActionPending) {
+            handleSelectCard(previewCard.id);
+          } else if (!previewCard && availableCards[selectedCardIndex]) {
+            // Open preview for current card
+            setPreviewCard(availableCards[selectedCardIndex]);
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          setPreviewCard(null);
+          break;
+      }
+    }
+  }, [session?.status, auctionState?.phase, availableCards, selectedCardIndex, previewCard, isSelector, isActionPending]);
+
+  // Set up keyboard event listener
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyboardNavigation);
+    return () => window.removeEventListener('keydown', handleKeyboardNavigation);
+  }, [handleKeyboardNavigation]);
+
+  // Reset selected index when available cards change
+  useEffect(() => {
+    setSelectedCardIndex(0);
+  }, [remainingCardIds.length, currentGrid]);
 
   // Set game context based on cube
   useEffect(() => {
@@ -280,6 +354,11 @@ export function AuctionDraft() {
   // Handler for viewing a grid card (opens detail sheet)
   const handleGridCardClick = (card: YuGiOhCardType) => {
     setPreviewCard(card);
+    // Also update keyboard selection index
+    const cardIndex = availableCards.findIndex(c => c.id === card.id);
+    if (cardIndex >= 0) {
+      setSelectedCardIndex(cardIndex);
+    }
   };
 
   // Action handlers with loading state
@@ -289,6 +368,13 @@ export function AuctionDraft() {
     setPreviewCard(null); // Close preview sheet
     try {
       await selectCard(cardId);
+      // Show success toast for Open mode (card is awarded immediately)
+      if (isOpenMode) {
+        const card = gridCards.find(c => c.id === cardId);
+        if (card) {
+          showToast(`Added "${card.name}" to your collection!`, 'success');
+        }
+      }
     } catch (err) {
       console.error('[AuctionDraft] Select failed:', err);
       showToast(err instanceof Error ? err.message : 'Failed to select card', 'error');
@@ -468,6 +554,76 @@ export function AuctionDraft() {
           </div>
         )}
 
+        {/* Turn Order Panel (shows all players and current turn) */}
+        {session?.status === 'in_progress' && (
+          <div className="mb-4 glass-card p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Turn Order
+              </h3>
+              <button
+                onClick={() => setShowTurnOrder(!showTurnOrder)}
+                className="text-xs text-gray-500 hover:text-gray-300"
+              >
+                {showTurnOrder ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            {showTurnOrder && (
+              <div className="flex flex-wrap gap-2">
+                {[...players]
+                  .sort((a, b) => a.seatPosition - b.seatPosition)
+                  .map((player, index) => {
+                    const isCurrentSelector = player.seatPosition === session?.current_selector_seat;
+                    const isMe = player.userId === currentPlayer?.userId;
+                    const hasMaxCards = player.cardsAcquiredThisGrid >= maxCardsPerGrid;
+
+                    return (
+                      <div
+                        key={player.id}
+                        className={`
+                          flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm transition-all
+                          ${isCurrentSelector
+                            ? 'bg-gold-500/20 border border-gold-500/50 text-gold-400'
+                            : hasMaxCards
+                              ? 'bg-gray-700/30 text-gray-500 line-through'
+                              : 'bg-yugi-card text-gray-300'
+                          }
+                          ${isMe ? 'ring-1 ring-blue-500/50' : ''}
+                        `}
+                      >
+                        {/* Position indicator */}
+                        <span className={`
+                          w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold
+                          ${isCurrentSelector ? 'bg-gold-500 text-black' : 'bg-gray-600 text-gray-300'}
+                        `}>
+                          {index + 1}
+                        </span>
+                        {/* Player name */}
+                        <span className={isCurrentSelector ? 'font-semibold' : ''}>
+                          {player.name}
+                          {isMe && <span className="text-blue-400 ml-1">(you)</span>}
+                        </span>
+                        {/* Cards acquired indicator */}
+                        <span className="text-xs text-gray-500">
+                          {player.cardsAcquiredThisGrid}/{maxCardsPerGrid}
+                        </span>
+                        {/* Current turn indicator */}
+                        {isCurrentSelector && (
+                          <Crown className="w-3 h-3 text-gold-400 animate-pulse" />
+                        )}
+                        {/* Bot indicator */}
+                        {player.isBot && (
+                          <span className="text-[10px] text-gray-500 bg-gray-700 px-1 rounded">BOT</span>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Main content - Grid and Bidding Panel (if auction mode) */}
         <div className={`flex-1 flex flex-col ${isOpenMode ? '' : 'lg:flex-row'} gap-4 min-h-0`}>
           {/* Grid */}
@@ -497,6 +653,8 @@ export function AuctionDraft() {
               currentAuctionCardId={auctionState?.cardId ?? null}
               onCardClick={handleGridCardClick}
               selectionDisabled={isActionPending || auctionState?.phase !== 'selecting'}
+              keyboardSelectedCardId={availableCards[selectedCardIndex]?.id ?? null}
+              isOpenMode={isOpenMode}
             />
           </div>
 
@@ -536,18 +694,37 @@ export function AuctionDraft() {
           onClose={() => setPreviewCard(null)}
           footer={
             isSelector && auctionState?.phase === 'selecting' && previewCard && remainingCardIds.includes(previewCard.id) ? (
-              <Button
-                onClick={() => handleSelectCard(previewCard.id)}
-                disabled={isActionPending}
-                className="w-full"
-              >
-                {isOpenMode ? (
-                  <MousePointer className="w-4 h-4 mr-2" />
-                ) : (
-                  <Gavel className="w-4 h-4 mr-2" />
-                )}
-                {isOpenMode ? 'Select Card' : 'Set for Auction'}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={() => handleSelectCard(previewCard.id)}
+                  disabled={isActionPending}
+                  className="w-full"
+                >
+                  {isActionPending ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      {isOpenMode ? 'Picking...' : 'Setting...'}
+                    </>
+                  ) : isOpenMode ? (
+                    <>
+                      <MousePointer className="w-4 h-4 mr-2" />
+                      Pick This Card
+                    </>
+                  ) : (
+                    <>
+                      <Gavel className="w-4 h-4 mr-2" />
+                      Set for Auction
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-gray-500 text-center">
+                  Press Enter to confirm, Escape to cancel
+                </p>
+              </div>
+            ) : !isSelector && auctionState?.phase === 'selecting' ? (
+              <div className="text-center text-gray-400 py-2">
+                <span className="text-yellow-400">Waiting for {players.find(p => p.seatPosition === session?.current_selector_seat)?.name || 'player'}</span> to make their pick...
+              </div>
             ) : undefined
           }
         />

@@ -208,7 +208,8 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
 
     try {
       // Use appropriate service based on mode
-      if (session.mode === 'auction-grid') {
+      // Both auction-grid and open modes use grid-based drafting via auctionService
+      if (session.mode === 'auction-grid' || session.mode === 'open') {
         await auctionService.startDraft(session.id);
       } else {
         await draftService.startDraft(session.id);

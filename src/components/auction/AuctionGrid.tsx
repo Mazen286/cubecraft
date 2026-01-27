@@ -16,6 +16,10 @@ interface AuctionGridProps {
   onCardClick: (card: YuGiOhCardType) => void;
   /** Whether selection is disabled (e.g., during bidding phase) */
   selectionDisabled?: boolean;
+  /** Card ID highlighted via keyboard navigation */
+  keyboardSelectedCardId?: number | null;
+  /** Whether this is Open Draft mode (no bidding) */
+  isOpenMode?: boolean;
 }
 
 export function AuctionGrid({
@@ -25,6 +29,8 @@ export function AuctionGrid({
   currentAuctionCardId,
   onCardClick,
   selectionDisabled = false,
+  keyboardSelectedCardId,
+  isOpenMode = false,
 }: AuctionGridProps) {
   // Create a set for O(1) lookup
   const remainingSet = useMemo(
@@ -44,6 +50,7 @@ export function AuctionGrid({
         {gridCards.map((card) => {
           const isRemaining = remainingSet.has(card.id);
           const isCurrentAuction = card.id === currentAuctionCardId;
+          const isKeyboardSelected = card.id === keyboardSelectedCardId && isRemaining;
           const isClickable = isRemaining; // Any remaining card is clickable to view
 
           return (
@@ -53,6 +60,7 @@ export function AuctionGrid({
                 'relative transition-all duration-200',
                 !isRemaining && 'opacity-30 grayscale',
                 isCurrentAuction && 'ring-2 ring-gold-400 z-10',
+                isKeyboardSelected && !isCurrentAuction && 'ring-2 ring-blue-400 z-10',
                 isClickable && 'cursor-pointer hover:z-10 hover:ring-2 hover:ring-gold-400/50',
               )}
               onClick={() => handleCardClick(card)}
@@ -79,7 +87,10 @@ export function AuctionGrid({
       {isSelector && !selectionDisabled && (
         <div className="mt-4 text-center">
           <p className="text-gold-400 font-medium animate-pulse">
-            Select a card to put up for auction
+            {isOpenMode ? 'Click a card to add it to your collection' : 'Select a card to put up for auction'}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Use arrow keys to navigate, Enter to select
           </p>
         </div>
       )}

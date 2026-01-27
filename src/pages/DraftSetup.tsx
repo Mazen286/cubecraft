@@ -243,7 +243,7 @@ export function DraftSetup() {
             />
             <ModeOption
               title="Auction Grid"
-              description="Bid on cards using 100 points across 6 grids."
+              description={`Bid on cards using ${settings.auctionBiddingPoints ?? 100} points across ${Math.ceil(settings.cardsPerPlayer / (settings.mode === 'auction-grid' ? settings.packSize : 5))} grids.`}
               selected={settings.mode === 'auction-grid'}
               onClick={() => updateSetting('mode', 'auction-grid' as DraftMode)}
               onInfoClick={() => setInfoSheet('auction')}
