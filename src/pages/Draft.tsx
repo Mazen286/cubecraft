@@ -351,11 +351,6 @@ export function Draft() {
     });
   }, []);
 
-  // Clear all stats filters for My Cards
-  const clearMyCardsStatsFilters = useCallback(() => {
-    setMyCardsStatsFilters({});
-  }, []);
-
   // Initialize statistics when draft starts
   useEffect(() => {
     if (session?.status === 'in_progress' && sessionId) {
@@ -1638,7 +1633,10 @@ export function Draft() {
                         onClick={() => {
                           setMyCardsStatsFilters(prev => {
                             const { archetype } = prev;
-                            return archetype ? { archetype } : {};
+                            if (archetype) {
+                              return { archetype } as Record<string, Set<string>>;
+                            }
+                            return {} as Record<string, Set<string>>;
                           });
                         }}
                         className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors"

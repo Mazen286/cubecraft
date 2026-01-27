@@ -80,11 +80,6 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     });
   }, []);
 
-  // Clear all stats filters
-  const clearStatsFilters = useCallback(() => {
-    setStatsFilters({});
-  }, []);
-
   // Selected card for detail view
   const [selectedCard, setSelectedCard] = useState<YuGiOhCardType | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
@@ -604,7 +599,10 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                   setStatsFilters(prev => {
                     // Keep archetype, clear others
                     const { archetype } = prev;
-                    return archetype ? { archetype } : {};
+                    if (archetype) {
+                      return { archetype } as Record<string, Set<string>>;
+                    }
+                    return {} as Record<string, Set<string>>;
                   });
                 }}
                 className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors"

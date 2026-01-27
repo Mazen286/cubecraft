@@ -90,7 +90,7 @@ function scryfallToCard(sc: ScryfallCard, userScore?: number): Card {
     description: sc.oracle_text || '',
     score: userScore,
     imageUrl,
-    attributes,
+    attributes: attributes as Record<string, unknown>,
   };
 }
 

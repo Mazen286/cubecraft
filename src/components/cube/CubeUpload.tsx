@@ -74,7 +74,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
           setStep('enriching');
           setEnrichmentProgress({ current: 0, total: parsed.cards.length });
 
-          parsed = await enrichYuGiOhCube(parsed, (current, total) => {
+          parsed = await enrichCube(parsed, (current, total) => {
             setEnrichmentProgress({ current, total });
           });
         }
