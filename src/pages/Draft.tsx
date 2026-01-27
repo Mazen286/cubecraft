@@ -780,6 +780,7 @@ export function Draft() {
           e.preventDefault();
           if (selectedCard && !isPicking && !hasPicked) {
             handlePickCard();
+            setSelectedCard(null); // Close sheet immediately after picking
           }
           break;
         }
