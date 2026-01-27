@@ -41,6 +41,10 @@ import { statisticsService } from '../services/statisticsService';
 import { draftService, clearLastSession } from '../services/draftService';
 import { cubeService } from '../services/cubeService';
 import { useGameConfig } from '../context/GameContext';
+import { useHostDisconnectPause } from '../hooks/useHostDisconnectPause';
+import { useCardKeyboardNavigation } from '../hooks/useCardKeyboardNavigation';
+import { useConnectionPresence } from '../hooks/useConnectionPresence';
+import { PauseOverlay } from '../components/draft';
 
 export function Draft() {
   const navigate = useNavigate();
@@ -110,8 +114,6 @@ export function Draft() {
   // Preload small images for drafted cards (for the sidebar)
   useImagePreloader(draftedCardIds, 'sm');
 
-  const [selectedCard, setSelectedCard] = useState<YuGiOhCardType | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [isPicking, setIsPicking] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -121,7 +123,6 @@ export function Draft() {
   const [autoPickNotification, setAutoPickNotification] = useState<string | null>(null);
   const [timeoutNotification, setTimeoutNotification] = useState<string | null>(null);
   const [pauseNotification, setPauseNotification] = useState<string | null>(null);
-  const [showShortcuts, setShowShortcuts] = useState(false);
   const [showMobileCards, setShowMobileCards] = useState(false);
   const [mobileViewCard, setMobileViewCard] = useState<YuGiOhCardType | null>(null);
   const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
@@ -414,26 +415,23 @@ export function Draft() {
     }
   }, [session?.status, sessionId]);
 
-  // Auto-pause when host disconnects (any player can trigger this)
-  const hostPlayer = players.find(p => p.is_host);
-  const prevHostConnected = useRef<boolean | undefined>(undefined);
-  useEffect(() => {
-    // Skip if no host player, session not in progress, already paused, or solo mode
-    if (!hostPlayer || session?.status !== 'in_progress' || session?.paused || humanPlayers.length <= 1) {
-      prevHostConnected.current = hostPlayer?.is_connected;
-      return;
-    }
+  // Auto-pause when host disconnects (uses universal hook)
+  const { hostPlayer, isHostConnected, isPausedDueToDisconnect } = useHostDisconnectPause({
+    sessionId: session?.id,
+    sessionStatus: session?.status,
+    sessionPaused: session?.paused,
+    players,
+    isHost,
+    currentTimeRemaining: timeRemaining,
+  });
 
-    // Check if host just disconnected (was connected before, now disconnected)
-    const wasConnected = prevHostConnected.current;
-    const isConnected = hostPlayer.is_connected;
-    prevHostConnected.current = isConnected;
-
-    if (wasConnected === true && isConnected === false && sessionId) {
-      // Host disconnected - auto-pause
-      draftService.autoPauseForHostDisconnect(sessionId, timeRemaining);
-    }
-  }, [hostPlayer?.is_connected, session?.status, session?.paused, sessionId, humanPlayers.length, timeRemaining]);
+  // Event-based connection presence tracking
+  // Marks player as disconnected when: tab hidden, offline, navigating away, closing tab
+  // Marks player as connected when: tab visible, online, page focused
+  useConnectionPresence({
+    playerId: currentPlayer?.id,
+    enabled: session?.status === 'in_progress' || session?.status === 'waiting',
+  });
 
   // Show notification when pause state changes
   const prevPausedState = useRef<boolean | undefined>(undefined);
@@ -450,8 +448,8 @@ export function Draft() {
     // Only show notification when state actually changes (not on initial load)
     if (wasPaused !== undefined && wasPaused !== isPaused) {
       if (isPaused) {
-        // Draft was paused
-        const reason = hostPlayer && !hostPlayer.is_connected
+        // Draft was paused - use hook's isHostConnected to determine reason
+        const reason = !isHostConnected
           ? 'Draft paused - Host disconnected'
           : 'Draft paused by host';
         setPauseNotification(reason);
@@ -460,7 +458,7 @@ export function Draft() {
         setPauseNotification(null);
       }
     }
-  }, [session?.paused, session?.status, hostPlayer?.is_connected]);
+  }, [session?.paused, session?.status, isHostConnected]);
 
   // Clear pause notification after delay (but keep it while paused)
   useEffect(() => {
@@ -516,10 +514,7 @@ export function Draft() {
     }
   };
 
-  // Reset description expansion when card changes
-  useEffect(() => {
-    setShowFullDescription(false);
-  }, [selectedCard?.id]);
+  // Note: Reset description expansion effect moved after useCardKeyboardNavigation hook
 
   // Calculate initial timer based on pick_started_at (syncs with DB on refresh)
   const initialTimerCalculatedRef = useRef<string>('');
@@ -709,9 +704,8 @@ export function Draft() {
   }, [session?.status, session?.timer_seconds, session?.current_pack, session?.current_pick, session?.paused, session?.pick_started_at, session?.resume_at, session?.time_remaining_at_pause, packReady, resumeCountdown]);
 
   const handlePickCard = useCallback(
-    async (card?: YuGiOhCardType, wasAutoPick = false) => {
-      const cardToPick = card || selectedCard;
-      if (!cardToPick || isPicking || currentPlayer?.pick_made) return;
+    async (card: YuGiOhCardType, wasAutoPick = false) => {
+      if (!card || isPicking || currentPlayer?.pick_made) return;
 
       setIsPicking(true);
       try {
@@ -720,13 +714,13 @@ export function Draft() {
         const isAutoPick = wasAutoPick || isAutoPickRef.current;
 
         // Pass timing metrics to database via the hook
-        await makePick(cardToPick.id, pickTime, isAutoPick);
+        await makePick(card.id, pickTime, isAutoPick);
 
         // Also record to localStorage for redundancy
         if (sessionId && session) {
           statisticsService.recordPick(
             sessionId,
-            cardToPick,
+            card,
             session.current_pack || 1,
             session.current_pick || 1,
             pickTime,
@@ -736,7 +730,6 @@ export function Draft() {
 
         // Reset for next pick
         isAutoPickRef.current = false;
-        setSelectedCard(null);
         if (session?.timer_seconds) {
           setTimeRemaining(session.timer_seconds);
         }
@@ -746,7 +739,7 @@ export function Draft() {
         setIsPicking(false);
       }
     },
-    [selectedCard, isPicking, currentPlayer?.pick_made, makePick, session, sessionId]
+    [isPicking, currentPlayer?.pick_made, makePick, session, sessionId]
   );
 
   // Keep autoPickRef updated with current values (avoids stale closure in timer)
@@ -791,6 +784,31 @@ export function Draft() {
       setIsPausing(false);
     }
   }, [togglePause, timeRemaining, isPausing, showToast]);
+
+  // Keyboard shortcuts for host to pause (P) and resume (R)
+  useEffect(() => {
+    if (!isHost || session?.status !== 'in_progress') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // P toggles pause/resume
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        handlePauseClick();
+      }
+
+      // R resumes (only when paused)
+      if ((e.key === 'r' || e.key === 'R') && session?.paused) {
+        e.preventDefault();
+        handlePauseClick();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isHost, session?.status, session?.paused, handlePauseClick]);
 
   // Handle draft completion
   useEffect(() => {
@@ -841,134 +859,46 @@ export function Draft() {
     };
   }, [session?.status, session?.paused, checkTimeouts]);
 
-  // Sync selectedIndex when selectedCard changes (e.g., from click)
-  useEffect(() => {
-    if (selectedCard) {
-      const index = currentPackCards.findIndex(c => c.id === selectedCard.id);
-      setSelectedIndex(index);
-    } else {
-      setSelectedIndex(-1);
-    }
-  }, [selectedCard, currentPackCards]);
-
-  // Reset selection when pack changes
-  useEffect(() => {
-    setSelectedCard(null);
-    setSelectedIndex(-1);
-  }, [session?.current_pack, session?.current_pick]);
-
   // Get column count based on screen width (matches Tailwind grid breakpoints)
   const getColumnCount = useCallback(() => {
     const width = window.innerWidth;
-    if (width >= 1536) return 7;  // 2xl
-    if (width >= 1280) return 6;  // xl
-    if (width >= 1024) return 5;  // lg
-    if (width >= 768) return 5;   // md
-    if (width >= 640) return 4;   // sm
-    return 3;                      // default
+    if (width >= 1536) return 12; // 2xl
+    if (width >= 1280) return 10; // xl
+    if (width >= 1024) return 8;  // lg
+    if (width >= 768) return 6;   // md
+    if (width >= 640) return 5;   // sm
+    return 4;                      // default
   }, []);
 
-  // Keyboard shortcuts (allow browsing even after picking)
+  // Pack sort options for keyboard shortcuts
+  const packSortOptions = useMemo(() => ['none', 'score', 'name', 'level', 'atk', 'def'], []);
+
+  // Keyboard navigation for card selection
+  const {
+    highlightedIndex,
+    sheetCard: selectedCard,
+    isSheetOpen,
+    closeSheet,
+    handleCardClick,
+    showShortcuts,
+    toggleShortcuts,
+  } = useCardKeyboardNavigation({
+    cards: sortedPackCards,
+    columns: getColumnCount,
+    enabled: !isPicking && session?.status === 'in_progress',
+    onSelect: (card) => handlePickCard(card),
+    isActionPending: isPicking,
+    hasSelected: hasPicked,
+    sortOptions: packSortOptions,
+    currentSortBy: packSortBy,
+    onSortChange: setPackSortBy,
+    onToggleSortDirection: () => setPackSortDirection(d => d === 'asc' ? 'desc' : 'asc'),
+  });
+
+  // Reset description expansion when card changes (must be after useCardKeyboardNavigation)
   useEffect(() => {
-    if (isPicking || session?.status !== 'in_progress') return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      const cardCount = currentPackCards.length;
-      if (cardCount === 0) return;
-
-      const cols = getColumnCount();
-
-      switch (e.key) {
-        case 'ArrowRight': {
-          e.preventDefault();
-          const nextIndex = selectedIndex < 0 ? 0 : (selectedIndex + 1) % cardCount;
-          setSelectedIndex(nextIndex);
-          setSelectedCard(currentPackCards[nextIndex]);
-          break;
-        }
-        case 'ArrowLeft': {
-          e.preventDefault();
-          const prevIndex = selectedIndex < 0 ? cardCount - 1 : (selectedIndex - 1 + cardCount) % cardCount;
-          setSelectedIndex(prevIndex);
-          setSelectedCard(currentPackCards[prevIndex]);
-          break;
-        }
-        case 'ArrowDown': {
-          e.preventDefault();
-          if (selectedIndex < 0) {
-            setSelectedIndex(0);
-            setSelectedCard(currentPackCards[0]);
-          } else {
-            // Move down one row (add column count)
-            const nextIndex = selectedIndex + cols;
-            if (nextIndex < cardCount) {
-              setSelectedIndex(nextIndex);
-              setSelectedCard(currentPackCards[nextIndex]);
-            }
-          }
-          break;
-        }
-        case 'ArrowUp': {
-          e.preventDefault();
-          if (selectedIndex < 0) {
-            setSelectedIndex(cardCount - 1);
-            setSelectedCard(currentPackCards[cardCount - 1]);
-          } else {
-            // Move up one row (subtract column count)
-            const prevIndex = selectedIndex - cols;
-            if (prevIndex >= 0) {
-              setSelectedIndex(prevIndex);
-              setSelectedCard(currentPackCards[prevIndex]);
-            }
-          }
-          break;
-        }
-        case 'Enter':
-        case ' ': {
-          e.preventDefault();
-          if (selectedCard && !isPicking && !hasPicked) {
-            handlePickCard();
-            setSelectedCard(null); // Close sheet immediately after picking
-          }
-          break;
-        }
-        case 'Escape': {
-          e.preventDefault();
-          setSelectedCard(null);
-          setSelectedIndex(-1);
-          break;
-        }
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9': {
-          const num = parseInt(e.key) - 1;
-          if (num < cardCount) {
-            e.preventDefault();
-            setSelectedIndex(num);
-            setSelectedCard(currentPackCards[num]);
-          }
-          break;
-        }
-        case '?': {
-          e.preventDefault();
-          setShowShortcuts(prev => !prev);
-          break;
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentPackCards, selectedIndex, selectedCard, hasPicked, isPicking, handlePickCard, session?.status, getColumnCount]);
+    setShowFullDescription(false);
+  }, [selectedCard?.id]);
 
   // Calculate pack progress (account for burned cards)
   const picksPerPack = session
@@ -1056,7 +986,7 @@ export function Draft() {
             {session?.paused ? (
               <div className="text-center">
                 <div className="text-2xl font-bold text-yellow-400">PAUSED</div>
-                {hostPlayer && !hostPlayer.is_connected && !isHost && (
+                {hostPlayer && !isHostConnected && !isHost && (
                   <div className="text-xs text-red-400">Host disconnected</div>
                 )}
                 {isHost && (
@@ -1127,7 +1057,7 @@ export function Draft() {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             {/* Keyboard shortcuts hint */}
             <button
-              onClick={() => setShowShortcuts(prev => !prev)}
+              onClick={toggleShortcuts}
               className="hidden sm:flex items-center gap-1 text-gray-400 hover:text-gold-400 transition-colors"
               title="Keyboard shortcuts (?)"
             >
@@ -1201,7 +1131,7 @@ export function Draft() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-white">Keyboard Shortcuts</h3>
               <button
-                onClick={() => setShowShortcuts(false)}
+                onClick={toggleShortcuts}
                 className="text-gray-400 hover:text-white text-sm"
               >
                 ✕
@@ -1209,29 +1139,45 @@ export function Draft() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">←→</kbd>
-                <span className="text-gray-400">Navigate cards</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">↑↓</kbd>
-                <span className="text-gray-400">Navigate cards</span>
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">←→↑↓</kbd>
+                <span className="text-gray-400">Highlight card</span>
               </div>
               <div className="flex items-center gap-2">
                 <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">1-9</kbd>
-                <span className="text-gray-400">Quick select</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Enter</kbd>
-                <span className="text-gray-400">Pick card</span>
+                <span className="text-gray-400">Highlight by number</span>
               </div>
               <div className="flex items-center gap-2">
                 <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Space</kbd>
-                <span className="text-gray-400">Pick card</span>
+                <span className="text-gray-400">View / Pick</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Esc</kbd>
-                <span className="text-gray-400">Deselect</span>
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">↓/Esc</kbd>
+                <span className="text-gray-400">Close sheet</span>
               </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">?</kbd>
+                <span className="text-gray-400">Toggle help</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">S</kbd>
+                <span className="text-gray-400">Cycle sort options</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">A</kbd>
+                <span className="text-gray-400">Toggle asc/desc</span>
+              </div>
+              {isHost && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">P</kbd>
+                    <span className="text-gray-400">Pause/Resume (Host)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">R</kbd>
+                    <span className="text-gray-400">Resume (Host)</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -1282,13 +1228,14 @@ export function Draft() {
               </div>
             ) : sortedPackCards.length > 0 ? (
               <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
-                {sortedPackCards.map((card) => (
+                {sortedPackCards.map((card, index) => (
                   <div key={card.id} className="relative">
                     <YuGiOhCard
                       card={card}
                       size="full"
                       isSelected={selectedCard?.id === card.id}
-                      onClick={() => setSelectedCard(card)}
+                      isHighlighted={highlightedIndex === index}
+                      onClick={() => handleCardClick(card, index)}
                       showTier={cubeHasScores}
                       flush
                       draggable={!hasPicked}
@@ -1423,7 +1370,7 @@ export function Draft() {
                     {draftedCards.map((card) => (
                       <div
                         key={card.id}
-                        onClick={() => setSelectedCard(card)}
+                        onClick={() => setMobileViewCard(card)}
                         className="cursor-pointer transition-transform hover:scale-105"
                       >
                         <YuGiOhCard card={card} size="sm" showTier={cubeHasScores} />
@@ -1469,71 +1416,13 @@ export function Draft() {
 
         {/* Pause Overlay Screen */}
         {session?.paused && session?.status === 'in_progress' && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm">
-            <div className="text-center max-w-md mx-auto p-8">
-              {/* Pause Icon */}
-              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                <Pause className="w-12 h-12 text-yellow-400" />
-              </div>
-
-              {/* Title */}
-              <h2 className="text-4xl font-bold text-yellow-400 mb-4">
-                DRAFT PAUSED
-              </h2>
-
-              {/* Reason */}
-              {hostPlayer && !hostPlayer.is_connected ? (
-                <div className="mb-6">
-                  <p className="text-red-400 text-lg mb-2">Host Disconnected</p>
-                  <p className="text-gray-400 text-sm">
-                    The draft has been automatically paused. Waiting for the host to reconnect...
-                  </p>
-                </div>
-              ) : (
-                <p className="text-gray-400 mb-6">
-                  The host has paused the draft. Please wait for them to resume.
-                </p>
-              )}
-
-              {/* Time remaining info */}
-              {session.time_remaining_at_pause && (
-                <div className="mb-6 p-4 rounded-lg bg-yugi-card border border-yugi-border">
-                  <p className="text-sm text-gray-400 mb-1">Time remaining when paused</p>
-                  <p className="text-2xl font-bold text-gold-400">
-                    {formatTime(session.time_remaining_at_pause)}
-                  </p>
-                </div>
-              )}
-
-              {/* Resume button (host only) */}
-              {isHost && (
-                <Button
-                  onClick={handlePauseClick}
-                  disabled={isPausing}
-                  className="flex items-center gap-2 mx-auto px-6 py-3"
-                >
-                  {isPausing ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      Resuming...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-5 h-5" />
-                      Resume Draft
-                    </>
-                  )}
-                </Button>
-              )}
-
-              {/* Non-host message */}
-              {!isHost && (
-                <p className="text-sm text-gray-500 mt-4">
-                  Only the host can resume the draft
-                </p>
-              )}
-            </div>
-          </div>
+          <PauseOverlay
+            isHost={isHost}
+            isPausedDueToDisconnect={isPausedDueToDisconnect}
+            timeRemainingAtPause={session.time_remaining_at_pause}
+            isResuming={isPausing}
+            onResume={handlePauseClick}
+          />
         )}
 
         {/* Resume Countdown Overlay */}
@@ -1809,22 +1698,25 @@ export function Draft() {
         {/* Card Selection Bottom Sheet (for picking from hand or viewing while waiting) */}
         <CardDetailSheet
           card={selectedCard}
-          isOpen={!!selectedCard}
-          onClose={() => setSelectedCard(null)}
+          isOpen={isSheetOpen}
+          onClose={closeSheet}
           footer={
             hasPicked ? (
               <div className="text-center text-gray-400 py-2">
                 <span className="text-green-400">Pick made</span> — Waiting for other players...
               </div>
-            ) : (
+            ) : selectedCard ? (
               <Button
-                onClick={() => handlePickCard()}
+                onClick={() => {
+                  handlePickCard(selectedCard);
+                  closeSheet();
+                }}
                 className="w-full py-3 text-lg"
                 disabled={isPicking}
               >
                 {isPicking ? 'Picking...' : 'Pick This Card'}
               </Button>
-            )
+            ) : null
           }
         />
 

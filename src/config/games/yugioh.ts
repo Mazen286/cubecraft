@@ -224,11 +224,17 @@ export const YUGIOH_MONSTER_TYPES = [
 ] as const;
 
 /**
- * Bot names for Yu-Gi-Oh!
+ * Bot names for Yu-Gi-Oh! (characters across series generations)
  */
 const YUGIOH_BOT_NAMES = [
-  'Kaiba Bot', 'Yugi Bot', 'Joey Bot', 'Mai Bot',
-  'Pegasus Bot', 'Marik Bot', 'Bakura Bot', 'Ishizu Bot',
+  // Duel Monsters era
+  'Yugi', 'Kaiba', 'Joey', 'Mai', 'Pegasus',
+  // GX era
+  'Jaden', 'Aster', 'Zane',
+  // 5D's era
+  'Yusei', 'Jack Atlas', 'Crow',
+  // ZEXAL/ARC-V/VRAINS era
+  'Yuma', 'Yuya', 'Playmaker', 'Revolver',
 ];
 
 /**

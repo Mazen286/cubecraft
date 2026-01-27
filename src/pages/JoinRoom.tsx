@@ -9,7 +9,7 @@ export function JoinRoom() {
   const navigate = useNavigate();
   const [roomCode, setRoomCode] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const { joinSession, isLoading, error } = useDraftSession();
+  const { joinSession, isLoading, error, existingSession, leaveExistingSession } = useDraftSession();
 
   // Load saved name on mount
   useEffect(() => {
@@ -84,7 +84,43 @@ export function JoinRoom() {
             />
           </div>
 
-          {error && (
+          {existingSession && (
+            <div className="mb-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/50">
+              <p className="text-yellow-400 text-sm mb-3">
+                You're already in an active draft (Room: <span className="font-bold">{existingSession.roomCode}</span>).
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const url = existingSession.status === 'waiting'
+                      ? `/lobby/${existingSession.roomCode}`
+                      : existingSession.mode === 'auction'
+                        ? `/auction/${existingSession.roomCode}`
+                        : `/draft/${existingSession.roomCode}`;
+                    navigate(url);
+                  }}
+                >
+                  Rejoin Existing
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={async () => {
+                    await leaveExistingSession();
+                  }}
+                  className="text-red-400 hover:text-red-300"
+                >
+                  Leave & Join New
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {error && !existingSession && (
             <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/50 text-red-400 text-sm">
               {error}
             </div>

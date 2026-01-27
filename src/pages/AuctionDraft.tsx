@@ -20,8 +20,12 @@ import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { CubeStats } from '../components/cube/CubeStats';
 import { draftService, clearLastSession } from '../services/draftService';
+import { auctionService } from '../services/auctionService';
 import { cubeService } from '../services/cubeService';
 import { useGameConfig } from '../context/GameContext';
+import { useHostDisconnectPause } from '../hooks/useHostDisconnectPause';
+import { useConnectionPresence } from '../hooks/useConnectionPresence';
+import { PauseOverlay } from '../components/draft';
 
 export function AuctionDraft() {
   const navigate = useNavigate();
@@ -83,6 +87,24 @@ export function AuctionDraft() {
     paused: session?.paused,
     resumeAt: session?.resume_at,
     status: session?.status,
+  });
+
+  // Host disconnect detection with auto-pause
+  const { hostPlayer, isHostConnected, isPausedDueToDisconnect } = useHostDisconnectPause({
+    sessionId: session?.id,
+    sessionStatus: session?.status,
+    sessionPaused: session?.paused,
+    players,
+    isHost,
+    currentTimeRemaining: selectionTimeRemaining,
+  });
+
+  // Event-based connection presence tracking
+  // Marks player as disconnected when: tab hidden, offline, navigating away, closing tab
+  // Marks player as connected when: tab visible, online, page focused
+  useConnectionPresence({
+    playerId: currentPlayer?.id,
+    enabled: session?.status === 'in_progress' || session?.status === 'waiting',
   });
 
   // Toast notifications
@@ -1486,51 +1508,14 @@ export function AuctionDraft() {
 
         {/* Pause Overlay Screen */}
         {session?.paused && session?.status === 'in_progress' && (
-          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center">
-            <div className="bg-yugi-darker border border-yugi-border rounded-2xl p-8 max-w-md mx-4 text-center">
-              {/* Pause Icon */}
-              <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-6">
-                <Pause className="w-12 h-12 text-yellow-400" />
-              </div>
-
-              <h2 className="text-2xl font-bold text-white mb-4">Draft Paused</h2>
-
-              <p className="text-gray-300 mb-6">
-                The host has paused the draft. Please wait for them to resume.
-              </p>
-
-              {/* Time remaining when paused */}
-              {session.time_remaining_at_pause && (
-                <div className="mb-6">
-                  <p className="text-sm text-gray-400 mb-1">Time remaining when paused</p>
-                  <p className="text-3xl font-bold text-gold-400">
-                    {session.time_remaining_at_pause}s
-                  </p>
-                </div>
-              )}
-
-              {/* Resume button for host */}
-              {isHost && (
-                <Button
-                  onClick={handlePauseClick}
-                  disabled={isPausing}
-                  className="w-full"
-                >
-                  {isPausing ? (
-                    <>
-                      <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      Resuming...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4 mr-2" />
-                      Resume Draft
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          </div>
+          <PauseOverlay
+            isHost={isHost}
+            isPausedDueToDisconnect={isPausedDueToDisconnect}
+            timeRemainingAtPause={session.time_remaining_at_pause}
+            isResuming={isPausing}
+            onResume={handlePauseClick}
+            showSecondsOnly
+          />
         )}
 
         {/* Resume Countdown Overlay */}

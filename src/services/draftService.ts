@@ -148,6 +148,15 @@ export const draftService = {
     const userId = getUserId();
     const roomCode = generateRoomCode();
 
+    // Check if user is already in an active session
+    const activeSession = await this.getActiveSession();
+    if (activeSession) {
+      const error = new Error(`You are already in an active draft (Room: ${activeSession.roomCode}). Leave that session first to create a new one.`);
+      (error as Error & { code: string; existingSession: typeof activeSession }).code = 'ALREADY_IN_SESSION';
+      (error as Error & { existingSession: typeof activeSession }).existingSession = activeSession;
+      throw error;
+    }
+
     // Calculate total players (for solo: 1 human + bots)
     const totalPlayers = settings.playerCount === 1
       ? 1 + settings.botCount
@@ -266,7 +275,8 @@ export const draftService = {
   },
 
   /**
-   * Join an existing draft session by room code
+   * Join an existing draft session by room code.
+   * Throws an error with code 'ALREADY_IN_SESSION' if user is in another active session.
    */
   async joinSession(
     roomCode: string
@@ -274,7 +284,7 @@ export const draftService = {
     const supabase = getSupabase();
     const userId = getUserId();
 
-    // Find the session
+    // Find the session being joined
     const { data: session, error: sessionError } = await supabase
       .from('draft_sessions')
       .select()
@@ -302,7 +312,19 @@ export const draftService = {
         .select()
         .single();
 
+      // Update localStorage to track this session
+      setLastSession(session.id, session.room_code);
+
       return { session, player: updatedPlayer || existingPlayer };
+    }
+
+    // Check if user is in a DIFFERENT active session
+    const activeSession = await this.getActiveSession();
+    if (activeSession && activeSession.sessionId !== session.id) {
+      const error = new Error(`You are already in an active draft (Room: ${activeSession.roomCode}). Leave that session first to join a new one.`);
+      (error as Error & { code: string; existingSession: typeof activeSession }).code = 'ALREADY_IN_SESSION';
+      (error as Error & { existingSession: typeof activeSession }).existingSession = activeSession;
+      throw error;
     }
 
     // Only allow new players to join during waiting phase
@@ -511,6 +533,24 @@ export const draftService = {
     if (error) {
       console.error('[draftService] Failed to toggle pause:', error);
       throw new Error(`Failed to pause: ${error.message}`);
+    }
+
+    // When resuming, immediately update host's last_seen_at to mark them as present
+    // This prevents the disconnect detection from thinking they're still away
+    if (!newPausedState) {
+      const { data: hostPlayer } = await supabase
+        .from('draft_players')
+        .select('id')
+        .eq('session_id', sessionId)
+        .eq('user_id', userId)
+        .single();
+
+      if (hostPlayer) {
+        await supabase
+          .from('draft_players')
+          .update({ last_seen_at: new Date().toISOString(), is_connected: true })
+          .eq('id', hostPlayer.id);
+      }
     }
 
     return newPausedState;

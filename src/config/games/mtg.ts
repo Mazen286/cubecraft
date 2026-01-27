@@ -220,11 +220,15 @@ export const MTG_CARD_TYPES = [
 ] as const;
 
 /**
- * Bot names for MTG
+ * Bot names for MTG (planeswalkers and legendary characters)
  */
 const MTG_BOT_NAMES = [
-  'Jace Bot', 'Liliana Bot', 'Chandra Bot', 'Nissa Bot',
-  'Gideon Bot', 'Ajani Bot', 'Sorin Bot', 'Elspeth Bot',
+  // Core planeswalkers
+  'Jace', 'Liliana', 'Chandra', 'Nissa', 'Gideon',
+  // Fan favorites
+  'Ajani', 'Sorin', 'Elspeth', 'Teferi', 'Kaya',
+  // Villains and others
+  'Nicol Bolas', 'Tezzeret', 'Vraska', 'Nahiri', 'Ashiok',
 ];
 
 /**

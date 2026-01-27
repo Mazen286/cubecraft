@@ -207,11 +207,15 @@ export const POKEMON_ENERGY_TYPES = [
 ] as const;
 
 /**
- * Bot names for Pokemon
+ * Bot names for Pokemon (trainers and professors across generations)
  */
 const POKEMON_BOT_NAMES = [
-  'Professor Oak', 'Professor Elm', 'Professor Birch', 'Professor Rowan',
-  'Cynthia Bot', 'Red Bot', 'Blue Bot', 'Ash Bot',
+  // Anime protagonists
+  'Ash', 'Misty', 'Brock', 'May', 'Dawn',
+  // Game protagonists and rivals
+  'Red', 'Blue', 'Cynthia', 'N', 'Leon',
+  // Professors
+  'Prof. Oak', 'Prof. Elm', 'Prof. Sycamore', 'Prof. Kukui', 'Prof. Turo',
 ];
 
 /**

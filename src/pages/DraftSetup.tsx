@@ -6,12 +6,19 @@ import { BottomSheet } from '../components/ui/BottomSheet';
 import { CubeViewer } from '../components/cube/CubeViewer';
 import type { DraftSettings, DraftMode } from '../types';
 import { cn } from '../lib/utils';
-import { draftService, getPlayerName, setPlayerName } from '../services/draftService';
+import { draftService, getPlayerName, setPlayerName, clearLastSession } from '../services/draftService';
 import { auctionService } from '../services/auctionService';
 import { cubeService, type CubeInfo } from '../services/cubeService';
 import { useGameConfig } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
 import { Eye, HelpCircle, ChevronRight, Lock, Globe } from 'lucide-react';
+
+interface ExistingSessionInfo {
+  sessionId: string;
+  roomCode: string;
+  status: 'waiting' | 'in_progress';
+  mode: string;
+}
 
 const DEFAULT_SETTINGS: DraftSettings = {
   mode: 'pack',
@@ -52,6 +59,7 @@ export function DraftSetup() {
   const [viewingCube, setViewingCube] = useState<{ id: string; name: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [infoSheet, setInfoSheet] = useState<'pack' | 'auction' | 'open' | null>(null);
+  const [existingSession, setExistingSession] = useState<ExistingSessionInfo | null>(null);
 
   // Database cubes state
   const [myCubes, setMyCubes] = useState<CubeInfo[]>([]);
@@ -236,12 +244,23 @@ export function DraftSetup() {
         }
       }
     } catch (err) {
+      const typedErr = err as Error & { code?: string; existingSession?: ExistingSessionInfo };
+      if (typedErr.code === 'ALREADY_IN_SESSION' && typedErr.existingSession) {
+        setExistingSession(typedErr.existingSession);
+      }
       if (err instanceof Error) {
         setValidationError(err.message);
       }
       setIsLoading(false);
     }
   }, [selectedCube, totalPlayers, settings, navigate]);
+
+  // Handle leaving existing session to create new one
+  const handleLeaveExistingSession = useCallback(() => {
+    clearLastSession();
+    setExistingSession(null);
+    setValidationError(null);
+  }, []);
 
   return (
     <Layout>
@@ -524,8 +543,43 @@ export function DraftSetup() {
           auctionBiddingPoints={settings.auctionBiddingPoints ?? 100}
         />
 
+        {/* Existing Session Warning */}
+        {existingSession && (
+          <div className="mb-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/50">
+            <p className="text-yellow-400 text-sm mb-3">
+              You're already in an active draft (Room: <span className="font-bold">{existingSession.roomCode}</span>).
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const url = existingSession.status === 'waiting'
+                    ? `/lobby/${existingSession.roomCode}`
+                    : existingSession.mode === 'auction'
+                      ? `/auction/${existingSession.roomCode}`
+                      : `/draft/${existingSession.roomCode}`;
+                  navigate(url);
+                }}
+              >
+                Rejoin Existing
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleLeaveExistingSession}
+                className="text-red-400 hover:text-red-300"
+              >
+                Leave & Create New
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Error Display */}
-        {validationError && (
+        {validationError && !existingSession && (
           <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/50 text-red-400">
             {validationError}
           </div>

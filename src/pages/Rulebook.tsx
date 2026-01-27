@@ -470,12 +470,55 @@ export function Rulebook() {
                   <li>Solo drafts start automatically when you're ready.</li>
                 </ul>
 
-                <p className="text-gray-400 font-medium mb-2">Bot Intelligence:</p>
+                <p className="text-gray-400 font-medium mb-2">Bot Intelligence - How It Works:</p>
+                <p className="text-gray-300 mb-3">
+                  Bots don't just pick the highest-rated card. They use a weighted scoring system that considers synergy with their existing collection:
+                </p>
+
+                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                  <p className="text-white font-semibold mb-2">Weighted Score Calculation:</p>
+                  <ul className="text-gray-300 text-sm space-y-2">
+                    <li><strong className="text-gold-400">Base:</strong> Card's power rating (0-100)</li>
+                    <li><strong className="text-green-400">+15 points:</strong> Card matches bot's top archetype (needs 2+ cards of same archetype)</li>
+                    <li><strong className="text-green-400">+8 points:</strong> Card matches any archetype the bot is building (2+ cards)</li>
+                    <li><strong className="text-green-400">+5 points:</strong> Spells when spell ratio is below 25%</li>
+                    <li><strong className="text-green-400">+5 points:</strong> Traps when trap ratio is below 10%</li>
+                    <li><strong className="text-red-400">-5 points:</strong> Monsters when monster ratio exceeds 70%</li>
+                  </ul>
+                </div>
+
+                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                  <p className="text-white font-semibold mb-2">MTG Color Intelligence:</p>
+                  <p className="text-gray-300 text-sm mb-2">For Magic: The Gathering cubes, bots also consider mana colors:</p>
+                  <ul className="text-gray-300 text-sm space-y-1">
+                    <li><strong className="text-green-400">×1.3 multiplier:</strong> On-color cards (matches committed colors)</li>
+                    <li><strong className="text-red-400">×0.4 multiplier:</strong> Off-color cards (heavily penalized)</li>
+                    <li><strong className="text-blue-400">×1.15 multiplier:</strong> Cards matching existing colors (before commitment)</li>
+                    <li><strong className="text-gray-400">×1.1 multiplier:</strong> Colorless cards (flexibility bonus)</li>
+                  </ul>
+                </div>
+
+                <div className="bg-yugi-darker rounded-lg p-4 mb-4 example-box">
+                  <p className="text-gold-400 font-semibold mb-2">Example - Archetype Synergy:</p>
+                  <p className="text-gray-300 text-sm mb-2">
+                    Bot has drafted 3 Lightsworn cards. In the current pack:
+                  </p>
+                  <ul className="text-gray-300 text-sm space-y-1">
+                    <li>Card A: Score 85, no archetype → Weighted: <strong>85</strong></li>
+                    <li>Card B: Score 70, Lightsworn archetype → Weighted: 70 + 15 = <strong>85</strong></li>
+                    <li>Card C: Score 60, Lightsworn archetype → Weighted: 60 + 15 = <strong>75</strong></li>
+                  </ul>
+                  <p className="text-white text-sm mt-2">
+                    Cards A and B tie at 85. The bot picks whichever appears first (often the synergy card due to ordering).
+                  </p>
+                </div>
+
+                <p className="text-gray-400 font-medium mb-2">Auction Bidding Strategy:</p>
                 <ul className="list-disc list-inside text-gray-300 space-y-2">
-                  <li>Bots prefer higher-rated cards but also consider synergies.</li>
-                  <li>In MTG drafts, bots track colors and stay focused on 1-2 colors.</li>
-                  <li>Bots may "hate draft" powerful cards to deny them to you.</li>
-                  <li>Bidding aggression varies based on card tier and remaining points.</li>
+                  <li>Bots calculate maximum bid based on card tier and remaining points.</li>
+                  <li>Higher-tier cards (S/A) get more aggressive bidding.</li>
+                  <li>Bots preserve points for later rounds - they won't go all-in early.</li>
+                  <li>When points are low, bots become more conservative.</li>
                 </ul>
               </section>
 

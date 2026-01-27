@@ -5,6 +5,13 @@ import { cubeService } from '../services/cubeService';
 import type { DraftSessionRow, DraftPlayerRow } from '../lib/database.types';
 import type { DraftSettings } from '../types';
 
+interface ExistingSessionInfo {
+  sessionId: string;
+  roomCode: string;
+  status: 'waiting' | 'in_progress';
+  mode: string;
+}
+
 interface UseDraftSessionReturn {
   // State
   session: DraftSessionRow | null;
@@ -15,6 +22,7 @@ interface UseDraftSessionReturn {
   isLoading: boolean;
   isCubeReady: boolean; // True when cube data is preloaded and ready
   error: string | null;
+  existingSession: ExistingSessionInfo | null; // Set when user tries to join/create while in another session
 
   // Actions
   createSession: (settings: DraftSettings, cubeId: string, cubeCardIds: number[]) => Promise<string>;
@@ -24,6 +32,7 @@ interface UseDraftSessionReturn {
   togglePause: (currentTimeRemaining?: number) => Promise<void>;
   checkTimeouts: () => Promise<{ autoPickedCount: number; autoPickedNames: string[] }>;
   clearError: () => void;
+  leaveExistingSession: () => Promise<void>;
 }
 
 export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
@@ -34,9 +43,9 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [isCubeReady, setIsCubeReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existingSession, setExistingSession] = useState<ExistingSessionInfo | null>(null);
 
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const userId = draftService.getUserId();
   const isHost = session?.host_id === userId;
@@ -93,20 +102,13 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
       }
     );
 
-    // Set up heartbeat to maintain connection status
-    heartbeatRef.current = setInterval(async () => {
-      const player = await draftService.getCurrentPlayer(sessionId);
-      if (player) {
-        await draftService.updateConnectionStatus(player.id, true);
-      }
-    }, 30000); // Every 30 seconds
+    // Note: Connection presence tracking (heartbeat) is now handled by
+    // useConnectionPresence hook in the Draft page, which uses event-based
+    // detection instead of periodic polling.
 
     return () => {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
-      }
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
       }
     };
   }, [sessionId, loadSessionData, userId]);
@@ -181,11 +183,42 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     prevStatusRef.current = session?.status;
   }, [session?.status, session?.id, currentPlayer?.id]);
 
+  // Refetch picks when pack/pick number changes (handles autopick triggering pack pass)
+  const prevPackPickRef = useRef<string>('');
+  useEffect(() => {
+    if (!session || !currentPlayer || session.status !== 'in_progress') return;
+
+    const packPickKey = `${session.current_pack}-${session.current_pick}`;
+    if (prevPackPickRef.current && prevPackPickRef.current !== packPickKey) {
+      // Pack/pick changed - refetch picks to ensure UI is up to date
+      draftService.getPlayerPicks(session.id, currentPlayer.id).then(setDraftedCardIds);
+    }
+    prevPackPickRef.current = packPickKey;
+  }, [session?.current_pack, session?.current_pick, session?.id, session?.status, currentPlayer?.id]);
+
+  // Helper to extract existing session from error
+  const handleSessionError = (err: unknown) => {
+    const typedErr = err as Error & { code?: string; existingSession?: ExistingSessionInfo };
+    if (typedErr.code === 'ALREADY_IN_SESSION' && typedErr.existingSession) {
+      setExistingSession(typedErr.existingSession);
+    }
+    const message = err instanceof Error ? err.message : 'Failed to complete action';
+    setError(message);
+  };
+
+  // Leave the existing session (clear local storage)
+  const leaveExistingSession = useCallback(async (): Promise<void> => {
+    clearLastSession();
+    setExistingSession(null);
+    setError(null);
+  }, []);
+
   // Create a new session
   const createSession = useCallback(
     async (settings: DraftSettings, cubeId: string, cubeCardIds: number[]): Promise<string> => {
       setIsLoading(true);
       setError(null);
+      setExistingSession(null);
 
       try {
         const result = await draftService.createSession(settings, cubeId, cubeCardIds);
@@ -196,8 +229,7 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
         setLastSession(result.session.id, result.roomCode);
         return result.session.id;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to create session';
-        setError(message);
+        handleSessionError(err);
         throw err;
       } finally {
         setIsLoading(false);
@@ -210,6 +242,7 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
   const joinSession = useCallback(async (roomCode: string): Promise<string> => {
     setIsLoading(true);
     setError(null);
+    setExistingSession(null);
 
     try {
       const result = await draftService.joinSession(roomCode);
@@ -224,8 +257,7 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
       setLastSession(result.session.id, result.session.room_code);
       return result.session.id;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to join session';
-      setError(message);
+      handleSessionError(err);
       throw err;
     } finally {
       setIsLoading(false);
@@ -310,7 +342,19 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     }
 
     try {
-      return await draftService.checkAndAutoPickTimedOut(session.id);
+      const result = await draftService.checkAndAutoPickTimedOut(session.id);
+
+      // If current player was auto-picked, refetch their picks to update the UI
+      if (result.autoPickedCount > 0 && currentPlayer) {
+        const wasCurrentPlayerAutoPicked = result.autoPickedNames.includes(currentPlayer.name);
+        if (wasCurrentPlayerAutoPicked) {
+          // Refetch picks to update "My Cards"
+          const freshPicks = await draftService.getPlayerPicks(session.id, currentPlayer.id);
+          setDraftedCardIds(freshPicks);
+        }
+      }
+
+      return result;
     } catch (err) {
       // Don't set error for timeout checks - they're background operations
       if (import.meta.env.DEV) {
@@ -318,7 +362,7 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
       }
       return { autoPickedCount: 0, autoPickedNames: [] };
     }
-  }, [session]);
+  }, [session, currentPlayer]);
 
   return {
     session,
@@ -329,6 +373,7 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     isLoading,
     isCubeReady,
     error,
+    existingSession,
     createSession,
     joinSession,
     startDraft,
@@ -336,5 +381,6 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     togglePause,
     checkTimeouts,
     clearError,
+    leaveExistingSession,
   };
 }

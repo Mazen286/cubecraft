@@ -179,14 +179,14 @@ export function useAuctionSession(
       cardId: auctionStateData.cardId,
       currentBid: auctionStateData.currentBid,
       currentBidderId: auctionStateData.currentBidderId,
-      bids: auctionStateData.bids.map(b => ({
+      bids: (auctionStateData.bids || []).map(b => ({
         playerId: b.playerId,
         playerName: b.playerName,
         seatPosition: b.seatPosition,
         amount: b.amount,
         timestamp: b.timestamp,
       })),
-      passedPlayerIds: auctionStateData.passedPlayerIds,
+      passedPlayerIds: auctionStateData.passedPlayerIds || [],
       nextBidderSeat: auctionStateData.nextBidderSeat,
     };
   }, [auctionStateData]);

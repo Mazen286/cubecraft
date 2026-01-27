@@ -11,6 +11,8 @@ export interface GameCardProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
   onClick?: () => void;
   isSelected?: boolean;
+  /** Show a subtle highlight ring (for keyboard navigation) */
+  isHighlighted?: boolean;
   showDetails?: boolean;
   showTier?: boolean;
   draggable?: boolean;
@@ -30,6 +32,7 @@ export const GameCard = memo(function GameCard({
   size = 'md',
   onClick,
   isSelected = false,
+  isHighlighted = false,
   showDetails = false,
   showTier = false,
   draggable = false,
@@ -76,11 +79,12 @@ export const GameCard = memo(function GameCard({
         sizeClasses[size],
         onClick && 'hover:scale-105 hover:z-10',
         isSelected && 'ring-2 ring-offset-2 ring-offset-yugi-dark scale-105',
+        isHighlighted && !isSelected && 'ring-2 ring-blue-400/70 ring-offset-1 ring-offset-yugi-dark',
         draggable && 'cursor-grab active:cursor-grabbing',
         className
       )}
       style={{
-        '--tw-ring-color': gameConfig.theme.primaryColor,
+        '--tw-ring-color': isSelected ? gameConfig.theme.primaryColor : undefined,
       } as React.CSSProperties}
       onClick={onClick}
       draggable={draggable}
