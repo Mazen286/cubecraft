@@ -84,9 +84,12 @@ export function useToast() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  // Limit visible toasts to prevent excessive stacking
+  const MAX_VISIBLE_TOASTS = 3;
+
   const ToastContainer = () => (
     <>
-      {toasts.map((toast, index) => (
+      {toasts.slice(0, MAX_VISIBLE_TOASTS).map((toast, index) => (
         <div
           key={toast.id}
           style={{ top: `${1 + index * 4}rem` }}

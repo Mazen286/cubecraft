@@ -257,14 +257,15 @@ export function AuctionDraft() {
   }, []);
 
   // Handler for selecting a card (moved up to avoid temporal dead zone in useEffect dependency)
-  const handleSelectCard = useCallback(async (cardId: number) => {
+  const handleSelectCard = useCallback(async (cardId: number, skipToast = false) => {
     if (isActionPending) return;
     setIsActionPending(true);
     setPreviewCard(null); // Close preview sheet
     try {
       await selectCard(cardId);
       // Show success toast for Open mode (card is awarded immediately)
-      if (isOpenMode) {
+      // Skip if this was triggered by auto-pick (which shows its own toast)
+      if (isOpenMode && !skipToast) {
         const card = gridCards.find(c => c.id === cardId);
         if (card) {
           showToast(`Added "${card.name}" to your collection!`, 'success');
@@ -582,7 +583,7 @@ export function AuctionDraft() {
         autoPickTriggeredRef.current = true;
         const highestRated = availableCardsWithScores[0];
         showToast(`Auto-picked: ${highestRated.name}`, 'info');
-        handleSelectCard(highestRated.id);
+        handleSelectCard(highestRated.id, true); // Skip redundant "Added to collection" toast
       }
     }
   }, [autoSelect, isOpenMode, isSelector, auctionState?.phase, isActionPending, remainingCardIds, gridCards, handleSelectCard, showToast, session?.paused]);
