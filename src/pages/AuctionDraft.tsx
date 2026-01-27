@@ -176,52 +176,56 @@ export function AuctionDraft() {
       return;
     }
 
-    // Only allow navigation during selection phase when it's in_progress
+    // Only allow navigation when draft is in_progress
     if (session?.status !== 'in_progress') return;
 
-    // For selection phase, navigate available cards
-    if (auctionState?.phase === 'selecting') {
-      const cardsCount = availableCards.length;
-      if (cardsCount === 0) return;
+    // Allow navigation during selecting phase OR bidding phase (to browse cards while bidding)
+    const canNavigate = auctionState?.phase === 'selecting' || auctionState?.phase === 'bidding';
+    if (!canNavigate) return;
 
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          {
-            const newIndex = (selectedCardIndex - 1 + cardsCount) % cardsCount;
-            setSelectedCardIndex(newIndex);
-            setPreviewCard(availableCards[newIndex]);
-          }
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          {
-            const newIndex = (selectedCardIndex + 1) % cardsCount;
-            setSelectedCardIndex(newIndex);
-            setPreviewCard(availableCards[newIndex]);
-          }
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          {
-            const cols = getGridColumns();
-            const newIndex = (selectedCardIndex - cols + cardsCount) % cardsCount;
-            setSelectedCardIndex(newIndex);
-            setPreviewCard(availableCards[newIndex]);
-          }
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          {
-            const cols = getGridColumns();
-            const newIndex = (selectedCardIndex + cols) % cardsCount;
-            setSelectedCardIndex(newIndex);
-            setPreviewCard(availableCards[newIndex]);
-          }
-          break;
-        case 'Enter':
-        case ' ':
-          e.preventDefault();
+    const cardsCount = availableCards.length;
+    if (cardsCount === 0) return;
+
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault();
+        {
+          const newIndex = (selectedCardIndex - 1 + cardsCount) % cardsCount;
+          setSelectedCardIndex(newIndex);
+          setPreviewCard(availableCards[newIndex]);
+        }
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        {
+          const newIndex = (selectedCardIndex + 1) % cardsCount;
+          setSelectedCardIndex(newIndex);
+          setPreviewCard(availableCards[newIndex]);
+        }
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        {
+          const cols = getGridColumns();
+          const newIndex = (selectedCardIndex - cols + cardsCount) % cardsCount;
+          setSelectedCardIndex(newIndex);
+          setPreviewCard(availableCards[newIndex]);
+        }
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        {
+          const cols = getGridColumns();
+          const newIndex = (selectedCardIndex + cols) % cardsCount;
+          setSelectedCardIndex(newIndex);
+          setPreviewCard(availableCards[newIndex]);
+        }
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        // Only allow selecting cards during selection phase
+        if (auctionState?.phase === 'selecting') {
           // If preview card is open, select it (if selector)
           if (previewCard && isSelector && !isActionPending) {
             handleSelectCard(previewCard.id);
@@ -229,12 +233,15 @@ export function AuctionDraft() {
             // Open preview for current card
             setPreviewCard(availableCards[selectedCardIndex]);
           }
-          break;
-        case 'Escape':
-          e.preventDefault();
-          setPreviewCard(null);
-          break;
-      }
+        } else if (!previewCard && availableCards[selectedCardIndex]) {
+          // During bidding, Enter/Space just opens preview (doesn't select)
+          setPreviewCard(availableCards[selectedCardIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setPreviewCard(null);
+        break;
     }
   }, [session?.status, auctionState?.phase, availableCards, selectedCardIndex, previewCard, isSelector, isActionPending, getGridColumns, handleSelectCard]);
 
