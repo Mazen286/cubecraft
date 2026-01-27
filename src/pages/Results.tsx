@@ -1,6 +1,5 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import html2canvas from 'html2canvas';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
@@ -14,6 +13,7 @@ import { useCards } from '../hooks/useCards';
 import { useCardFilters, type Tier } from '../hooks/useCardFilters';
 import { statisticsService } from '../services/statisticsService';
 import { draftService } from '../services/draftService';
+import { generateDeckImage } from '../services/deckImageService';
 import { useGameConfig } from '../context/GameContext';
 import type { Card } from '../types/card';
 import type { DraftPlayerRow } from '../lib/database.types';
@@ -145,9 +145,6 @@ export function Results() {
 
   // State for viewing non-deck cards (burned/first picks)
   const [viewOnlyCard, setViewOnlyCard] = useState<YuGiOhCardType | null>(null);
-
-  // Ref for capturing deck zones as image
-  const deckZonesRef = useRef<HTMLDivElement>(null);
 
   // Initialize deck assignments when cards load
   useEffect(() => {
@@ -501,15 +498,15 @@ ${sideDeck}
       .filter(({ index }) => deckAssignments.get(index) === 'side')
       .map(({ card }) => card.name);
 
-    let text = `🎴 My CubeCraft Draft Deck\n\n`;
-    text += `📦 Main Deck (${mainCards.length}):\n${mainCards.join('\n')}\n\n`;
+    let text = `My CubeCraft Draft Deck\n\n`;
+    text += `Main Deck (${mainCards.length}):\n${mainCards.join('\n')}\n\n`;
     if (extraCards.length > 0) {
-      text += `⭐ Extra Deck (${extraCards.length}):\n${extraCards.join('\n')}\n\n`;
+      text += `Extra Deck (${extraCards.length}):\n${extraCards.join('\n')}\n\n`;
     }
     if (sideCards.length > 0) {
-      text += `📋 Side Deck (${sideCards.length}):\n${sideCards.join('\n')}\n\n`;
+      text += `Side Deck (${sideCards.length}):\n${sideCards.join('\n')}\n\n`;
     }
-    text += `\nDrafted on CubeCraft 🎲`;
+    text += `\nDrafted on CubeCraft`;
     return text;
   }, [allDraftedCards, deckAssignments]);
 
@@ -517,46 +514,28 @@ ${sideDeck}
   const handleShare = useCallback(async () => {
     setIsSharing(true);
     const deckText = generateDeckText();
-    let imageBlob: Blob | null = null;
 
-    // Try to capture deck zones as image (may fail due to CORS with external card images)
-    if (deckZonesRef.current) {
-      try {
-        const canvas = await html2canvas(deckZonesRef.current, {
-          backgroundColor: '#1a1a2e',
-          scale: 2,
-          useCORS: true,
-          allowTaint: false, // Don't allow tainted canvas - we need to export it
-          logging: false,
-          // Ignore images that fail to load
-          onclone: (doc) => {
-            // Remove any broken images to prevent errors
-            const images = doc.querySelectorAll('img');
-            images.forEach(img => {
-              if (!img.complete || img.naturalWidth === 0) {
-                img.remove();
-              }
-            });
-          },
-        });
-
-        // Try to convert to blob
-        imageBlob = await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob(
-            (b) => resolve(b),
-            'image/png',
-            0.95
-          );
-        });
-      } catch (err) {
-        console.warn('Could not capture deck image (CORS issue with external card images):', err);
-        // Continue without image
-      }
-    }
+    // Get cards for each zone (sorted according to current filter settings)
+    const mainCards = mainDeckCards.map(({ card }) => card);
+    const extraCards = extraDeckCards.map(({ card }) => card);
+    const sideCards = sideDeckCards.map(({ card }) => card);
 
     try {
-      // If we have an image, try to share with it
-      if (imageBlob && navigator.share && navigator.canShare) {
+      // Generate deck image using canvas
+      const imageBlob = await generateDeckImage({
+        mainDeckCards: mainCards,
+        extraDeckCards: extraCards,
+        sideDeckCards: sideCards,
+        showTiers: hasScores,
+        getCardImageUrl: (card) => {
+          // Use game config's image URL function
+          const genericCard = toCardWithAttributes(card);
+          return gameConfig.getCardImageUrl(genericCard, 'sm');
+        },
+      });
+
+      // Try to share with image using Web Share API
+      if (navigator.share && navigator.canShare) {
         const file = new File([imageBlob], 'cubecraft-deck.png', { type: 'image/png' });
         const shareData = {
           title: 'My CubeCraft Draft Deck',
@@ -570,42 +549,25 @@ ${sideDeck}
         }
       }
 
-      // Try to share just text if no image or image sharing not supported
-      if (navigator.share) {
-        const textShareData = {
-          title: 'My CubeCraft Draft Deck',
-          text: deckText,
-        };
-
-        if (navigator.canShare && navigator.canShare(textShareData)) {
-          await navigator.share(textShareData);
-          return;
-        }
-      }
-
-      // Fallback: Download image (if available) and copy text to clipboard
-      if (imageBlob) {
-        const url = URL.createObjectURL(imageBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `cubecraft-deck-${Date.now()}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
+      // Fallback: Download image and copy text to clipboard
+      const url = URL.createObjectURL(imageBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cubecraft-deck-${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
 
       // Copy text to clipboard
       await navigator.clipboard.writeText(deckText);
-      alert(imageBlob
-        ? 'Deck image downloaded and deck list copied to clipboard!'
-        : 'Deck list copied to clipboard!');
+      alert('Deck image downloaded and deck list copied to clipboard!');
     } catch (error) {
       console.error('Failed to share:', error);
       // If share was cancelled by user, don't show error
       if (error instanceof Error && error.name !== 'AbortError') {
-        // Last resort: try to at least copy to clipboard
+        // Fallback: try to at least copy to clipboard
         try {
           await navigator.clipboard.writeText(deckText);
-          alert('Deck list copied to clipboard!');
+          alert('Could not generate image. Deck list copied to clipboard!');
         } catch {
           alert('Failed to share deck. Please try again.');
         }
@@ -613,7 +575,7 @@ ${sideDeck}
     } finally {
       setIsSharing(false);
     }
-  }, [generateDeckText]);
+  }, [generateDeckText, mainDeckCards, extraDeckCards, sideDeckCards, hasScores, gameConfig]);
 
   // Show loading state
   if (isLoading && allDraftedCards.length === 0) {
@@ -1068,7 +1030,7 @@ ${sideDeck}
             </div>
 
             {/* Shareable deck zones container */}
-            <div ref={deckZonesRef} className="space-y-6 bg-yugi-darker p-4 rounded-lg">
+            <div className="space-y-6 bg-yugi-darker p-4 rounded-lg">
               <DeckZoneSection
                 title="Main Deck"
                 count={mainCount}
