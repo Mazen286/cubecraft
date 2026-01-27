@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Pause, Play, ChevronDown, ChevronUp, ArrowRight, X } from 'lucide-react';
+import { Layers, Pause, Play, ChevronDown, ChevronUp, ArrowRight, X, SortAsc, SortDesc } from 'lucide-react';
 import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { CubeStats } from '../components/cube/CubeStats';
@@ -131,6 +131,10 @@ export function Draft() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showMyCardsStats, setShowMyCardsStats] = useState(false);
 
+  // Pack sort state
+  const [packSortBy, setPackSortBy] = useState<string>('none');
+  const [packSortDirection, setPackSortDirection] = useState<'asc' | 'desc'>('desc');
+
   // Toast notifications
   const { showToast, ToastContainer } = useToast();
   const cancelledToastShownRef = useRef(false);
@@ -157,6 +161,55 @@ export function Draft() {
 
   // Pack is ready when we have cards loaded (or player already picked, waiting for next pack)
   const packReady = (currentPackCards.length > 0 && !cardsLoading) || currentPlayer?.pick_made;
+
+  // Sort pack cards based on user selection
+  const sortedPackCards = useMemo(() => {
+    if (packSortBy === 'none' || !currentPackCards.length) {
+      return currentPackCards;
+    }
+
+    const sorted = [...currentPackCards].sort((a, b) => {
+      let aVal: number | string | undefined;
+      let bVal: number | string | undefined;
+
+      switch (packSortBy) {
+        case 'score':
+          aVal = a.score ?? 0;
+          bVal = b.score ?? 0;
+          break;
+        case 'name':
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case 'type':
+          aVal = a.type.toLowerCase();
+          bVal = b.type.toLowerCase();
+          break;
+        case 'level':
+          aVal = a.level ?? 0;
+          bVal = b.level ?? 0;
+          break;
+        case 'atk':
+          aVal = a.atk ?? -1;
+          bVal = b.atk ?? -1;
+          break;
+        case 'def':
+          aVal = a.def ?? -1;
+          bVal = b.def ?? -1;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return packSortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      const diff = (aVal as number) - (bVal as number);
+      return packSortDirection === 'asc' ? diff : -diff;
+    });
+
+    return sorted;
+  }, [currentPackCards, packSortBy, packSortDirection]);
 
   // Derived state - must be defined before any hooks that use it
   const hasPicked = currentPlayer?.pick_made || false;
@@ -1166,16 +1219,49 @@ export function Draft() {
         <div className="flex-1 min-h-0 overflow-hidden">
           {/* Current Pack */}
           <div className="glass-card p-4 lg:p-6 overflow-auto h-full">
-            <h2 className="text-lg font-semibold text-white mb-4">
-              Current Pack {hasPicked && <span className="text-green-400 text-sm font-normal ml-2">Waiting for other players...</span>}
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white">
+                Current Pack {hasPicked && <span className="text-green-400 text-sm font-normal ml-2">Waiting for other players...</span>}
+              </h2>
+              {/* Pack Sort Controls */}
+              {sortedPackCards.length > 0 && !hasPicked && (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={packSortBy}
+                    onChange={(e) => setPackSortBy(e.target.value)}
+                    className="bg-yugi-dark border border-yugi-border rounded-lg text-white text-sm px-2 py-1 focus:border-gold-500 focus:outline-none"
+                  >
+                    <option value="none">No Sort</option>
+                    {cubeHasScores && <option value="score">Score</option>}
+                    <option value="name">Name</option>
+                    <option value="type">Type</option>
+                    <option value="level">Level</option>
+                    <option value="atk">ATK</option>
+                    <option value="def">DEF</option>
+                  </select>
+                  {packSortBy !== 'none' && (
+                    <button
+                      onClick={() => setPackSortDirection(d => d === 'asc' ? 'desc' : 'asc')}
+                      className="p-1.5 bg-yugi-dark border border-yugi-border rounded-lg hover:border-gold-500 transition-colors"
+                      title={packSortDirection === 'asc' ? 'Ascending' : 'Descending'}
+                    >
+                      {packSortDirection === 'asc' ? (
+                        <SortAsc className="w-4 h-4 text-gray-300" />
+                      ) : (
+                        <SortDesc className="w-4 h-4 text-gray-300" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="w-8 h-8 border-2 border-gold-400 border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : currentPackCards.length > 0 ? (
+            ) : sortedPackCards.length > 0 ? (
               <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
-                {currentPackCards.map((card) => (
+                {sortedPackCards.map((card) => (
                   <div key={card.id} className="relative">
                     <YuGiOhCard
                       card={card}

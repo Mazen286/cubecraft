@@ -175,13 +175,15 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     description: card.desc,
     imageUrl: card.imageUrl,
     score: card.score,
-    attributes: card.attributes || {
+    attributes: {
       atk: card.atk,
       def: card.def,
       level: card.level,
       attribute: card.attribute,
       race: card.race,
       linkval: card.linkval,
+      archetype: card.archetype,
+      ...(card.attributes || {}),
     },
   }), []);
 
