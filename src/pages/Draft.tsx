@@ -950,9 +950,9 @@ export function Draft() {
         </div>
 
         {/* Draft Settings Info Bar */}
-        <div className="glass-card px-3 lg:px-4 py-2 mb-4 text-xs lg:text-sm">
-          {/* First row: Stats */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 sm:mb-0 sm:inline-flex">
+        <div className="glass-card px-3 lg:px-4 py-2 mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs lg:text-sm">
+          {/* Stats */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span className="whitespace-nowrap">
               <span className="text-gray-400">Target:</span>{' '}
               <span className="text-white font-medium">{session?.cards_per_player || 60} cards</span>
@@ -972,8 +972,8 @@ export function Draft() {
               </span>
             )}
           </div>
-          {/* Second row: Controls and pass order */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:float-right sm:-mt-6">
+          {/* Controls and pass order */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             {/* Keyboard shortcuts hint */}
             <button
               onClick={() => setShowShortcuts(prev => !prev)}
