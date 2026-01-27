@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { BottomSheet } from '../ui/BottomSheet';
 import { YuGiOhCard } from './YuGiOhCard';
+import { ManaCostWithFaces, OracleText } from './ManaSymbols';
 import { useGameConfig } from '../../context/GameContext';
 import { hasErrata, getErrata } from '../../data/cardErrata';
 import { cn, getTierFromScore } from '../../lib/utils';
@@ -8,6 +9,7 @@ import type { YuGiOhCard as YuGiOhCardType } from '../../types';
 import type { Card } from '../../types/card';
 import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
 import { ENERGY_COLORS } from '../../config/games/pokemon';
+import type { MTGCardAttributes } from '../../config/games/mtg';
 
 interface CardDetailSheetProps {
   card: YuGiOhCardType | null;
@@ -115,6 +117,16 @@ export function CardDetailSheet({
                 {gameConfig.cardDisplay?.secondaryInfo?.map(info => {
                   const value = info.getValue(genericCard);
                   if (!value) return null;
+
+                  // MTG mana cost - render with colored symbols
+                  if (gameConfig.id === 'mtg' && info.label === 'Mana') {
+                    return (
+                      <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-yugi-card rounded text-xs md:text-sm flex items-center gap-1">
+                        <ManaCostWithFaces cost={value} size="xs" />
+                      </span>
+                    );
+                  }
+
                   return (
                     <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-yugi-card rounded text-xs md:text-sm text-gray-300">
                       {value}
@@ -278,8 +290,18 @@ export function CardDetailSheet({
                     </div>
                   );
                 }
+                // Use OracleText for MTG to render tap symbols, mana symbols, etc.
+                if (gameConfig.id === 'mtg' && card.desc) {
+                  return (
+                    <OracleText
+                      text={card.desc}
+                      className="text-xs md:text-sm text-gray-300 leading-relaxed"
+                    />
+                  );
+                }
+
                 return (
-                  <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
+                  <p className="text-xs md:text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
                     {card.desc || 'No description available.'}
                   </p>
                 );

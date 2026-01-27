@@ -4,12 +4,22 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { auctionService } from '../services/auctionService';
 import { cubeService } from '../services/cubeService';
+import { getActiveGameConfig } from '../context/GameContext';
 import type { DraftSessionRow, DraftPlayerRow, GridData, AuctionStateData } from '../lib/database.types';
 import type { YuGiOhCard, AuctionDraftPlayer, AuctionState } from '../types';
 
+// Helper to get storage prefix from active game config (matches auctionService)
+function getStoragePrefix(): string {
+  try {
+    return getActiveGameConfig().storageKeyPrefix;
+  } catch {
+    return 'yugioh-draft';
+  }
+}
+
 // Helper to get user ID from localStorage
-function getUserId(prefix: string): string {
-  const key = `${prefix}-user-id`;
+function getUserId(): string {
+  const key = `${getStoragePrefix()}-user-id`;
   let userId = localStorage.getItem(key);
   if (!userId) {
     userId = crypto.randomUUID();
@@ -19,7 +29,7 @@ function getUserId(prefix: string): string {
 }
 
 // Default bidding time per turn (seconds)
-const DEFAULT_BID_TIME = 15;
+const DEFAULT_BID_TIME = 20;
 
 interface UseAuctionSessionReturn {
   // Session state
@@ -74,10 +84,9 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
   const selectionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bidTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastBidderSeatRef = useRef<number | null>(null);
-  const storagePrefix = 'yugioh-draft';
 
   // Derived state
-  const userId = useMemo(() => getUserId(storagePrefix), []);
+  const userId = useMemo(() => getUserId(), []);
 
   const currentPlayer = useMemo(() => {
     return players.find(p => p.user_id === userId) || null;
@@ -295,7 +304,7 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
     };
   }, [auctionState?.phase, session?.selection_started_at, session?.timer_seconds]);
 
-  // Bidding timer - resets when bidder changes
+  // Bidding timer - uses server timestamp for accuracy
   useEffect(() => {
     // Clear existing timer
     if (bidTimerRef.current) {
@@ -304,29 +313,30 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
     }
 
     // Only run timer during bidding phase
-    if (auctionState?.phase !== 'bidding') {
+    if (auctionState?.phase !== 'bidding' || !auctionStateData?.bidStartedAt) {
       setBidTimeRemaining(configuredBidTime);
       lastBidderSeatRef.current = null;
       return;
     }
 
-    // Reset timer when bidder changes
-    if (auctionState.nextBidderSeat !== lastBidderSeatRef.current) {
-      lastBidderSeatRef.current = auctionState.nextBidderSeat;
-      setBidTimeRemaining(configuredBidTime);
-    }
+    const bidStartTime = new Date(auctionStateData.bidStartedAt).getTime();
 
-    // Countdown timer
-    bidTimerRef.current = setInterval(() => {
-      setBidTimeRemaining(prev => Math.max(0, prev - 1));
-    }, 1000);
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - bidStartTime) / 1000);
+      const remaining = Math.max(0, configuredBidTime - elapsed);
+      setBidTimeRemaining(remaining);
+    };
+
+    // Update immediately and then every second
+    updateTimer();
+    bidTimerRef.current = setInterval(updateTimer, 1000);
 
     return () => {
       if (bidTimerRef.current) {
         clearInterval(bidTimerRef.current);
       }
     };
-  }, [auctionState?.phase, auctionState?.nextBidderSeat, configuredBidTime]);
+  }, [auctionState?.phase, auctionStateData?.bidStartedAt, configuredBidTime]);
 
   // Auto-pass when bid time runs out (only for current player)
   useEffect(() => {
@@ -337,6 +347,63 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
       });
     }
   }, [bidTimeRemaining, isMyBidTurn, sessionId, currentPlayer]);
+
+  // Server-side timeout check (fallback for stuck auctions, especially with bots)
+  useEffect(() => {
+    if (!sessionId || session?.status !== 'in_progress') return;
+    if (auctionState?.phase !== 'bidding') return;
+
+    // Check every 3 seconds for timed-out bidders
+    const checkInterval = setInterval(() => {
+      auctionService.checkAndAutoPassTimedOut(sessionId).catch(err => {
+        console.error('[useAuctionSession] Timeout check failed:', err);
+      });
+    }, 3000);
+
+    return () => clearInterval(checkInterval);
+  }, [sessionId, session?.status, auctionState?.phase]);
+
+  // Periodic sync fallback - catches missed Realtime updates
+  // This ensures the UI stays in sync even if WebSocket updates are dropped
+  useEffect(() => {
+    if (!sessionId || session?.status !== 'in_progress') return;
+
+    // Re-fetch session and players every 5 seconds as a fallback
+    const syncInterval = setInterval(async () => {
+      try {
+        const [freshSession, freshPlayers] = await Promise.all([
+          auctionService.getSession(sessionId),
+          auctionService.getPlayers(sessionId),
+        ]);
+
+        if (freshSession) {
+          // Only update if something actually changed
+          const currentAuction = session?.auction_state as AuctionStateData | null;
+          const freshAuction = freshSession.auction_state as AuctionStateData | null;
+
+          const hasChanges =
+            session?.current_grid !== freshSession.current_grid ||
+            currentAuction?.phase !== freshAuction?.phase ||
+            currentAuction?.cardId !== freshAuction?.cardId ||
+            currentAuction?.currentBid !== freshAuction?.currentBid ||
+            currentAuction?.nextBidderSeat !== freshAuction?.nextBidderSeat;
+
+          if (hasChanges) {
+            console.log('[useAuctionSession] Sync fallback detected changes, updating state');
+            setSession(freshSession);
+          }
+        }
+
+        if (freshPlayers) {
+          setPlayers(freshPlayers);
+        }
+      } catch (err) {
+        console.error('[useAuctionSession] Sync fallback failed:', err);
+      }
+    }, 5000);
+
+    return () => clearInterval(syncInterval);
+  }, [sessionId, session?.status, session?.current_grid, session?.auction_state]);
 
   // Actions
   const startDraft = useCallback(async () => {

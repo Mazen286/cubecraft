@@ -1,5 +1,5 @@
-// Auction Grid Drafting Service
-// Handles all auction-specific logic for the auction-grid draft mode
+// Grid-based Drafting Service
+// Handles all grid-specific logic for auction-grid and open draft modes
 
 import { getSupabase, generateRoomCode } from '../lib/supabase';
 import type {
@@ -24,10 +24,11 @@ import { getPlayerName } from './draftService';
 // =============================================================================
 
 const DEFAULT_BIDDING_POINTS = 100;
+const DEFAULT_BID_TIMER_SECONDS = 20;
 const DEFAULT_SELECTION_TIMER_SECONDS = 30;
 const DEFAULT_CARDS_PER_PLAYER = 60;
-const DEFAULT_CARDS_ACQUIRED_PER_GRID = 10;
-const DEFAULT_BURNED_PER_GRID = 10;
+const DEFAULT_CARDS_ACQUIRED_PER_GRID = 5;
+const DEFAULT_BURNED_PER_GRID = 5;
 
 // =============================================================================
 // Helper Functions
@@ -78,16 +79,31 @@ function calculateTotalCardsNeeded(playerCount: number, cardsPerPlayer: number, 
 }
 
 /**
- * Get the next seat position in clockwise order
+ * Get bidding direction for a grid
+ * Odd grids (1, 3, 5...): clockwise
+ * Even grids (2, 4, 6...): counter-clockwise
  */
-function getNextSeat(currentSeat: number, totalPlayers: number): number {
-  return (currentSeat + 1) % totalPlayers;
+function getBiddingDirection(gridNumber: number): 'cw' | 'ccw' {
+  return gridNumber % 2 === 1 ? 'cw' : 'ccw';
+}
+
+/**
+ * Get the next seat position based on direction
+ * @param direction 'cw' for clockwise, 'ccw' for counter-clockwise
+ */
+function getNextSeat(currentSeat: number, totalPlayers: number, direction: 'cw' | 'ccw' = 'cw'): number {
+  if (direction === 'cw') {
+    return (currentSeat + 1) % totalPlayers;
+  } else {
+    return (currentSeat - 1 + totalPlayers) % totalPlayers;
+  }
 }
 
 /**
  * Analyze a bot's drafted cards for strategic decision making
  */
 interface BotCollectionAnalysis {
+  // Yu-Gi-Oh specific
   archetypes: Map<string, number>; // archetype -> count
   topArchetype: string | null;
   monsterCount: number;
@@ -97,6 +113,12 @@ interface BotCollectionAnalysis {
   monsterRatio: number;
   spellRatio: number;
   trapRatio: number;
+  // MTG specific - color tracking
+  mtgColors: Map<string, number>; // color (W/U/B/R/G) -> count of cards with that color
+  mtgCommittedColors: string[]; // The 1-2 colors the bot is "locked into" (empty if not committed yet)
+  mtgColorlessCount: number; // Artifacts and colorless cards
+  mtgCreatureCount: number;
+  mtgNonCreatureCount: number;
 }
 
 function analyzeBotCollection(draftedCards: YuGiOhCard[]): BotCollectionAnalysis {
@@ -105,8 +127,14 @@ function analyzeBotCollection(draftedCards: YuGiOhCard[]): BotCollectionAnalysis
   let spellCount = 0;
   let trapCount = 0;
 
+  // MTG color tracking
+  const mtgColors = new Map<string, number>();
+  let mtgColorlessCount = 0;
+  let mtgCreatureCount = 0;
+  let mtgNonCreatureCount = 0;
+
   for (const card of draftedCards) {
-    // Count card types
+    // Count card types (Yu-Gi-Oh)
     const type = card.type.toLowerCase();
     if (type.includes('spell')) {
       spellCount++;
@@ -116,21 +144,71 @@ function analyzeBotCollection(draftedCards: YuGiOhCard[]): BotCollectionAnalysis
       monsterCount++;
     }
 
-    // Track archetypes
+    // Track archetypes (Yu-Gi-Oh)
     if (card.archetype) {
       archetypes.set(card.archetype, (archetypes.get(card.archetype) || 0) + 1);
+    }
+
+    // MTG color tracking - check card.attributes for colors
+    const attrs = card.attributes as Record<string, unknown> | undefined;
+    if (attrs) {
+      const colors = attrs.colors as string[] | undefined;
+      if (colors && colors.length > 0) {
+        // Card has colors - count each color
+        for (const color of colors) {
+          mtgColors.set(color, (mtgColors.get(color) || 0) + 1);
+        }
+      } else {
+        // Colorless card (artifact, land, etc.)
+        mtgColorlessCount++;
+      }
+
+      // MTG creature vs non-creature tracking
+      if (type.includes('creature')) {
+        mtgCreatureCount++;
+      } else if (type.includes('instant') || type.includes('sorcery') ||
+                 type.includes('enchantment') || type.includes('artifact') ||
+                 type.includes('planeswalker')) {
+        mtgNonCreatureCount++;
+      }
     }
   }
 
   const totalCards = draftedCards.length;
 
-  // Find top archetype
+  // Find top archetype (Yu-Gi-Oh)
   let topArchetype: string | null = null;
   let topCount = 0;
   for (const [archetype, count] of archetypes) {
     if (count > topCount && count >= 2) { // Only consider if we have 2+ cards
       topCount = count;
       topArchetype = archetype;
+    }
+  }
+
+  // Determine MTG committed colors
+  // After drafting 4+ colored cards, commit to the top 1-2 colors
+  const mtgCommittedColors: string[] = [];
+  const coloredCardCount = totalCards - mtgColorlessCount;
+
+  if (coloredCardCount >= 4) {
+    // Sort colors by count (descending)
+    const sortedColors = Array.from(mtgColors.entries())
+      .sort((a, b) => b[1] - a[1]);
+
+    if (sortedColors.length > 0) {
+      // Always commit to primary color if we have 3+ cards
+      if (sortedColors[0][1] >= 3) {
+        mtgCommittedColors.push(sortedColors[0][0]);
+
+        // Consider second color if we have 2+ cards AND it's close to primary
+        if (sortedColors.length > 1 && sortedColors[1][1] >= 2) {
+          // Only add second color if it's at least 40% as prevalent as primary
+          if (sortedColors[1][1] >= sortedColors[0][1] * 0.4) {
+            mtgCommittedColors.push(sortedColors[1][0]);
+          }
+        }
+      }
     }
   }
 
@@ -144,6 +222,12 @@ function analyzeBotCollection(draftedCards: YuGiOhCard[]): BotCollectionAnalysis
     monsterRatio: totalCards > 0 ? monsterCount / totalCards : 0,
     spellRatio: totalCards > 0 ? spellCount / totalCards : 0,
     trapRatio: totalCards > 0 ? trapCount / totalCards : 0,
+    // MTG specific
+    mtgColors,
+    mtgCommittedColors,
+    mtgColorlessCount,
+    mtgCreatureCount,
+    mtgNonCreatureCount,
   };
 }
 
@@ -206,7 +290,7 @@ function calculateBotInterest(
   const isMonster = !isSpell && !isTrap;
 
   // Target ratios: ~55% monsters, ~30% spells, ~15% traps
-  if (collection.totalCards >= 10) {
+  if (collection.totalCards >= 5) {
     if (isSpell && collection.spellRatio < 0.25) {
       // Need more spells
       interestMultiplier *= 1.3;
@@ -223,6 +307,79 @@ function calculateBotInterest(
       // Too many spells
       interestMultiplier *= 0.8;
       reason = 'enough spells';
+    }
+  }
+
+  // === MTG COLOR COMPATIBILITY ===
+  const attrs = card.attributes as Record<string, unknown> | undefined;
+  const cardColors = attrs?.colors as string[] | undefined;
+  const isColorless = !cardColors || cardColors.length === 0;
+
+  // If we have committed colors (MTG), check color compatibility
+  if (collection.mtgCommittedColors.length > 0 && !isColorless) {
+    // Check if card's colors overlap with our committed colors
+    const onColor = cardColors!.some(c => collection.mtgCommittedColors.includes(c));
+
+    if (onColor) {
+      // Card matches our colors - boost interest
+      interestMultiplier *= 1.4;
+      reason = `on-color (${collection.mtgCommittedColors.join('/')})`;
+    } else {
+      // Off-color card - heavily penalize unless it's a bomb (S-tier)
+      if (score >= 95) {
+        // Bombs are worth considering for hate-drafting
+        const hateDraftChance = 0.25; // 25% chance to hate-draft a bomb
+        if (Math.random() < hateDraftChance) {
+          interestMultiplier *= 0.7; // Still interested but won't overpay
+          reason = 'hate-drafting bomb';
+        } else {
+          // Pass on off-color bomb
+          return { interested: false, interestMultiplier: 0, isBluff: false, reason: 'off-color bomb, not hate-drafting' };
+        }
+      } else {
+        // Regular off-color card - almost never want it
+        return { interested: false, interestMultiplier: 0, isBluff: false, reason: `off-color (need ${collection.mtgCommittedColors.join('/')})` };
+      }
+    }
+  } else if (collection.mtgCommittedColors.length === 0 && !isColorless && collection.totalCards >= 2) {
+    // Not committed yet but have some cards - prefer cards that match existing colors
+    if (cardColors && cardColors.length > 0) {
+      const matchesExisting = cardColors.some(c => collection.mtgColors.has(c));
+      if (matchesExisting) {
+        // Matches a color we've already started
+        interestMultiplier *= 1.2;
+        reason = 'builds toward color commitment';
+      }
+    }
+  }
+
+  // Colorless cards (artifacts, lands) are always fair game
+  if (isColorless && attrs) {
+    // Slight bonus for colorless flexibility
+    interestMultiplier *= 1.1;
+    if (reason === 'base interest') {
+      reason = 'colorless - flexible pick';
+    }
+  }
+
+  // === MTG CREATURE/SPELL BALANCE ===
+  const cardType = card.type.toLowerCase();
+  const isMtgCreature = cardType.includes('creature');
+  const isMtgNonCreature = cardType.includes('instant') || cardType.includes('sorcery') ||
+                           cardType.includes('enchantment') || cardType.includes('planeswalker');
+
+  if (collection.totalCards >= 8 && attrs) {
+    const creatureRatio = collection.mtgCreatureCount / collection.totalCards;
+
+    // Target: ~60% creatures, ~40% non-creatures for most decks
+    if (isMtgCreature && creatureRatio > 0.70) {
+      // Too creature-heavy
+      interestMultiplier *= 0.8;
+      reason = 'enough creatures';
+    } else if (isMtgNonCreature && creatureRatio < 0.45) {
+      // Need more creatures
+      interestMultiplier *= 0.85;
+      reason = 'needs creatures';
     }
   }
 
@@ -318,7 +475,7 @@ function calculateBotBid(
 
 export const auctionService = {
   /**
-   * Create a new auction grid draft session
+   * Create a new grid draft session (auction-grid or open)
    */
   async createSession(
     settings: DraftSettings,
@@ -329,13 +486,17 @@ export const auctionService = {
     const userId = getUserId();
     const roomCode = generateRoomCode();
 
+    // Determine mode (auction-grid or open)
+    const mode = settings.mode === 'open' ? 'open' : 'auction-grid';
+    const isOpenMode = mode === 'open';
+
     // Get settings (shared with pack drafting, plus auction-specific)
     const cardsPerPlayer = settings.cardsPerPlayer || DEFAULT_CARDS_PER_PLAYER;
     const cardsAcquiredPerGrid = settings.packSize || DEFAULT_CARDS_ACQUIRED_PER_GRID; // packSize = cards acquired per grid
     const burnedPerGrid = settings.burnedPerPack ?? DEFAULT_BURNED_PER_GRID; // burnedPerPack = burned per grid
-    const biddingPoints = settings.auctionBiddingPoints ?? DEFAULT_BIDDING_POINTS;
+    const biddingPoints = isOpenMode ? 0 : (settings.auctionBiddingPoints ?? DEFAULT_BIDDING_POINTS);
     const selectionTimer = settings.timerSeconds || DEFAULT_SELECTION_TIMER_SECONDS;
-    const bidTimer = settings.auctionBidTimerSeconds ?? 15;
+    const bidTimer = isOpenMode ? 0 : (settings.auctionBidTimerSeconds ?? DEFAULT_BID_TIMER_SECONDS);
 
     // Calculate total players (for solo: 1 human + bots)
     const totalPlayers = settings.playerCount === 1
@@ -393,7 +554,7 @@ export const auctionService = {
       room_code: roomCode,
       host_id: userId,
       cube_id: cubeId,
-      mode: 'auction-grid',
+      mode: mode,
       player_count: totalPlayers,
       cards_per_player: cardsPerPlayer,
       pack_size: cardsAcquiredPerGrid, // Cards each player acquires per grid
@@ -492,19 +653,30 @@ export const auctionService = {
 
     const existingAuctionState = existingSession?.auction_state as AuctionStateData | null;
 
-    // Get all players sorted by seat
+    // Get all players
     const { data: players, error: playersError } = await supabase
       .from('draft_players')
       .select()
-      .eq('session_id', sessionId)
-      .order('seat_position', { ascending: true });
+      .eq('session_id', sessionId);
 
     if (playersError) throw playersError;
     if (!players || players.length === 0) {
       throw new Error('No players in session');
     }
 
-    // First selector is seat 0 (can be randomized later via die roll)
+    // Randomize player order by shuffling and reassigning seat positions
+    const shuffledPlayers = shuffleArray([...players]);
+    for (let i = 0; i < shuffledPlayers.length; i++) {
+      const player = shuffledPlayers[i];
+      if (player.seat_position !== i) {
+        await supabase
+          .from('draft_players')
+          .update({ seat_position: i })
+          .eq('id', player.id);
+      }
+    }
+
+    // First selector is seat 0 (now randomized)
     const firstSelectorSeat = 0;
 
     // Initialize auction state for selection phase, preserving settings from createSession
@@ -537,7 +709,9 @@ export const auctionService = {
   },
 
   /**
-   * Select a card for auction (called by the current selector)
+   * Select a card (called by the current selector)
+   * In 'auction-grid' mode: starts bidding phase
+   * In 'open' mode: directly awards card to selector
    */
   async selectCardForAuction(
     sessionId: string,
@@ -576,6 +750,33 @@ export const auctionService = {
       throw new Error('Card is not available for selection');
     }
 
+    // Check if this is Open Draft mode (no bidding)
+    if (session.mode === 'open') {
+      // In open mode, selector just gets the card directly (no bidding)
+      // Set the cardId in auction state for consistency
+      const existingAuctionState = session.auction_state as AuctionStateData | null;
+      const openAuctionState: AuctionStateData = {
+        ...existingAuctionState,
+        phase: 'selecting',
+        cardId: cardId,
+        currentBid: 0,
+        currentBidderId: null,
+        bids: [],
+        passedPlayerIds: [],
+        nextBidderSeat: null,
+      };
+
+      await supabase
+        .from('draft_sessions')
+        .update({ auction_state: openAuctionState })
+        .eq('id', sessionId);
+
+      // Award card directly to selector - pass cardId directly to avoid race condition
+      await this.resolveAuction(sessionId, playerId, 0, cardId);
+      return;
+    }
+
+    // Auction mode: start bidding phase
     // Get all players for the session
     const { data: allPlayers } = await supabase
       .from('draft_players')
@@ -586,8 +787,24 @@ export const auctionService = {
     // Get max cards per grid setting
     const maxCardsPerGrid = session.pack_size || DEFAULT_CARDS_ACQUIRED_PER_GRID;
 
-    // Find next bidder (clockwise from selector, skip players with max cards)
-    let nextBidderSeat = getNextSeat(player.seat_position, allPlayers!.length);
+    // Check if selector is the only player who can still acquire cards
+    // If so, skip bidding entirely and award the card directly
+    const eligibleBidders = allPlayers!.filter(
+      p => p.cards_acquired_this_grid < maxCardsPerGrid
+    );
+
+    if (eligibleBidders.length === 1 && eligibleBidders[0].id === playerId) {
+      // Selector is the only one who can acquire cards - skip bidding
+      console.log(`[selectCardForAuction] Only ${player.name} can acquire cards, skipping bidding`);
+      await this.resolveAuction(sessionId, playerId, 0, cardId);
+      return;
+    }
+
+    // Get bidding direction for this grid (alternates between grids)
+    const biddingDirection = getBiddingDirection(session.current_grid);
+
+    // Find next bidder (skip players with max cards)
+    let nextBidderSeat = getNextSeat(player.seat_position, allPlayers!.length, biddingDirection);
     let attempts = 0;
     while (attempts < allPlayers!.length) {
       const nextPlayer = allPlayers?.find(p => p.seat_position === nextBidderSeat);
@@ -595,13 +812,14 @@ export const auctionService = {
       if (nextPlayer && !hasMaxCards) {
         break;
       }
-      nextBidderSeat = getNextSeat(nextBidderSeat, allPlayers!.length);
+      nextBidderSeat = getNextSeat(nextBidderSeat, allPlayers!.length, biddingDirection);
       attempts++;
     }
 
-    // Preserve bid timer setting from existing auction state
+    // Preserve settings from existing auction state
     const existingAuctionState = session.auction_state as AuctionStateData | null;
     const bidTimerSeconds = existingAuctionState?.bidTimerSeconds;
+    const totalBiddingPoints = existingAuctionState?.totalBiddingPoints;
 
     // Initialize bidding phase
     const auctionState: AuctionStateData = {
@@ -613,6 +831,8 @@ export const auctionService = {
       passedPlayerIds: [],
       nextBidderSeat: nextBidderSeat,
       bidTimerSeconds: bidTimerSeconds,
+      totalBiddingPoints: totalBiddingPoints,
+      bidStartedAt: new Date().toISOString(),
     };
 
     // Update session with auction state
@@ -629,7 +849,11 @@ export const auctionService = {
     // If next bidder is a bot, trigger bot bid
     const nextBidder = allPlayers?.find(p => p.seat_position === nextBidderSeat);
     if (nextBidder?.is_bot) {
-      await this.makeBotBid(sessionId, session.current_grid, cardId);
+      try {
+        await this.makeBotBid(sessionId, session.current_grid, cardId, nextBidder.id);
+      } catch (err) {
+        console.error('[selectCardForAuction] Bot bid failed:', err);
+      }
     }
   },
 
@@ -691,6 +915,25 @@ export const auctionService = {
       throw new Error('You have already acquired the maximum cards for this grid');
     }
 
+    // Get all players to check if this bidder is the only eligible one
+    const { data: allPlayersCheck } = await supabase
+      .from('draft_players')
+      .select()
+      .eq('session_id', sessionId);
+
+    // Check if this player is the only one who can acquire cards
+    const eligiblePlayers = allPlayersCheck?.filter(
+      p => p.cards_acquired_this_grid < maxCardsPerGrid &&
+           !auctionState.passedPlayerIds.includes(p.id)
+    ) || [];
+
+    if (eligiblePlayers.length === 1 && eligiblePlayers[0].id === playerId) {
+      // This player is the only one who can acquire cards - auto-win at minimum bid
+      console.log(`[placeBid] ${player.name} is the only eligible bidder, auto-winning`);
+      await this.resolveAuction(sessionId, playerId, amount, auctionState.cardId!);
+      return;
+    }
+
     // Record the bid
     const newBid: AuctionBidData = {
       playerId: playerId,
@@ -707,8 +950,11 @@ export const auctionService = {
       .eq('session_id', sessionId)
       .order('seat_position', { ascending: true });
 
+    // Get bidding direction for this grid
+    const biddingDirection = getBiddingDirection(session.current_grid);
+
     // Find next bidder (skip passed players and players with max cards)
-    let nextSeat = getNextSeat(player.seat_position, allPlayers!.length);
+    let nextSeat = getNextSeat(player.seat_position, allPlayers!.length, biddingDirection);
     let attempts = 0;
     while (attempts < allPlayers!.length) {
       const nextPlayer = allPlayers?.find(p => p.seat_position === nextSeat);
@@ -716,17 +962,18 @@ export const auctionService = {
       if (nextPlayer && !auctionState.passedPlayerIds.includes(nextPlayer.id) && !hasMaxCards) {
         break;
       }
-      nextSeat = getNextSeat(nextSeat, allPlayers!.length);
+      nextSeat = getNextSeat(nextSeat, allPlayers!.length, biddingDirection);
       attempts++;
     }
 
-    // Update auction state
+    // Update auction state (reset bid timer when bidder changes)
     const updatedAuctionState: AuctionStateData = {
       ...auctionState,
       currentBid: amount,
       currentBidderId: playerId,
       bids: [...auctionState.bids, newBid],
       nextBidderSeat: nextSeat,
+      bidStartedAt: new Date().toISOString(),
     };
 
     // Check if this player is the only one who hasn't passed and doesn't have max cards (they win)
@@ -765,7 +1012,11 @@ export const auctionService = {
     // If next bidder is a bot, trigger bot bid
     const nextBidder = allPlayers?.find(p => p.seat_position === nextSeat);
     if (nextBidder?.is_bot) {
-      await this.makeBotBid(sessionId, session.current_grid, auctionState.cardId!);
+      try {
+        await this.makeBotBid(sessionId, session.current_grid, auctionState.cardId!, nextBidder.id);
+      } catch (err) {
+        console.error('[placeBid] Bot bid failed:', err);
+      }
     }
   },
 
@@ -822,13 +1073,13 @@ export const auctionService = {
     );
 
     // If only one player remains, they win
-    if (activeBidders.length === 1 && auctionState.currentBidderId) {
-      // Current high bidder wins
-      await this.resolveAuction(
-        sessionId,
-        auctionState.currentBidderId,
-        auctionState.currentBid
-      );
+    if (activeBidders.length === 1) {
+      // The last remaining eligible player wins
+      const winner = activeBidders[0];
+      // If someone has bid, use that bid amount. Otherwise, give it for free.
+      const winningBid = auctionState.currentBidderId ? auctionState.currentBid : 0;
+      console.log(`[passBid] Only ${winner.name} remains eligible, auto-winning for ${winningBid}`);
+      await this.resolveAuction(sessionId, winner.id, winningBid);
       return;
     }
 
@@ -855,8 +1106,11 @@ export const auctionService = {
       return;
     }
 
+    // Get bidding direction for this grid
+    const biddingDirection = getBiddingDirection(session.current_grid);
+
     // Find next bidder (skip passed players and players with max cards)
-    let nextSeat = getNextSeat(player.seat_position, allPlayers!.length);
+    let nextSeat = getNextSeat(player.seat_position, allPlayers!.length, biddingDirection);
     let attempts = 0;
     while (attempts < allPlayers!.length) {
       const nextPlayer = allPlayers?.find(p => p.seat_position === nextSeat);
@@ -864,15 +1118,16 @@ export const auctionService = {
       if (nextPlayer && !passedPlayerIds.includes(nextPlayer.id) && !hasMaxCards) {
         break;
       }
-      nextSeat = getNextSeat(nextSeat, allPlayers!.length);
+      nextSeat = getNextSeat(nextSeat, allPlayers!.length, biddingDirection);
       attempts++;
     }
 
-    // Update auction state
+    // Update auction state (reset bid timer when bidder changes)
     const updatedAuctionState: AuctionStateData = {
       ...auctionState,
       passedPlayerIds: passedPlayerIds,
       nextBidderSeat: nextSeat,
+      bidStartedAt: new Date().toISOString(),
     };
 
     const { error: updateError } = await supabase
@@ -897,17 +1152,23 @@ export const auctionService = {
     // If next bidder is a bot, trigger bot bid
     const nextBidder = allPlayers?.find(p => p.seat_position === nextSeat);
     if (nextBidder?.is_bot) {
-      await this.makeBotBid(sessionId, session.current_grid, auctionState.cardId!);
+      try {
+        await this.makeBotBid(sessionId, session.current_grid, auctionState.cardId!, nextBidder.id);
+      } catch (err) {
+        console.error('[passBid] Bot bid failed:', err);
+      }
     }
   },
 
   /**
    * Resolve the auction - award card to winner
+   * @param cardIdOverride - Optional: Pass cardId directly to avoid race conditions (for open mode)
    */
   async resolveAuction(
     sessionId: string,
     winnerId: string,
-    winningBid: number
+    winningBid: number,
+    cardIdOverride?: number
   ): Promise<void> {
     const supabase = getSupabase();
 
@@ -929,7 +1190,7 @@ export const auctionService = {
     }
 
     const auctionState = session.auction_state as AuctionStateData;
-    const cardId = auctionState.cardId!;
+    const cardId = cardIdOverride ?? auctionState.cardId!;
 
     // Deduct points from winner
     const newPoints = winner.bidding_points - winningBid;
@@ -958,6 +1219,19 @@ export const auctionService = {
     const { error: pickError } = await supabase.from('draft_picks').insert(pickData);
     if (pickError) {
       console.error('[resolveAuction] Failed to insert pick:', pickError);
+      // If it's a duplicate constraint, the card might already be picked
+      // Log details for debugging
+      console.error('[resolveAuction] Pick data was:', {
+        sessionId,
+        playerId: winnerId,
+        playerName: winner.name,
+        cardId,
+        gridNumber: session.current_grid,
+        pickNumber: newCardsAcquired,
+        currentCardsThisGrid: winner.cards_acquired_this_grid,
+      });
+      // Don't throw - we've already updated the player state, so continue
+      // The card count will be tracked even if the pick record fails
     }
 
     // Remove card from remaining cards
@@ -1042,6 +1316,24 @@ export const auctionService = {
     // Check if no more cards remain
     const noCardsRemain = !currentGrid || currentGrid.remainingCards.length === 0;
 
+    // Debug logging
+    console.log(`[advanceToNextAuction] Grid ${currentGridNumber}/${totalGrids}:`, {
+      cardsAcquiredPerGrid,
+      remainingCards: currentGrid?.remainingCards.length ?? 0,
+      playerCards: allPlayers.map(p => ({ name: p.name, acquired: p.cards_acquired_this_grid })),
+      allPlayersMaxCards,
+      noCardsRemain,
+      shouldTransition: allPlayersMaxCards || noCardsRemain,
+    });
+
+    // Safety check: warn if transitioning while any player has fewer cards than expected
+    const playersWithFewerCards = allPlayers.filter(p => p.cards_acquired_this_grid < cardsAcquiredPerGrid);
+    if ((allPlayersMaxCards || noCardsRemain) && playersWithFewerCards.length > 0) {
+      console.warn(`[advanceToNextAuction] WARNING: Grid ${currentGridNumber} transitioning but some players have fewer cards:`,
+        playersWithFewerCards.map(p => ({ name: p.name, acquired: p.cards_acquired_this_grid, expected: cardsAcquiredPerGrid }))
+      );
+    }
+
     // If grid is complete
     if (allPlayersMaxCards || noCardsRemain) {
       // Move remaining cards to graveyard
@@ -1071,14 +1363,6 @@ export const auctionService = {
       // Move to next grid
       const nextGrid = currentGridNumber + 1;
 
-      // Reset cards_acquired_this_grid for all players
-      for (const player of allPlayers) {
-        await supabase
-          .from('draft_players')
-          .update({ cards_acquired_this_grid: 0 })
-          .eq('id', player.id);
-      }
-
       // Set new selector (rotate from previous grid's first selector)
       const nextSelector = getNextSeat(session.current_selector_seat ?? 0, allPlayers.length);
 
@@ -1098,7 +1382,10 @@ export const auctionService = {
         bidTimerSeconds: bidTimerSeconds,
       };
 
-      await supabase
+      // IMPORTANT: Update session FIRST, then reset players
+      // This prevents race condition where UI sees 0/5 but still shows old grid
+      console.log(`[advanceToNextAuction] Transitioning to Grid ${nextGrid}`);
+      const { error: sessionUpdateError } = await supabase
         .from('draft_sessions')
         .update({
           current_grid: nextGrid,
@@ -1108,6 +1395,34 @@ export const auctionService = {
           selection_started_at: new Date().toISOString(),
         })
         .eq('id', sessionId);
+
+      if (sessionUpdateError) {
+        console.error('[advanceToNextAuction] Failed to update session:', sessionUpdateError);
+        throw sessionUpdateError;
+      }
+
+      // Reset cards_acquired_this_grid for all players AFTER session update
+      // Use a single batch update for all players to avoid race conditions
+      console.log(`[advanceToNextAuction] Resetting cards_acquired_this_grid for ${allPlayers.length} players`);
+      const playerIds = allPlayers.map(p => p.id);
+      const { error: resetError } = await supabase
+        .from('draft_players')
+        .update({ cards_acquired_this_grid: 0 })
+        .in('id', playerIds);
+
+      if (resetError) {
+        console.error('[advanceToNextAuction] Failed to reset player card counts:', resetError);
+        // Try individual updates as fallback
+        for (const player of allPlayers) {
+          const { error: individualError } = await supabase
+            .from('draft_players')
+            .update({ cards_acquired_this_grid: 0 })
+            .eq('id', player.id);
+          if (individualError) {
+            console.error(`[advanceToNextAuction] Failed to reset ${player.name}:`, individualError);
+          }
+        }
+      }
 
       // If selector is a bot, auto-select
       const selectorPlayer = allPlayers.find(p => p.seat_position === nextSelector);
@@ -1168,6 +1483,7 @@ export const auctionService = {
 
   /**
    * Auto-select a card for a bot
+   * Prioritizes on-color cards (MTG) while considering card score
    */
   async autoSelectForBot(
     sessionId: string,
@@ -1188,15 +1504,52 @@ export const auctionService = {
 
     if (!session) return;
 
-    // Load cards and find highest scored card
+    // Get bot's drafted cards for color analysis
+    const draftedCardIds = await this.getPlayerDraftedCards(sessionId, botPlayerId);
+    const draftedCards = draftedCardIds
+      .map(id => cubeService.getCardFromAnyCube(id))
+      .filter((c): c is YuGiOhCard => c !== null);
+    const collection = analyzeBotCollection(draftedCards);
+
+    // Load cards and score them considering color compatibility
     const remainingCards = currentGrid.remainingCards;
     let bestCardId = remainingCards[0];
-    let bestScore = 0;
+    let bestAdjustedScore = -1;
 
     for (const cardId of remainingCards) {
       const card = cubeService.getCardFromAnyCube(cardId);
-      if (card && (card.score ?? 0) > bestScore) {
-        bestScore = card.score ?? 0;
+      if (!card) continue;
+
+      let adjustedScore = card.score ?? 50;
+      const attrs = card.attributes as Record<string, unknown> | undefined;
+      const cardColors = attrs?.colors as string[] | undefined;
+      const isColorless = !cardColors || cardColors.length === 0;
+
+      // MTG color consideration
+      if (collection.mtgCommittedColors.length > 0 && !isColorless) {
+        const onColor = cardColors!.some(c => collection.mtgCommittedColors.includes(c));
+        if (onColor) {
+          // Boost on-color cards
+          adjustedScore *= 1.3;
+        } else {
+          // Penalize off-color cards heavily (but still consider bombs)
+          adjustedScore *= 0.4;
+        }
+      } else if (!isColorless && collection.totalCards >= 2) {
+        // Not committed yet - slight bonus for cards matching existing colors
+        const matchesExisting = cardColors!.some(c => collection.mtgColors.has(c));
+        if (matchesExisting) {
+          adjustedScore *= 1.15;
+        }
+      }
+
+      // Colorless cards get a small flexibility bonus
+      if (isColorless && attrs) {
+        adjustedScore *= 1.1;
+      }
+
+      if (adjustedScore > bestAdjustedScore) {
+        bestAdjustedScore = adjustedScore;
         bestCardId = cardId;
       }
     }
@@ -1209,70 +1562,104 @@ export const auctionService = {
 
   /**
    * Make a bot bid on the current auction
+   * @param botPlayerId - Optional: Pass the bot player ID directly to avoid race conditions
    */
   async makeBotBid(
     sessionId: string,
     gridNumber: number,
-    cardId: number
+    cardId: number,
+    botPlayerId?: string
   ): Promise<void> {
-    const supabase = getSupabase();
+    try {
+      const supabase = getSupabase();
 
-    // Get session and auction state
-    const { data: session } = await supabase
-      .from('draft_sessions')
-      .select()
-      .eq('id', sessionId)
-      .single();
+      // Get session and auction state
+      const { data: session } = await supabase
+        .from('draft_sessions')
+        .select()
+        .eq('id', sessionId)
+        .single();
 
-    if (!session) return;
+      if (!session) {
+        console.log('[makeBotBid] Session not found, aborting');
+        return;
+      }
 
-    const auctionState = session.auction_state as AuctionStateData | null;
-    if (!auctionState || auctionState.phase !== 'bidding') return;
+      const auctionState = session.auction_state as AuctionStateData | null;
+      if (!auctionState || auctionState.phase !== 'bidding') {
+        console.log('[makeBotBid] Not in bidding phase, aborting. Phase:', auctionState?.phase);
+        return;
+      }
 
-    // Get all players
-    const { data: allPlayers } = await supabase
-      .from('draft_players')
-      .select()
-      .eq('session_id', sessionId)
-      .order('seat_position', { ascending: true });
+      // Get all players
+      const { data: allPlayers } = await supabase
+        .from('draft_players')
+        .select()
+        .eq('session_id', sessionId)
+        .order('seat_position', { ascending: true });
 
-    // Find the bot whose turn it is
-    const botPlayer = allPlayers?.find(
-      p => p.seat_position === auctionState.nextBidderSeat && p.is_bot
-    );
+      // Find the bot - use passed ID if available, otherwise look up by seat
+      let botPlayer: typeof allPlayers extends (infer T)[] | null ? T : never;
+      if (botPlayerId) {
+        botPlayer = allPlayers?.find(p => p.id === botPlayerId && p.is_bot);
+      } else {
+        botPlayer = allPlayers?.find(
+          p => p.seat_position === auctionState.nextBidderSeat && p.is_bot
+        );
+      }
 
-    if (!botPlayer) return;
+      if (!botPlayer) {
+        console.log('[makeBotBid] Bot player not found. botPlayerId:', botPlayerId, 'nextBidderSeat:', auctionState.nextBidderSeat);
+        return;
+      }
 
-    // Get card info
-    const card = cubeService.getCardFromAnyCube(cardId);
+      console.log(`[makeBotBid] ${botPlayer.name} deciding on card ${cardId}`);
 
-    // Get bot's drafted cards for intelligent bidding
-    const draftedCardIds = await this.getPlayerDraftedCards(sessionId, botPlayer.id);
-    const draftedCards = draftedCardIds
-      .map(id => cubeService.getCardFromAnyCube(id))
-      .filter((c): c is YuGiOhCard => c !== null);
+      // Get card info - if card not found, bot will pass
+      const card = cubeService.getCardFromAnyCube(cardId);
 
-    // Get total bidding points from auction state (defaults to 100)
-    const totalPoints = auctionState.totalBiddingPoints ?? DEFAULT_BIDDING_POINTS;
+      // Get bot's drafted cards for intelligent bidding
+      const draftedCardIds = await this.getPlayerDraftedCards(sessionId, botPlayer.id);
+      const draftedCards = draftedCardIds
+        .map(id => cubeService.getCardFromAnyCube(id))
+        .filter((c): c is YuGiOhCard => c !== null);
 
-    // Calculate bot bid with intelligent decision making
-    const bidAmount = calculateBotBid(
-      card,
-      botPlayer.bidding_points,
-      auctionState.currentBid,
-      gridNumber,
-      botPlayer.cards_acquired_this_grid,
-      totalPoints,
-      draftedCards
-    );
+      // Get total bidding points from auction state (defaults to 100)
+      const totalPoints = auctionState.totalBiddingPoints ?? DEFAULT_BIDDING_POINTS;
 
-    // Add a small delay for UX
-    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+      // Calculate bot bid with intelligent decision making
+      // If card is null (not loaded), bot will pass (calculateBotBid returns null)
+      const bidAmount = calculateBotBid(
+        card,
+        botPlayer.bidding_points,
+        auctionState.currentBid,
+        gridNumber,
+        botPlayer.cards_acquired_this_grid,
+        totalPoints,
+        draftedCards
+      );
 
-    if (bidAmount !== null) {
-      await this.placeBid(sessionId, botPlayer.id, bidAmount);
-    } else {
-      await this.passBid(sessionId, botPlayer.id);
+      // Add a small delay for UX
+      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+
+      if (bidAmount !== null) {
+        console.log(`[makeBotBid] ${botPlayer.name} bidding ${bidAmount}`);
+        await this.placeBid(sessionId, botPlayer.id, bidAmount);
+      } else {
+        console.log(`[makeBotBid] ${botPlayer.name} passing`);
+        await this.passBid(sessionId, botPlayer.id);
+      }
+    } catch (error) {
+      console.error('[makeBotBid] Error:', error);
+      // On error, try to pass so the auction can continue
+      if (botPlayerId) {
+        try {
+          console.log('[makeBotBid] Attempting emergency pass after error');
+          await this.passBid(sessionId, botPlayerId);
+        } catch (passError) {
+          console.error('[makeBotBid] Emergency pass also failed:', passError);
+        }
+      }
     }
   },
 
@@ -1377,5 +1764,66 @@ export const auctionService = {
     return () => {
       supabase.removeChannel(channel);
     };
+  },
+
+  /**
+   * Check for timed-out bidders and auto-pass or trigger bot bids
+   * Should be called on an interval from the client
+   */
+  async checkAndAutoPassTimedOut(sessionId: string): Promise<void> {
+    const supabase = getSupabase();
+
+    // Get current session
+    const { data: session } = await supabase
+      .from('draft_sessions')
+      .select()
+      .eq('id', sessionId)
+      .single();
+
+    if (!session || session.status !== 'in_progress') return;
+
+    const auctionState = session.auction_state as AuctionStateData | null;
+    if (!auctionState || auctionState.phase !== 'bidding') return;
+
+    // Check if bid timer has expired
+    const bidTimerSeconds = auctionState.bidTimerSeconds ?? DEFAULT_BID_TIMER_SECONDS;
+    const bidStartedAt = auctionState.bidStartedAt;
+
+    if (!bidStartedAt) return;
+
+    const startTime = new Date(bidStartedAt).getTime();
+    const elapsed = (Date.now() - startTime) / 1000;
+
+    // Add a small grace period (2 seconds) to allow for network latency
+    if (elapsed < bidTimerSeconds + 2) return;
+
+    console.log(`[auctionService] Bid timer expired for seat ${auctionState.nextBidderSeat}, elapsed: ${elapsed}s`);
+
+    // Get all players
+    const { data: allPlayers } = await supabase
+      .from('draft_players')
+      .select()
+      .eq('session_id', sessionId)
+      .order('seat_position', { ascending: true });
+
+    if (!allPlayers) return;
+
+    // Find the current bidder
+    const currentBidder = allPlayers.find(p => p.seat_position === auctionState.nextBidderSeat);
+    if (!currentBidder) return;
+
+    // Already passed?
+    if (auctionState.passedPlayerIds.includes(currentBidder.id)) return;
+
+    // If current bidder is a bot, trigger bot bid (shouldn't normally get here, but fallback)
+    if (currentBidder.is_bot) {
+      console.log(`[auctionService] Triggering fallback bot bid for ${currentBidder.name}`);
+      await this.makeBotBid(sessionId, session.current_grid, auctionState.cardId!, currentBidder.id);
+      return;
+    }
+
+    // Auto-pass for human player who timed out
+    console.log(`[auctionService] Auto-passing for timed-out player ${currentBidder.name}`);
+    await this.passBid(sessionId, currentBidder.id);
   },
 };

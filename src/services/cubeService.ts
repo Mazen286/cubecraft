@@ -199,8 +199,10 @@ export const cubeService = {
     }
 
     try {
-      // Add cache-busting in development mode to pick up score changes
-      const cacheBuster = import.meta.env.DEV ? `?t=${Date.now()}` : '';
+      // Add cache-busting with app version to pick up cube updates
+      // Using a fixed version string that changes with deployments
+      const version = import.meta.env.VITE_APP_VERSION || '1';
+      const cacheBuster = import.meta.env.DEV ? `?t=${Date.now()}` : `?v=${version}`;
       const response = await fetch(`/cubes/${cubeId}.json${cacheBuster}`);
       if (!response.ok) {
         throw new Error(`Failed to load cube: ${response.statusText}`);
@@ -623,3 +625,10 @@ export const cubeService = {
     return this.loadCube(cubeId);
   },
 };
+
+// Expose to window for debugging in development
+if (import.meta.env.DEV) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).__cubeService = cubeService;
+  console.log('[CubeService] Debug: Run window.__cubeService.clearAllCaches() to clear cube cache');
+}

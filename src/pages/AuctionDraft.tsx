@@ -1,12 +1,14 @@
-// Auction Grid Draft Page
-// Main UI for the auction-grid draft mode
+// Grid-based Draft Page
+// Main UI for grid draft modes: auction-grid (with bidding) and open (no bidding)
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, X } from 'lucide-react';
+import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { BottomSheet } from '../components/ui/BottomSheet';
+import { useToast } from '../components/ui/Toast';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
 import { AuctionGrid, BiddingPanel, SelectionTimer } from '../components/auction';
@@ -52,6 +54,9 @@ export function AuctionDraft() {
     passBid,
   } = useAuctionSession(sessionId);
 
+  // Check if this is Open Draft mode (no bidding)
+  const isOpenMode = session?.mode === 'open';
+
   // UI state
   const [showMobileCards, setShowMobileCards] = useState(false);
   const [mobileViewCard, setMobileViewCard] = useState<YuGiOhCardType | null>(null);
@@ -62,6 +67,12 @@ export function AuctionDraft() {
   const [isActionPending, setIsActionPending] = useState(false);
   const [showAuctionCardDetail, setShowAuctionCardDetail] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  // Card being previewed during selection phase (before confirming auction)
+  const [previewCard, setPreviewCard] = useState<YuGiOhCardType | null>(null);
+
+  // Toast notifications
+  const { showToast, ToastContainer } = useToast();
+  const cancelledToastShownRef = useRef(false);
 
   // Card filters for "My Cards" drawer
   const myCardsFilters = useCardFilters({
@@ -71,8 +82,47 @@ export function AuctionDraft() {
     defaultDirection: 'desc',
   });
 
+  // Card filters for grid sorting
+  const gridFilters = useCardFilters({
+    includePickSort: false,
+    includeScoreSort: true,
+    defaultSort: 'score',
+    defaultDirection: 'desc',
+  });
+
   // Fetch drafted card data
   const { cards: draftedCards } = useCards(draftedCardIds);
+
+  // Sort grid cards using the filter hook
+  const sortedGridCards = useMemo(() => {
+    if (gridCards.length === 0) return [];
+
+    // Convert to the Card format expected by applyFilters
+    const cardsForFilter = gridCards.map(card => ({
+      id: card.id,
+      name: card.name,
+      type: card.type,
+      description: card.desc,
+      score: card.score,
+      attributes: {
+        atk: card.atk,
+        def: card.def,
+        level: card.level,
+        attribute: card.attribute,
+        race: card.race,
+        linkval: card.linkval,
+        archetype: card.archetype,
+      },
+    }));
+
+    // Apply sorting only (no filtering)
+    const sorted = gridFilters.applyFilters(cardsForFilter);
+
+    // Map back to original card objects
+    return sorted.map(sortedCard =>
+      gridCards.find(c => c.id === sortedCard.id)!
+    ).filter(Boolean);
+  }, [gridCards, gridFilters]);
 
   // Set game context based on cube
   useEffect(() => {
@@ -124,12 +174,39 @@ export function AuctionDraft() {
 
   // Handle session cancellation
   useEffect(() => {
-    if (session?.status === 'cancelled') {
+    if (session?.status === 'cancelled' && !cancelledToastShownRef.current) {
+      cancelledToastShownRef.current = true;
       clearLastSession();
-      alert('The host has cancelled this draft session.');
+      showToast('The host has cancelled this draft session.', 'info');
       navigate('/');
     }
-  }, [session?.status, navigate]);
+  }, [session?.status, navigate, showToast]);
+
+  // Clear preview card when leaving selection phase
+  useEffect(() => {
+    if (auctionState?.phase !== 'selecting') {
+      setPreviewCard(null);
+    }
+  }, [auctionState?.phase]);
+
+  // Auto-select previewed card when time runs out (or random if none previewed)
+  useEffect(() => {
+    if (
+      isSelector &&
+      auctionState?.phase === 'selecting' &&
+      selectionTimeRemaining === 0 &&
+      !isActionPending &&
+      remainingCardIds.length > 0
+    ) {
+      // Select the previewed card, or pick a random remaining card
+      const cardToSelect = previewCard && remainingCardIds.includes(previewCard.id)
+        ? previewCard.id
+        : remainingCardIds[Math.floor(Math.random() * remainingCardIds.length)];
+
+      setPreviewCard(null);
+      handleSelectCard(cardToSelect);
+    }
+  }, [selectionTimeRemaining, isSelector, auctionState?.phase, previewCard, remainingCardIds, isActionPending]);
 
   // Drafted cards stats
   const myCardsStats = useMemo(() => {
@@ -200,15 +277,21 @@ export function AuctionDraft() {
     return filteredIndexed.map(({ index }) => draftedCards[index]);
   }, [draftedCards, myCardsFilters]);
 
+  // Handler for viewing a grid card (opens detail sheet)
+  const handleGridCardClick = (card: YuGiOhCardType) => {
+    setPreviewCard(card);
+  };
+
   // Action handlers with loading state
   const handleSelectCard = async (cardId: number) => {
     if (isActionPending) return;
     setIsActionPending(true);
+    setPreviewCard(null); // Close preview sheet
     try {
       await selectCard(cardId);
     } catch (err) {
       console.error('[AuctionDraft] Select failed:', err);
-      alert(err instanceof Error ? err.message : 'Failed to select card');
+      showToast(err instanceof Error ? err.message : 'Failed to select card', 'error');
     } finally {
       setIsActionPending(false);
     }
@@ -221,7 +304,7 @@ export function AuctionDraft() {
       await placeBid(amount);
     } catch (err) {
       console.error('[AuctionDraft] Bid failed:', err);
-      alert(err instanceof Error ? err.message : 'Failed to place bid');
+      showToast(err instanceof Error ? err.message : 'Failed to place bid', 'error');
     } finally {
       setIsActionPending(false);
     }
@@ -234,7 +317,7 @@ export function AuctionDraft() {
       await passBid();
     } catch (err) {
       console.error('[AuctionDraft] Pass failed:', err);
-      alert(err instanceof Error ? err.message : 'Failed to pass');
+      showToast(err instanceof Error ? err.message : 'Failed to pass', 'error');
     } finally {
       setIsActionPending(false);
     }
@@ -299,8 +382,14 @@ export function AuctionDraft() {
       <Layout>
         <div className="flex items-center justify-center h-[calc(100vh-200px)]">
           <div className="text-center">
-            <Gavel className="w-16 h-16 mx-auto mb-4 text-gold-400 opacity-50" />
-            <h2 className="text-2xl font-bold text-white mb-2">Auction Grid Draft</h2>
+            {isOpenMode ? (
+              <MousePointer className="w-16 h-16 mx-auto mb-4 text-gold-400 opacity-50" />
+            ) : (
+              <Gavel className="w-16 h-16 mx-auto mb-4 text-gold-400 opacity-50" />
+            )}
+            <h2 className="text-2xl font-bold text-white mb-2">
+              {isOpenMode ? 'Open Draft' : 'Auction Grid Draft'}
+            </h2>
             <p className="text-gray-300 mb-4">Waiting for the draft to start...</p>
             {isHost && (
               <Button onClick={() => startDraft()} className="mt-4">
@@ -315,13 +404,20 @@ export function AuctionDraft() {
 
   return (
     <Layout>
+      {/* Toast notifications */}
+      <ToastContainer />
+
       <div className="flex flex-col min-h-[calc(100vh-200px)]">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Gavel className="w-6 h-6 text-gold-400" />
-              Auction Grid Draft
+              {isOpenMode ? (
+                <MousePointer className="w-6 h-6 text-gold-400" />
+              ) : (
+                <Gavel className="w-6 h-6 text-gold-400" />
+              )}
+              {isOpenMode ? 'Open Draft' : 'Auction Grid Draft'}
             </h1>
             <p className="text-gray-300">
               Grid {currentGrid} of {totalGrids} &bull; {remainingCardIds.length} cards remaining
@@ -336,16 +432,18 @@ export function AuctionDraft() {
             >
               <HelpCircle className="w-5 h-5" />
             </button>
-            {/* Player info */}
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold text-gold-400">
-                {currentPlayer?.biddingPoints ?? 100}
+            {/* Player info - only show points in auction mode */}
+            {!isOpenMode && (
+              <div className="text-center">
+                <div className="text-xl sm:text-2xl font-bold text-gold-400">
+                  {currentPlayer?.biddingPoints ?? 100}
+                </div>
+                <div className="text-xs text-gray-300">My Points</div>
               </div>
-              <div className="text-xs text-gray-300">My Points</div>
-            </div>
+            )}
             <div className="text-center">
               <div className="text-xl sm:text-2xl font-bold text-white">
-                {currentPlayer?.cardsAcquiredThisGrid ?? 0}/10
+                {currentPlayer?.cardsAcquiredThisGrid ?? 0}/{maxCardsPerGrid}
               </div>
               <div className="text-xs text-gray-300">This Grid</div>
             </div>
@@ -370,49 +468,88 @@ export function AuctionDraft() {
           </div>
         )}
 
-        {/* Main content - Grid and Bidding Panel */}
-        <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
+        {/* Main content - Grid and Bidding Panel (if auction mode) */}
+        <div className={`flex-1 flex flex-col ${isOpenMode ? '' : 'lg:flex-row'} gap-4 min-h-0`}>
           {/* Grid */}
           <div className="flex-1 glass-card p-4 overflow-auto">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5 text-gold-400" />
-              Grid {currentGrid}
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-gold-400" />
+                Grid {currentGrid}
+              </h2>
+              {/* Sort controls for grid */}
+              <CardFilterBar
+                filters={gridFilters}
+                showSearch={false}
+                showTypeFilter={false}
+                showTierFilter={false}
+                showAdvancedFilters={false}
+                showSort
+                includeScoreSort
+                compact
+                className="flex-shrink-0"
+              />
+            </div>
             <AuctionGrid
-              gridCards={gridCards}
+              gridCards={sortedGridCards}
               remainingCardIds={remainingCardIds}
               isSelector={isSelector && auctionState?.phase === 'selecting'}
               currentAuctionCardId={auctionState?.cardId ?? null}
-              onSelectCard={handleSelectCard}
+              onCardClick={handleGridCardClick}
               selectionDisabled={isActionPending || auctionState?.phase !== 'selecting'}
             />
           </div>
 
-          {/* Bidding Panel */}
-          <div className="w-full lg:w-80 flex-shrink-0">
-            <BiddingPanel
-              auctionState={auctionState}
-              currentCard={currentAuctionCard}
-              players={players}
-              currentPlayer={currentPlayer}
-              isMyBidTurn={isMyBidTurn}
-              hasMaxCards={hasMaxCards}
-              maxCardsPerGrid={maxCardsPerGrid}
-              onBid={handlePlaceBid}
-              onPass={handlePassBid}
-              disabled={isActionPending}
-              bidTimeRemaining={bidTimeRemaining}
-              totalBidTime={totalBidTime}
-              onViewCard={() => setShowAuctionCardDetail(true)}
-            />
-          </div>
+          {/* Bidding Panel - only in auction mode */}
+          {!isOpenMode && (
+            <div className="w-full lg:w-80 flex-shrink-0">
+              <BiddingPanel
+                auctionState={auctionState}
+                currentCard={currentAuctionCard}
+                players={players}
+                currentPlayer={currentPlayer}
+                isMyBidTurn={isMyBidTurn}
+                hasMaxCards={hasMaxCards}
+                maxCardsPerGrid={maxCardsPerGrid}
+                onBid={handlePlaceBid}
+                onPass={handlePassBid}
+                disabled={isActionPending}
+                bidTimeRemaining={bidTimeRemaining}
+                totalBidTime={totalBidTime}
+                onViewCard={() => setShowAuctionCardDetail(true)}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Auction Card Detail Sheet */}
+        {/* Auction Card Detail Sheet (for viewing card being auctioned) */}
         <CardDetailSheet
           card={currentAuctionCard}
           isOpen={showAuctionCardDetail}
           onClose={() => setShowAuctionCardDetail(false)}
+        />
+
+        {/* Grid Card Preview Sheet (for viewing/selecting grid cards) */}
+        <CardDetailSheet
+          card={previewCard}
+          isOpen={!!previewCard}
+          onClose={() => setPreviewCard(null)}
+          footer={
+            isSelector && auctionState?.phase === 'selecting' && previewCard && remainingCardIds.includes(previewCard.id) ? (
+              <Button
+                onClick={() => handleSelectCard(previewCard.id)}
+                disabled={isActionPending}
+                className="w-full"
+              >
+                {isOpenMode ? (
+                  <MousePointer className="w-4 h-4 mr-2" />
+                ) : (
+                  <Gavel className="w-4 h-4 mr-2" />
+                )}
+                {isOpenMode ? 'Select Card' : 'Set for Auction'}
+              </Button>
+            ) : undefined
+          }
         />
 
         {/* Footer actions */}
@@ -692,38 +829,71 @@ export function AuctionDraft() {
           isLoading={isCancelling}
         />
 
-        {/* How it Works Modal */}
-        {showHowItWorks && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setShowHowItWorks(false)}
-            />
-
-            {/* Modal */}
-            <div className="relative w-full max-w-2xl max-h-[85vh] bg-yugi-darker rounded-xl border border-yugi-border overflow-hidden flex flex-col">
-              {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-yugi-border flex-shrink-0">
-                <h2 className="text-xl font-bold text-gold-400 flex items-center gap-2">
-                  <Gavel className="w-5 h-5" />
-                  How Auction Grid Works
-                </h2>
-                <button
-                  onClick={() => setShowHowItWorks(false)}
-                  className="p-1 text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
+        {/* How it Works Bottom Sheet */}
+        <BottomSheet
+          isOpen={showHowItWorks}
+          onClose={() => setShowHowItWorks(false)}
+          title={
+            <span className="flex items-center gap-2">
+              {isOpenMode ? <MousePointer className="w-5 h-5" /> : <Gavel className="w-5 h-5" />}
+              How {isOpenMode ? 'Open Draft' : 'Auction Grid'} Works
+            </span>
+          }
+          maxHeight={90}
+        >
+          <div className="p-4 space-y-4">
+            {isOpenMode ? (
+              /* Open Draft Content */
+              <>
                 {/* Quick Overview */}
                 <div className="bg-yugi-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
                   <p className="text-sm text-gray-300">
-                    Auction Grid Drafting is a bidding-based draft format where players use <span className="text-gold-400 font-medium">100 bidding points</span> to compete for cards across <span className="text-white font-medium">6 grids</span>. Each grid has cards laid out face-up, and players take turns selecting cards to auction.
+                    Open Drafting is a straightforward pick-based format where players take turns selecting cards from a shared pool across <span className="text-white font-medium">{totalGrids} grids</span>. Each grid has cards laid out face-up, and on your turn you simply pick the card you want.
+                  </p>
+                </div>
+
+                {/* How It Works */}
+                <div className="bg-yugi-card rounded-lg p-4">
+                  <h3 className="font-semibold text-white mb-2">1. Your Turn</h3>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>• When it's your turn, <span className="text-gold-400">pick any card</span> from the grid</li>
+                    <li>• You have <span className="text-white font-medium">{session?.timer_seconds ?? 30} seconds</span> to make your selection</li>
+                    <li>• The card you pick is immediately added to your collection</li>
+                    <li>• Selection rotates clockwise to the next player</li>
+                  </ul>
+                </div>
+
+                {/* Max Cards */}
+                <div className="bg-yugi-card rounded-lg p-4">
+                  <h3 className="font-semibold text-white mb-2">2. Cards Per Grid</h3>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>• You can acquire <span className="text-white font-medium">maximum {maxCardsPerGrid} cards</span> per grid</li>
+                    <li>• Once you hit {maxCardsPerGrid}, your turns are <span className="text-gray-400">skipped</span> until the next grid</li>
+                    <li>• Grid completes when all players have {maxCardsPerGrid} cards or no cards remain</li>
+                    <li>• Remaining cards are burned and the next grid begins</li>
+                  </ul>
+                </div>
+
+                {/* Tips */}
+                <div className="bg-gold-500/10 border border-gold-500/30 rounded-lg p-4">
+                  <h3 className="font-semibold text-gold-400 mb-2">Strategy Tips</h3>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>• <span className="text-white">Watch the grid</span> - see what cards might wheel back to you</li>
+                    <li>• <span className="text-white">Know your deck</span> - prioritize cards that fit your strategy</li>
+                    <li>• <span className="text-white">Hate draft</span> - sometimes taking a card from opponents is worth it</li>
+                    <li>• <span className="text-white">Plan ahead</span> - the grid rotates so predict what'll be available</li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              /* Auction Grid Content */
+              <>
+                {/* Quick Overview */}
+                <div className="bg-yugi-card rounded-lg p-4">
+                  <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
+                  <p className="text-sm text-gray-300">
+                    Auction Grid Drafting is a bidding-based draft format where players use <span className="text-gold-400 font-medium">{(auctionState as any)?.totalBiddingPoints ?? 100} bidding points</span> to compete for cards across <span className="text-white font-medium">{totalGrids} grids</span>. Each grid has cards laid out face-up, and players take turns selecting cards to auction.
                   </p>
                 </div>
 
@@ -732,7 +902,7 @@ export function AuctionDraft() {
                   <h3 className="font-semibold text-white mb-2">1. Selection Phase</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>• The <span className="text-gold-400">selecting player</span> picks a card from the grid to auction</li>
-                    <li>• You have <span className="text-white font-medium">30 seconds</span> to make your selection</li>
+                    <li>• You have <span className="text-white font-medium">{session?.timer_seconds ?? 30} seconds</span> to make your selection</li>
                     <li>• Selection rotates clockwise after each auction</li>
                   </ul>
                 </div>
@@ -742,10 +912,10 @@ export function AuctionDraft() {
                   <h3 className="font-semibold text-white mb-2">2. Bidding Phase</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>• Bidding starts at <span className="text-white font-medium">0 points</span></li>
-                    <li>• Players bid clockwise from the selector</li>
+                    <li>• Players bid <span className="text-white font-medium">clockwise</span> on odd grids, <span className="text-white font-medium">counter-clockwise</span> on even grids</li>
                     <li>• You must <span className="text-gold-400">bid higher</span> than the current bid or <span className="text-red-400">pass</span></li>
                     <li>• <span className="text-red-400 font-medium">Once you pass, you cannot re-enter</span> that auction</li>
-                    <li>• Each player has a <span className="text-white font-medium">timer</span> to bid (auto-pass if expired)</li>
+                    <li>• Each player has <span className="text-white font-medium">{totalBidTime} seconds</span> to bid (auto-pass if expired)</li>
                   </ul>
                 </div>
 
@@ -755,7 +925,7 @@ export function AuctionDraft() {
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>• Highest bidder wins and <span className="text-gold-400">deducts points</span> from their total</li>
                     <li>• If <span className="text-white font-medium">no one bids</span>, the selector gets the card for free!</li>
-                    <li>• Your points <span className="text-red-400 font-medium">persist across all 6 grids</span> - budget wisely</li>
+                    <li>• Your points <span className="text-red-400 font-medium">persist across all {totalGrids} grids</span> - budget wisely</li>
                   </ul>
                 </div>
 
@@ -763,10 +933,10 @@ export function AuctionDraft() {
                 <div className="bg-yugi-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">4. Max Cards Per Grid</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
-                    <li>• You can acquire <span className="text-white font-medium">maximum 10 cards</span> per grid</li>
-                    <li>• Once you hit 10, you're <span className="text-gray-400">skipped</span> in bidding rotation</li>
-                    <li>• If it's your turn to select but you have 10 cards, selection passes to the next player</li>
-                    <li>• Grid completes when all players have 10 cards or no cards remain</li>
+                    <li>• You can acquire <span className="text-white font-medium">maximum {maxCardsPerGrid} cards</span> per grid</li>
+                    <li>• Once you hit {maxCardsPerGrid}, you're <span className="text-gray-400">skipped</span> in bidding rotation</li>
+                    <li>• If it's your turn to select but you have {maxCardsPerGrid} cards, selection passes to the next player</li>
+                    <li>• Grid completes when all players have {maxCardsPerGrid} cards or no cards remain</li>
                   </ul>
                 </div>
 
@@ -774,26 +944,26 @@ export function AuctionDraft() {
                 <div className="bg-gold-500/10 border border-gold-500/30 rounded-lg p-4">
                   <h3 className="font-semibold text-gold-400 mb-2">Strategy Tips</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
-                    <li>• <span className="text-white">Budget wisely</span> - your 100 points must last all 6 grids!</li>
+                    <li>• <span className="text-white">Budget wisely</span> - your {(auctionState as any)?.totalBiddingPoints ?? 100} points must last all {totalGrids} grids!</li>
                     <li>• <span className="text-white">Watch opponents</span> - track their remaining points</li>
                     <li>• <span className="text-white">Select strategically</span> - pick cards that benefit you but might force others to overpay</li>
                     <li>• <span className="text-white">Late grids</span> - low-point players may get cards cheaper as others run out</li>
                   </ul>
                 </div>
-              </div>
+              </>
+            )}
 
-              {/* Footer */}
-              <div className="p-4 border-t border-yugi-border flex-shrink-0">
-                <Button
-                  onClick={() => setShowHowItWorks(false)}
-                  className="w-full"
-                >
-                  Got it!
-                </Button>
-              </div>
+            {/* Footer Button */}
+            <div className="pt-2 pb-4">
+              <Button
+                onClick={() => setShowHowItWorks(false)}
+                className="w-full"
+              >
+                Got it!
+              </Button>
             </div>
           </div>
-        )}
+        </BottomSheet>
       </div>
     </Layout>
   );
