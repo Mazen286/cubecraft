@@ -308,6 +308,7 @@ export interface AuctionStateData {
   nextBidderSeat: number | null; // Next player to bid
   bidTimerSeconds?: number; // Seconds per bid turn (default 15)
   totalBiddingPoints?: number; // Total points each player started with (for bot bid scaling)
+  bidStartedAt?: string; // ISO timestamp when current bidder's turn started
 }
 
 // Draft Auction Bids table

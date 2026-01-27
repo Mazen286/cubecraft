@@ -8,10 +8,70 @@ import type {
   DraftBurnedCardInsert,
   PackData,
 } from '../lib/database.types';
-import type { DraftSettings } from '../types';
+import type { DraftSettings, YuGiOhCard } from '../types';
 import { shuffleArray, createPacks } from '../lib/utils';
 import { cubeService } from './cubeService';
 import { getActiveGameConfig } from '../context/GameContext';
+
+/**
+ * Analyze a bot's drafted cards for intelligent picking
+ */
+interface BotCollectionAnalysis {
+  archetypes: Map<string, number>;
+  topArchetype: string | null;
+  monsterCount: number;
+  spellCount: number;
+  trapCount: number;
+  totalCards: number;
+  monsterRatio: number;
+  spellRatio: number;
+  trapRatio: number;
+}
+
+function analyzeBotCollection(draftedCards: YuGiOhCard[]): BotCollectionAnalysis {
+  const archetypes = new Map<string, number>();
+  let monsterCount = 0;
+  let spellCount = 0;
+  let trapCount = 0;
+
+  for (const card of draftedCards) {
+    const type = card.type.toLowerCase();
+    if (type.includes('spell')) {
+      spellCount++;
+    } else if (type.includes('trap')) {
+      trapCount++;
+    } else {
+      monsterCount++;
+    }
+
+    if (card.archetype) {
+      archetypes.set(card.archetype, (archetypes.get(card.archetype) || 0) + 1);
+    }
+  }
+
+  const totalCards = draftedCards.length;
+
+  let topArchetype: string | null = null;
+  let topCount = 0;
+  for (const [archetype, count] of archetypes) {
+    if (count > topCount && count >= 2) {
+      topCount = count;
+      topArchetype = archetype;
+    }
+  }
+
+  return {
+    archetypes,
+    topArchetype,
+    monsterCount,
+    spellCount,
+    trapCount,
+    totalCards,
+    monsterRatio: totalCards > 0 ? monsterCount / totalCards : 0,
+    spellRatio: totalCards > 0 ? spellCount / totalCards : 0,
+    trapRatio: totalCards > 0 ? trapCount / totalCards : 0,
+  };
+}
 
 /**
  * Get the storage key prefix for the current game
@@ -591,7 +651,6 @@ export const draftService = {
       return;
     }
 
-    const burnedPerPack = session?.burned_per_pack || 0;
     const currentPack = session.current_pack;
     const currentPick = session.current_pick;
 
@@ -654,15 +713,63 @@ export const draftService = {
         continue;
       }
 
-      // Get card scores and sort by score descending
-      const cardScores: { cardId: number; score: number }[] = currentHand.map((cardId: number) => {
+      // Get bot's drafted cards for intelligent picking
+      const { data: draftedPicksData } = await supabase
+        .from('draft_picks')
+        .select('card_id')
+        .eq('session_id', sessionId)
+        .eq('player_id', bot.id);
+
+      const draftedCards = (draftedPicksData || [])
+        .map(p => cubeService.getCardFromAnyCube(p.card_id))
+        .filter((c): c is YuGiOhCard => c !== null);
+
+      // Analyze bot's collection for intelligent picking
+      const collection = analyzeBotCollection(draftedCards);
+
+      // Calculate weighted scores considering synergy and balance
+      const cardScores: { cardId: number; score: number; weightedScore: number }[] = currentHand.map((cardId: number) => {
         const card = cubeService.getCardFromAnyCube(cardId);
+        const baseScore = card?.score ?? 50;
+        let weightedScore = baseScore;
+
+        if (card) {
+          // Archetype synergy bonus
+          if (card.archetype && collection.topArchetype === card.archetype) {
+            weightedScore += 15; // Big bonus for matching archetype
+          } else if (card.archetype && collection.archetypes.has(card.archetype)) {
+            const count = collection.archetypes.get(card.archetype)!;
+            if (count >= 2) {
+              weightedScore += 8; // Smaller bonus for building archetype
+            }
+          }
+
+          // Card type balance adjustments
+          const cardType = card.type.toLowerCase();
+          const isSpell = cardType.includes('spell');
+          const isTrap = cardType.includes('trap');
+          const isMonster = !isSpell && !isTrap;
+
+          if (collection.totalCards >= 5) {
+            if (isSpell && collection.spellRatio < 0.25) {
+              weightedScore += 5; // Need more spells
+            } else if (isTrap && collection.trapRatio < 0.10) {
+              weightedScore += 5; // Need more traps
+            } else if (isMonster && collection.monsterRatio > 0.70) {
+              weightedScore -= 5; // Too many monsters
+            }
+          }
+        }
+
         return {
           cardId,
-          score: card?.score ?? 50,
+          score: baseScore,
+          weightedScore,
         };
       });
-      cardScores.sort((a, b) => b.score - a.score);
+
+      // Sort by weighted score (includes synergy/balance), then by base score
+      cardScores.sort((a, b) => b.weightedScore - a.weightedScore || b.score - a.score);
 
       // Try each card in order until one succeeds (in case some are already picked)
       let pickedCardId: number | null = null;
@@ -1228,15 +1335,63 @@ export const draftService = {
         continue;
       }
 
-      // Get card scores and sort by score descending
-      const cardScores: { cardId: number; score: number }[] = currentHand.map((cardId: number) => {
+      // Get player's drafted cards for intelligent picking
+      const { data: draftedPicksData } = await supabase
+        .from('draft_picks')
+        .select('card_id')
+        .eq('session_id', sessionId)
+        .eq('player_id', player.id);
+
+      const draftedCards = (draftedPicksData || [])
+        .map(p => cubeService.getCardFromAnyCube(p.card_id))
+        .filter((c): c is YuGiOhCard => c !== null);
+
+      // Analyze player's collection for intelligent picking
+      const collection = analyzeBotCollection(draftedCards);
+
+      // Calculate weighted scores considering synergy and balance
+      const cardScores: { cardId: number; score: number; weightedScore: number }[] = currentHand.map((cardId: number) => {
         const card = cubeService.getCardFromAnyCube(cardId);
+        const baseScore = card?.score ?? 50;
+        let weightedScore = baseScore;
+
+        if (card) {
+          // Archetype synergy bonus
+          if (card.archetype && collection.topArchetype === card.archetype) {
+            weightedScore += 15; // Big bonus for matching archetype
+          } else if (card.archetype && collection.archetypes.has(card.archetype)) {
+            const count = collection.archetypes.get(card.archetype)!;
+            if (count >= 2) {
+              weightedScore += 8; // Smaller bonus for building archetype
+            }
+          }
+
+          // Card type balance adjustments
+          const cardType = card.type.toLowerCase();
+          const isSpell = cardType.includes('spell');
+          const isTrap = cardType.includes('trap');
+          const isMonster = !isSpell && !isTrap;
+
+          if (collection.totalCards >= 5) {
+            if (isSpell && collection.spellRatio < 0.25) {
+              weightedScore += 5; // Need more spells
+            } else if (isTrap && collection.trapRatio < 0.10) {
+              weightedScore += 5; // Need more traps
+            } else if (isMonster && collection.monsterRatio > 0.70) {
+              weightedScore -= 5; // Too many monsters
+            }
+          }
+        }
+
         return {
           cardId,
-          score: card?.score ?? 50,
+          score: baseScore,
+          weightedScore,
         };
       });
-      cardScores.sort((a, b) => b.score - a.score);
+
+      // Sort by weighted score (includes synergy/balance), then by base score
+      cardScores.sort((a, b) => b.weightedScore - a.weightedScore || b.score - a.score);
 
       // Try each card in order until one succeeds (in case some are already picked)
       let pickedCardId: number | null = null;
@@ -1777,12 +1932,11 @@ export const draftService = {
         }
       }
 
-      // Get players for this session
+      // Get players for this session (including bots)
       const { data: players } = await supabase
         .from('draft_players')
         .select('id, name, is_bot')
         .eq('session_id', s.id)
-        .eq('is_bot', false)
         .order('seat_position', { ascending: true });
 
       return {
