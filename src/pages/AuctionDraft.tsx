@@ -538,7 +538,7 @@ export function AuctionDraft() {
     autoPickTriggeredRef.current = false;
   }, [session?.current_grid, session?.current_selector_seat]);
 
-  // Auto-select previewed card when time runs out (or random if none previewed)
+  // Auto-select previewed card when time runs out (or highest scored if none previewed)
   useEffect(() => {
     if (
       isSelector &&
@@ -552,15 +552,31 @@ export function AuctionDraft() {
       // Mark as triggered to prevent double-firing
       autoPickTriggeredRef.current = true;
 
-      // Select the previewed card, or pick a random remaining card
-      const cardToSelect = previewCard && remainingCardIds.includes(previewCard.id)
-        ? previewCard.id
-        : remainingCardIds[Math.floor(Math.random() * remainingCardIds.length)];
+      let cardToSelect: number;
+
+      if (previewCard && remainingCardIds.includes(previewCard.id)) {
+        // Select the previewed card
+        cardToSelect = previewCard.id;
+      } else {
+        // Pick the highest scored remaining card
+        const availableCards = gridCards
+          .filter(card => remainingCardIds.includes(card.id))
+          .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+        cardToSelect = availableCards.length > 0
+          ? availableCards[0].id
+          : remainingCardIds[0]; // Fallback to first remaining card
+      }
+
+      const selectedCard = gridCards.find(c => c.id === cardToSelect);
+      if (selectedCard) {
+        showToast(`Auto-picked: ${selectedCard.name}`, 'info');
+      }
 
       setPreviewCard(null);
-      handleSelectCard(cardToSelect);
+      handleSelectCard(cardToSelect, true); // Skip redundant toast
     }
-  }, [selectionTimeRemaining, isSelector, auctionState?.phase, previewCard, remainingCardIds, isActionPending, handleSelectCard, session?.paused]);
+  }, [selectionTimeRemaining, isSelector, auctionState?.phase, previewCard, remainingCardIds, isActionPending, handleSelectCard, session?.paused, gridCards, showToast]);
 
   // Auto-select: automatically pick highest-rated card when it's your turn (Open mode only)
   useEffect(() => {
