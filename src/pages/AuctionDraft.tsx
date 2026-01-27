@@ -99,8 +99,10 @@ export function AuctionDraft() {
   // Fetch drafted card data
   const { cards: draftedCards } = useCards(draftedCardIds);
 
-  // Track selected card index for keyboard navigation
+  // Track selected card index for keyboard navigation (grid)
   const [selectedCardIndex, setSelectedCardIndex] = useState(0);
+  // Track selected card index for My Cards drawer keyboard navigation
+  const [myCardsSelectedIndex, setMyCardsSelectedIndex] = useState(0);
 
   // Calculate grid columns based on screen width (matches AuctionGrid responsive classes)
   const getGridColumns = useCallback(() => {
@@ -147,6 +149,32 @@ export function AuctionDraft() {
     return sortedGridCards.filter(card => remainingCardIds.includes(card.id));
   }, [sortedGridCards, remainingCardIds]);
 
+  // Filter drafted cards for My Cards drawer
+  const filteredDraftedCards = useMemo(() => {
+    const indexedCards = draftedCards.map((card, index) => ({
+      card: {
+        id: card.id,
+        name: card.name,
+        type: card.type,
+        description: card.desc,
+        score: card.score,
+        attributes: {
+          atk: card.atk,
+          def: card.def,
+          level: card.level,
+          attribute: card.attribute,
+          race: card.race,
+          linkval: card.linkval,
+          archetype: card.archetype,
+        },
+      },
+      index,
+    }));
+
+    const filteredIndexed = myCardsFilters.applyFiltersWithIndex(indexedCards);
+    return filteredIndexed.map(({ index }) => draftedCards[index]);
+  }, [draftedCards, myCardsFilters]);
+
   // Handler for selecting a card (moved up to avoid temporal dead zone in useEffect dependency)
   const handleSelectCard = useCallback(async (cardId: number) => {
     if (isActionPending) return;
@@ -176,7 +204,59 @@ export function AuctionDraft() {
       return;
     }
 
-    // Only allow navigation when draft is in_progress
+    // Handle My Cards drawer navigation
+    if (showMobileCards && !mobileViewCard) {
+      const cardsCount = filteredDraftedCards.length;
+      if (cardsCount === 0) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          setMyCardsSelectedIndex(prev => (prev - 1 + cardsCount) % cardsCount);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          setMyCardsSelectedIndex(prev => (prev + 1) % cardsCount);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          {
+            const cols = getGridColumns();
+            setMyCardsSelectedIndex(prev => (prev - cols + cardsCount) % cardsCount);
+          }
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          {
+            const cols = getGridColumns();
+            setMyCardsSelectedIndex(prev => (prev + cols) % cardsCount);
+          }
+          break;
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          if (filteredDraftedCards[myCardsSelectedIndex]) {
+            setMobileViewCard(filteredDraftedCards[myCardsSelectedIndex]);
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          setShowMobileCards(false);
+          break;
+      }
+      return;
+    }
+
+    // Close My Cards detail sheet with Escape
+    if (mobileViewCard) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setMobileViewCard(null);
+      }
+      return;
+    }
+
+    // Only allow grid navigation when draft is in_progress
     if (session?.status !== 'in_progress') return;
 
     // Allow navigation during selecting phase OR bidding phase (to browse cards while bidding)
@@ -243,7 +323,7 @@ export function AuctionDraft() {
         setPreviewCard(null);
         break;
     }
-  }, [session?.status, auctionState?.phase, availableCards, selectedCardIndex, previewCard, isSelector, isActionPending, getGridColumns, handleSelectCard]);
+  }, [session?.status, auctionState?.phase, availableCards, selectedCardIndex, previewCard, isSelector, isActionPending, getGridColumns, handleSelectCard, showMobileCards, mobileViewCard, filteredDraftedCards, myCardsSelectedIndex]);
 
   // Set up keyboard event listener
   useEffect(() => {
@@ -255,6 +335,11 @@ export function AuctionDraft() {
   useEffect(() => {
     setSelectedCardIndex(0);
   }, [remainingCardIds.length, currentGrid]);
+
+  // Reset My Cards selected index when drawer opens or filtered cards change
+  useEffect(() => {
+    setMyCardsSelectedIndex(0);
+  }, [showMobileCards, filteredDraftedCards.length]);
 
   // Set game context based on cube
   useEffect(() => {
@@ -421,32 +506,6 @@ export function AuctionDraft() {
     stats.avgScore = scoredCards > 0 ? Math.round(totalScore / scoredCards) : 0;
     return stats;
   }, [draftedCards]);
-
-  // Filter drafted cards
-  const filteredDraftedCards = useMemo(() => {
-    const indexedCards = draftedCards.map((card, index) => ({
-      card: {
-        id: card.id,
-        name: card.name,
-        type: card.type,
-        description: card.desc,
-        score: card.score,
-        attributes: {
-          atk: card.atk,
-          def: card.def,
-          level: card.level,
-          attribute: card.attribute,
-          race: card.race,
-          linkval: card.linkval,
-          archetype: card.archetype,
-        },
-      },
-      index,
-    }));
-
-    const filteredIndexed = myCardsFilters.applyFiltersWithIndex(indexedCards);
-    return filteredIndexed.map(({ index }) => draftedCards[index]);
-  }, [draftedCards, myCardsFilters]);
 
   // Handler for viewing a grid card (opens detail sheet)
   const handleGridCardClick = (card: YuGiOhCardType) => {
@@ -1030,11 +1089,15 @@ export function AuctionDraft() {
                   /* Cards grid */
                   filteredDraftedCards.length > 0 ? (
                     <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
-                      {filteredDraftedCards.map(card => (
+                      {filteredDraftedCards.map((card, index) => (
                         <div
                           key={card.id}
                           onClick={() => setMobileViewCard(card)}
-                          className="cursor-pointer active:scale-95 transition-transform"
+                          className={`cursor-pointer active:scale-95 transition-all ${
+                            index === myCardsSelectedIndex
+                              ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-darker rounded-lg z-10'
+                              : ''
+                          }`}
                         >
                           <YuGiOhCard card={card} size="full" showTier flush />
                         </div>
