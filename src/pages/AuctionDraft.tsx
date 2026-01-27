@@ -187,24 +187,36 @@ export function AuctionDraft() {
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
-          setSelectedCardIndex(prev => (prev - 1 + cardsCount) % cardsCount);
+          {
+            const newIndex = (selectedCardIndex - 1 + cardsCount) % cardsCount;
+            setSelectedCardIndex(newIndex);
+            setPreviewCard(availableCards[newIndex]);
+          }
           break;
         case 'ArrowRight':
           e.preventDefault();
-          setSelectedCardIndex(prev => (prev + 1) % cardsCount);
+          {
+            const newIndex = (selectedCardIndex + 1) % cardsCount;
+            setSelectedCardIndex(newIndex);
+            setPreviewCard(availableCards[newIndex]);
+          }
           break;
         case 'ArrowUp':
           e.preventDefault();
           {
             const cols = getGridColumns();
-            setSelectedCardIndex(prev => (prev - cols + cardsCount) % cardsCount);
+            const newIndex = (selectedCardIndex - cols + cardsCount) % cardsCount;
+            setSelectedCardIndex(newIndex);
+            setPreviewCard(availableCards[newIndex]);
           }
           break;
         case 'ArrowDown':
           e.preventDefault();
           {
             const cols = getGridColumns();
-            setSelectedCardIndex(prev => (prev + cols) % cardsCount);
+            const newIndex = (selectedCardIndex + cols) % cardsCount;
+            setSelectedCardIndex(newIndex);
+            setPreviewCard(availableCards[newIndex]);
           }
           break;
         case 'Enter':
