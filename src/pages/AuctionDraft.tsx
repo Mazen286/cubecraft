@@ -845,6 +845,13 @@ export function AuctionDraft() {
           }
         />
 
+        {/* My Cards Detail Sheet (for viewing cards from My Cards drawer) */}
+        <CardDetailSheet
+          card={mobileViewCard}
+          isOpen={!!mobileViewCard}
+          onClose={() => setMobileViewCard(null)}
+        />
+
         {/* Footer actions */}
         <div className="flex justify-between mt-6">
           <div className="flex gap-2">
@@ -882,10 +889,7 @@ export function AuctionDraft() {
             {/* Backdrop */}
             <div
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => {
-                setShowMobileCards(false);
-                setMobileViewCard(null);
-              }}
+              onClick={() => setShowMobileCards(false)}
             />
 
             {/* Drawer */}
@@ -898,31 +902,18 @@ export function AuctionDraft() {
               {/* Header */}
               <div className="flex items-center justify-between px-4 pb-3 border-b border-yugi-border flex-shrink-0">
                 <h3 className="text-lg font-semibold text-white">
-                  {mobileViewCard ? 'Card Details' : `My Drafted Cards (${draftedCards.length})`}
+                  My Drafted Cards ({draftedCards.length})
                 </h3>
-                <div className="flex items-center gap-2">
-                  {mobileViewCard && (
-                    <button
-                      onClick={() => setMobileViewCard(null)}
-                      className="px-3 py-1 text-sm text-gold-400 hover:text-gold-300"
-                    >
-                      Back
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setShowMobileCards(false);
-                      setMobileViewCard(null);
-                    }}
-                    className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white text-xl"
-                  >
-                    x
-                  </button>
-                </div>
+                <button
+                  onClick={() => setShowMobileCards(false)}
+                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white text-xl"
+                >
+                  x
+                </button>
               </div>
 
               {/* Stats and Filters */}
-              {!mobileViewCard && draftedCards.length > 0 && (
+              {draftedCards.length > 0 && (
                 <div className="px-4 py-3 border-b border-yugi-border flex-shrink-0 space-y-3">
                   {/* Stats Toggle & Summary */}
                   <div className="flex items-center justify-between">
@@ -1035,28 +1026,7 @@ export function AuctionDraft() {
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-                {mobileViewCard ? (
-                  /* Card detail view */
-                  <div className="space-y-4">
-                    <div className="flex justify-center">
-                      <YuGiOhCard card={mobileViewCard} size="lg" showTier />
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-lg font-semibold" style={{ color: gameConfig.theme.primaryColor }}>
-                        {mobileViewCard.name}
-                      </h4>
-                      <p className="text-sm text-gray-300">{mobileViewCard.type}</p>
-                      {mobileViewCard.score !== undefined && (
-                        <p className="text-sm text-gray-400">Score: {mobileViewCard.score}/100</p>
-                      )}
-                      {mobileViewCard.desc && (
-                        <div className="pt-3 border-t border-yugi-border">
-                          <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{mobileViewCard.desc}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : draftedCards.length > 0 ? (
+                {draftedCards.length > 0 ? (
                   /* Cards grid */
                   filteredDraftedCards.length > 0 ? (
                     <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
