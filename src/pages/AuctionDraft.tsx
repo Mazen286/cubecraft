@@ -98,6 +98,15 @@ export function AuctionDraft() {
   // Track selected card index for keyboard navigation
   const [selectedCardIndex, setSelectedCardIndex] = useState(0);
 
+  // Calculate grid columns based on screen width (matches AuctionGrid responsive classes)
+  const getGridColumns = useCallback(() => {
+    const width = window.innerWidth;
+    if (width >= 1024) return 10; // lg:grid-cols-10
+    if (width >= 768) return 8;   // md:grid-cols-8
+    if (width >= 640) return 6;   // sm:grid-cols-6
+    return 5;                      // grid-cols-5
+  }, []);
+
   // Sort grid cards using the filter hook
   const sortedGridCards = useMemo(() => {
     if (gridCards.length === 0) return [];
@@ -182,13 +191,17 @@ export function AuctionDraft() {
           break;
         case 'ArrowUp':
           e.preventDefault();
-          // Move up one row (assume ~6 cards per row on desktop)
-          setSelectedCardIndex(prev => (prev - 6 + cardsCount) % cardsCount);
+          {
+            const cols = getGridColumns();
+            setSelectedCardIndex(prev => (prev - cols + cardsCount) % cardsCount);
+          }
           break;
         case 'ArrowDown':
           e.preventDefault();
-          // Move down one row
-          setSelectedCardIndex(prev => (prev + 6) % cardsCount);
+          {
+            const cols = getGridColumns();
+            setSelectedCardIndex(prev => (prev + cols) % cardsCount);
+          }
           break;
         case 'Enter':
         case ' ':
@@ -207,7 +220,7 @@ export function AuctionDraft() {
           break;
       }
     }
-  }, [session?.status, auctionState?.phase, availableCards, selectedCardIndex, previewCard, isSelector, isActionPending]);
+  }, [session?.status, auctionState?.phase, availableCards, selectedCardIndex, previewCard, isSelector, isActionPending, getGridColumns, handleSelectCard]);
 
   // Set up keyboard event listener
   useEffect(() => {
