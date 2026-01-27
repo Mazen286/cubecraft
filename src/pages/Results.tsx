@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import html2canvas from 'html2canvas';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
@@ -7,7 +8,7 @@ import { CardDetailSheet } from '../components/cards/CardDetailSheet';
 import { CardFilterBar } from '../components/filters';
 import type { YuGiOhCard as YuGiOhCardType } from '../types';
 import { cn, formatTime, isExtraDeckCard, isMonsterCard, isSpellCard, isTrapCard, getTierFromScore } from '../lib/utils';
-import { Download, BarChart3, Clock, Zap, ChevronDown, ChevronUp, Flame, Trophy, RotateCcw, Plus, Minus, Layers, Archive } from 'lucide-react';
+import { Download, BarChart3, Clock, Zap, ChevronDown, ChevronUp, Flame, Trophy, RotateCcw, Plus, Minus, Layers, Archive, Share2 } from 'lucide-react';
 import { useDraftSession } from '../hooks/useDraftSession';
 import { useCards } from '../hooks/useCards';
 import { useCardFilters, type Tier } from '../hooks/useCardFilters';
@@ -140,6 +141,10 @@ export function Results() {
   const [deckAssignments, setDeckAssignments] = useState<Map<number, string>>(new Map());
   const [selectedCard, setSelectedCard] = useState<DeckCard | null>(null);
   const [showCardDetail, setShowCardDetail] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+
+  // Ref for capturing deck zones as image
+  const deckZonesRef = useRef<HTMLDivElement>(null);
 
   // Initialize deck assignments when cards load
   useEffect(() => {
@@ -468,6 +473,93 @@ ${sideDeck}
     }
   }, [allDraftedCards, deckAssignments, basicResourceCounts, gameConfig]);
 
+  // Generate deck export text for sharing
+  const generateDeckText = useCallback(() => {
+    const mainCards = allDraftedCards
+      .filter(({ index }) => deckAssignments.get(index) === 'main')
+      .map(({ card }) => card.name);
+    const extraCards = allDraftedCards
+      .filter(({ index }) => deckAssignments.get(index) === 'extra')
+      .map(({ card }) => card.name);
+    const sideCards = allDraftedCards
+      .filter(({ index }) => deckAssignments.get(index) === 'side')
+      .map(({ card }) => card.name);
+
+    let text = `🎴 My CubeCraft Draft Deck\n\n`;
+    text += `📦 Main Deck (${mainCards.length}):\n${mainCards.join('\n')}\n\n`;
+    if (extraCards.length > 0) {
+      text += `⭐ Extra Deck (${extraCards.length}):\n${extraCards.join('\n')}\n\n`;
+    }
+    if (sideCards.length > 0) {
+      text += `📋 Side Deck (${sideCards.length}):\n${sideCards.join('\n')}\n\n`;
+    }
+    text += `\nDrafted on CubeCraft 🎲`;
+    return text;
+  }, [allDraftedCards, deckAssignments]);
+
+  // Share deck as image + text
+  const handleShare = useCallback(async () => {
+    if (!deckZonesRef.current) return;
+
+    setIsSharing(true);
+    try {
+      // Capture the deck zones as an image
+      const canvas = await html2canvas(deckZonesRef.current, {
+        backgroundColor: '#1a1a2e',
+        scale: 2, // Higher quality
+        useCORS: true, // Allow cross-origin images
+        allowTaint: true,
+        logging: false,
+      });
+
+      // Convert to blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error('Failed to create blob'))),
+          'image/png',
+          0.95
+        );
+      });
+
+      const deckText = generateDeckText();
+
+      // Check if Web Share API is available and supports files
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], 'cubecraft-deck.png', { type: 'image/png' });
+        const shareData = {
+          title: 'My CubeCraft Draft Deck',
+          text: deckText,
+          files: [file],
+        };
+
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          return;
+        }
+      }
+
+      // Fallback: Download image and copy text to clipboard
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cubecraft-deck-${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Copy text to clipboard
+      await navigator.clipboard.writeText(deckText);
+      alert('Deck image downloaded and deck list copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to share:', error);
+      // If share was cancelled by user, don't show error
+      if (error instanceof Error && error.name !== 'AbortError') {
+        alert('Failed to share deck. Please try again.');
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  }, [generateDeckText]);
+
   // Show loading state
   if (isLoading && allDraftedCards.length === 0) {
     return (
@@ -529,6 +621,14 @@ ${sideDeck}
             <Button onClick={handleExport} disabled={allDraftedCards.length === 0}>
               <Download className="w-4 h-4 mr-2" />
               Export
+            </Button>
+            <Button
+              onClick={handleShare}
+              disabled={allDraftedCards.length === 0 || isSharing}
+              variant="secondary"
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              {isSharing ? 'Sharing...' : 'Share'}
             </Button>
           </div>
         </div>
@@ -895,23 +995,26 @@ ${sideDeck}
                 Reset Zones
               </button>
             </div>
-            <DeckZoneSection
-              title="Main Deck"
-              count={mainCount}
-              filteredCount={mainDeckCards.length}
-              color="text-blue-400"
-              zone="main"
-              cards={mainDeckCards}
-              selectedIndex={selectedCard?.index}
-              onCardClick={handleCardClick}
-              onCardDrop={moveCard}
-              showTier={hasScores}
-            />
 
-            {/* Extra Deck */}
-            <DeckZoneSection
-              title="Extra Deck"
-              count={extraCount}
+            {/* Shareable deck zones container */}
+            <div ref={deckZonesRef} className="space-y-6 bg-yugi-darker p-4 rounded-lg">
+              <DeckZoneSection
+                title="Main Deck"
+                count={mainCount}
+                filteredCount={mainDeckCards.length}
+                color="text-blue-400"
+                zone="main"
+                cards={mainDeckCards}
+                selectedIndex={selectedCard?.index}
+                onCardClick={handleCardClick}
+                onCardDrop={moveCard}
+                showTier={hasScores}
+              />
+
+              {/* Extra Deck */}
+              <DeckZoneSection
+                title="Extra Deck"
+                count={extraCount}
               filteredCount={extraDeckCards.length}
               color="text-purple-400"
               zone="extra"
@@ -922,22 +1025,23 @@ ${sideDeck}
               showTier={hasScores}
             />
 
-            {/* Side Deck */}
-            <DeckZoneSection
-              title="Side Deck"
-              count={sideCount}
-              filteredCount={sideDeckCards.length}
-              color="text-orange-400"
-              zone="side"
-              cards={sideDeckCards}
-              selectedIndex={selectedCard?.index}
-              onCardClick={handleCardClick}
-              onCardDrop={moveCard}
-              emptyMessage="Drag cards here or click to move"
-              showTier={hasScores}
-            />
+              {/* Side Deck */}
+              <DeckZoneSection
+                title="Side Deck"
+                count={sideCount}
+                filteredCount={sideDeckCards.length}
+                color="text-orange-400"
+                zone="side"
+                cards={sideDeckCards}
+                selectedIndex={selectedCard?.index}
+                onCardClick={handleCardClick}
+                onCardDrop={moveCard}
+                emptyMessage="Drag cards here or click to move"
+                showTier={hasScores}
+              />
+            </div>
 
-            {/* Unused Pool */}
+            {/* Unused Pool - outside shareable area */}
             <DeckZoneSection
               title="Unused Pool"
               count={poolCount}
