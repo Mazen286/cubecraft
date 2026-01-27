@@ -80,11 +80,14 @@ export interface UseCardFiltersReturn {
 export function useCardFilters(options: UseCardFiltersOptions = {}): UseCardFiltersReturn {
   const { gameConfig } = useGameConfig();
   const {
-    includePickSort = false,
-    includeScoreSort = true,
+    includePickSort: _includePickSort = false,
+    includeScoreSort: _includeScoreSort = true,
     defaultSort = 'name',
     defaultDirection = 'asc',
   } = options;
+  // TODO: Use includePickSort and includeScoreSort to filter sort options
+  void _includePickSort;
+  void _includeScoreSort;
 
   // Filter state
   const [search, setSearch] = useState('');

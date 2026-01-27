@@ -97,15 +97,23 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
   // Convert players to AuctionDraftPlayer format
   const auctionPlayers = useMemo((): AuctionDraftPlayer[] => {
     return players.map(p => ({
-      ...p,
+      id: p.id,
+      sessionId: p.session_id,
+      userId: p.user_id,
+      name: p.name,
+      seatPosition: p.seat_position,
+      isHost: p.is_host,
+      isConnected: true, // Assume connected for auction draft
+      isBot: p.is_bot,
+      draftedCards: [], // Will be populated from picks
+      currentPack: [], // Not used in auction draft
       biddingPoints: p.bidding_points ?? 100,
       cardsAcquiredThisGrid: p.cards_acquired_this_grid ?? 0,
-      isBot: p.is_bot,
     }));
   }, [players]);
 
   const currentAuctionPlayer = useMemo(() => {
-    return auctionPlayers.find(p => p.user_id === userId) || null;
+    return auctionPlayers.find(p => p.userId === userId) || null;
   }, [auctionPlayers, userId]);
 
   // Grid state

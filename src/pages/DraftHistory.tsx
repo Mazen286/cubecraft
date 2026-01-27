@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { draftService } from '../services/draftService';
-import { Clock, Calendar, Users, Layers, ChevronRight } from 'lucide-react';
+import { Clock, Users, Layers, ChevronRight } from 'lucide-react';
 
 interface DraftHistoryItem {
   sessionId: string;

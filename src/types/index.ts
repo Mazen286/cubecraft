@@ -135,10 +135,12 @@ export interface DraftSession {
 export interface DraftPlayer {
   id: string;
   sessionId: string;
+  userId: string;
   name: string;
   seatPosition: number;
   isHost: boolean;
   isConnected: boolean;
+  isBot: boolean;
   draftedCards: YuGiOhCard[];
   currentPack: YuGiOhCard[];
 }
@@ -151,8 +153,6 @@ export interface AuctionDraftPlayer extends DraftPlayer {
   biddingPoints: number;
   /** Cards acquired in current grid (max 10 per grid) */
   cardsAcquiredThisGrid: number;
-  /** Whether this player is a bot */
-  isBot: boolean;
 }
 
 /**
