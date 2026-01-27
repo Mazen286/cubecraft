@@ -279,8 +279,8 @@ export function useCardFilters(options: UseCardFiltersOptions = {}): UseCardFilt
 
       let comparison = 0;
 
-      if (sortBy === 'pick') {
-        // Pick order - preserve original order (no sort needed, handled externally)
+      if (sortBy === 'none' || sortBy === 'pick') {
+        // No sort / pick order - preserve original order
         comparison = 0;
       } else if (sortBy === 'score') {
         comparison = (b.score ?? 0) - (a.score ?? 0);
@@ -388,7 +388,10 @@ export function useCardFilters(options: UseCardFiltersOptions = {}): UseCardFilt
 
       let comparison = 0;
 
-      if (sortBy === 'pick') {
+      if (sortBy === 'none') {
+        // No sort - preserve original order
+        comparison = 0;
+      } else if (sortBy === 'pick') {
         comparison = a.index - b.index;
       } else if (sortBy === 'score') {
         comparison = (b.card.score ?? 0) - (a.card.score ?? 0);

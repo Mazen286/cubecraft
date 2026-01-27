@@ -84,11 +84,11 @@ export function AuctionDraft() {
     defaultDirection: 'desc',
   });
 
-  // Card filters for grid sorting
+  // Card filters for grid sorting (default to no sort - preserves random grid order)
   const gridFilters = useCardFilters({
     includePickSort: false,
     includeScoreSort: true,
-    defaultSort: 'score',
+    defaultSort: 'none',
     defaultDirection: 'desc',
   });
 
@@ -133,6 +133,28 @@ export function AuctionDraft() {
   const availableCards = useMemo(() => {
     return sortedGridCards.filter(card => remainingCardIds.includes(card.id));
   }, [sortedGridCards, remainingCardIds]);
+
+  // Handler for selecting a card (moved up to avoid temporal dead zone in useEffect dependency)
+  const handleSelectCard = useCallback(async (cardId: number) => {
+    if (isActionPending) return;
+    setIsActionPending(true);
+    setPreviewCard(null); // Close preview sheet
+    try {
+      await selectCard(cardId);
+      // Show success toast for Open mode (card is awarded immediately)
+      if (isOpenMode) {
+        const card = gridCards.find(c => c.id === cardId);
+        if (card) {
+          showToast(`Added "${card.name}" to your collection!`, 'success');
+        }
+      }
+    } catch (err) {
+      console.error('[AuctionDraft] Select failed:', err);
+      showToast(err instanceof Error ? err.message : 'Failed to select card', 'error');
+    } finally {
+      setIsActionPending(false);
+    }
+  }, [isActionPending, selectCard, isOpenMode, gridCards, showToast]);
 
   // Keyboard navigation handlers
   const handleKeyboardNavigation = useCallback((e: KeyboardEvent) => {
@@ -263,6 +285,14 @@ export function AuctionDraft() {
     }
   }, [auctionState?.phase]);
 
+  // Track if we've already triggered auto-pick for current selection round
+  const autoPickTriggeredRef = useRef(false);
+
+  // Reset auto-pick flag when selection round changes
+  useEffect(() => {
+    autoPickTriggeredRef.current = false;
+  }, [session?.current_grid, session?.current_selector_seat]);
+
   // Auto-select previewed card when time runs out (or random if none previewed)
   useEffect(() => {
     if (
@@ -270,8 +300,12 @@ export function AuctionDraft() {
       auctionState?.phase === 'selecting' &&
       selectionTimeRemaining === 0 &&
       !isActionPending &&
-      remainingCardIds.length > 0
+      remainingCardIds.length > 0 &&
+      !autoPickTriggeredRef.current
     ) {
+      // Mark as triggered to prevent double-firing
+      autoPickTriggeredRef.current = true;
+
       // Select the previewed card, or pick a random remaining card
       const cardToSelect = previewCard && remainingCardIds.includes(previewCard.id)
         ? previewCard.id
@@ -280,7 +314,7 @@ export function AuctionDraft() {
       setPreviewCard(null);
       handleSelectCard(cardToSelect);
     }
-  }, [selectionTimeRemaining, isSelector, auctionState?.phase, previewCard, remainingCardIds, isActionPending]);
+  }, [selectionTimeRemaining, isSelector, auctionState?.phase, previewCard, remainingCardIds, isActionPending, handleSelectCard]);
 
   // Drafted cards stats
   const myCardsStats = useMemo(() => {
@@ -362,27 +396,6 @@ export function AuctionDraft() {
   };
 
   // Action handlers with loading state
-  const handleSelectCard = async (cardId: number) => {
-    if (isActionPending) return;
-    setIsActionPending(true);
-    setPreviewCard(null); // Close preview sheet
-    try {
-      await selectCard(cardId);
-      // Show success toast for Open mode (card is awarded immediately)
-      if (isOpenMode) {
-        const card = gridCards.find(c => c.id === cardId);
-        if (card) {
-          showToast(`Added "${card.name}" to your collection!`, 'success');
-        }
-      }
-    } catch (err) {
-      console.error('[AuctionDraft] Select failed:', err);
-      showToast(err instanceof Error ? err.message : 'Failed to select card', 'error');
-    } finally {
-      setIsActionPending(false);
-    }
-  };
-
   const handlePlaceBid = async (amount: number) => {
     if (isActionPending) return;
     setIsActionPending(true);

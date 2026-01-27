@@ -102,6 +102,7 @@ export function CardFilterBar({
   // Build sort options (avoid duplicates)
   const hasScoreInConfig = gameConfig.sortOptions?.some(o => o.id === 'score');
   const sortOptions = [
+    { id: 'none', label: 'None' },
     ...(includePickSort ? [{ id: 'pick', label: 'Pick Order' }] : []),
     ...(gameConfig.sortOptions || []),
     ...(includeScoreSort && !hasScoreInConfig ? [{ id: 'score', label: 'Score' }] : []),

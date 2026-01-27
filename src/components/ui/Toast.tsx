@@ -11,7 +11,7 @@ interface ToastProps {
   onClose: () => void;
 }
 
-export function Toast({ message, type = 'info', duration = 5000, onClose }: ToastProps) {
+export function Toast({ message, type = 'info', duration = 3000, onClose }: ToastProps) {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function Toast({ message, type = 'info', duration = 5000, onClose }: Toas
       )}
     >
       {icons[type]}
-      <span className="text-white text-sm font-medium max-w-md">{message}</span>
+      <span className="text-white text-sm font-medium max-w-xs truncate">{message}</span>
       <button
         onClick={() => {
           setIsVisible(false);
