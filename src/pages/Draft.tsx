@@ -950,28 +950,35 @@ export function Draft() {
         </div>
 
         {/* Draft Settings Info Bar */}
-        <div className="glass-card px-3 lg:px-4 py-2 mb-4 flex flex-wrap items-center justify-between gap-2 text-xs lg:text-sm">
-          <div className="flex flex-wrap items-center gap-3 lg:gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400">Target:</span>
-              <span className="text-white font-medium">{session?.cards_per_player || 60} cards</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400">Pack Size:</span>
+        <div className="glass-card px-3 lg:px-4 py-2 mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs lg:text-sm">
+          {/* Stats row - use compact format on mobile */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 lg:gap-6">
+            <span className="whitespace-nowrap">
+              <span className="text-gray-400 hidden sm:inline">Target: </span>
+              <span className="text-white font-medium">{session?.cards_per_player || 60}</span>
+              <span className="text-gray-400 sm:hidden"> cards</span>
+              <span className="text-gray-400 hidden sm:inline"> cards</span>
+            </span>
+            <span className="whitespace-nowrap">
+              <span className="text-gray-400 hidden sm:inline">Pack: </span>
               <span className="text-white font-medium">{packSize}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400">Picks/Pack:</span>
+              <span className="text-gray-400 sm:hidden">/pk</span>
+            </span>
+            <span className="whitespace-nowrap">
+              <span className="text-gray-400 hidden sm:inline">Picks: </span>
               <span className="text-white font-medium">{picksPerPack}</span>
-            </div>
+              <span className="text-gray-400 sm:hidden"> picks</span>
+            </span>
             {(session?.burned_per_pack || 0) > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400">Burned/Pack:</span>
+              <span className="whitespace-nowrap">
+                <span className="text-gray-400 hidden sm:inline">Burn: </span>
                 <span className="text-red-400 font-medium">{session?.burned_per_pack}</span>
-              </div>
+                <span className="text-gray-400 sm:hidden text-red-400"> burn</span>
+              </span>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          {/* Controls row */}
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Keyboard shortcuts hint */}
             <button
               onClick={() => setShowShortcuts(prev => !prev)}
@@ -982,39 +989,40 @@ export function Draft() {
               <span className="text-xs">Shortcuts</span>
             </button>
             {/* Auto-select toggle */}
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={autoSelect}
                 onChange={(e) => setAutoSelect(e.target.checked)}
                 className="w-4 h-4 accent-gold-400"
               />
-              <span className="text-gray-300">Auto-pick</span>
+              <span className="text-gray-300 text-xs sm:text-sm">Auto</span>
             </label>
             {/* Host pause button */}
             {isHost && !session?.paused && resumeCountdown === null && session?.status === 'in_progress' && (
               <button
                 onClick={handlePauseClick}
                 disabled={isPausing}
-                className="flex items-center gap-1.5 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-600/50 text-white rounded text-sm font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-1 px-2 sm:px-4 py-1.5 sm:py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-600/50 text-white rounded text-xs sm:text-sm font-semibold transition-colors shadow-sm whitespace-nowrap"
               >
-                <Pause className="w-4 h-4" />
-                {isPausing ? 'Pausing...' : 'Pause'}
+                <Pause className="w-3 h-3 sm:w-4 sm:h-4" />
+                {isPausing ? '...' : 'Pause'}
               </button>
             )}
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400">Players:</span>
+            <span className="whitespace-nowrap">
               <span className="text-white font-medium">{players.length}</span>
-            </div>
-            {/* Pass order indicator */}
+              <span className="text-gray-400 hidden sm:inline"> Players</span>
+              <span className="text-gray-400 sm:hidden">P</span>
+            </span>
+            {/* Pass order indicator - compact on mobile */}
             {passOrder.fromPlayer && passOrder.toPlayer && (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="hidden sm:flex items-center gap-1.5 text-sm whitespace-nowrap">
                 <span className="text-gray-500">|</span>
-                <span className="text-gray-400">{passOrder.fromPlayer}</span>
-                <ArrowRight className="w-4 h-4 text-yugi-accent" />
+                <span className="text-gray-400 truncate max-w-[60px]" title={passOrder.fromPlayer}>{passOrder.fromPlayer}</span>
+                <ArrowRight className="w-3 h-3 text-yugi-accent flex-shrink-0" />
                 <span className="text-yugi-accent font-medium">You</span>
-                <ArrowRight className="w-4 h-4 text-yugi-accent" />
-                <span className="text-gray-400">{passOrder.toPlayer}</span>
+                <ArrowRight className="w-3 h-3 text-yugi-accent flex-shrink-0" />
+                <span className="text-gray-400 truncate max-w-[60px]" title={passOrder.toPlayer}>{passOrder.toPlayer}</span>
               </div>
             )}
           </div>
