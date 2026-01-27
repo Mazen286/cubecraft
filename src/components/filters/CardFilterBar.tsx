@@ -1,22 +1,24 @@
 import { useState } from 'react';
 import { Search, SortAsc, SortDesc, X, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useGameConfig } from '../../context/GameContext';
-import type { UseCardFiltersReturn, Tier, TIER_OPTIONS } from '../../hooks/useCardFilters';
+import type { UseCardFiltersReturn, Tier } from '../../hooks/useCardFilters';
 import { cn } from '../../lib/utils';
 
 /**
- * Tier colors for filter pills
+ * Tier colors for filter pills (matches utils.ts TIER_COLORS)
+ * S: 95+, A: 90-94, B: 80-89, C: 70-79, D: 60-69, E: 50-59, F: <50
  */
 const TIER_COLORS: Record<Tier, string> = {
-  S: 'bg-red-600 hover:bg-red-500 text-white',
-  A: 'bg-orange-500 hover:bg-orange-400 text-white',
-  B: 'bg-yellow-500 hover:bg-yellow-400 text-black',
-  C: 'bg-green-500 hover:bg-green-400 text-white',
-  E: 'bg-blue-500 hover:bg-blue-400 text-white',
+  S: 'bg-amber-500 hover:bg-amber-400 text-black',
+  A: 'bg-red-500 hover:bg-red-400 text-white',
+  B: 'bg-orange-500 hover:bg-orange-400 text-white',
+  C: 'bg-yellow-500 hover:bg-yellow-400 text-black',
+  D: 'bg-lime-500 hover:bg-lime-400 text-black',
+  E: 'bg-green-500 hover:bg-green-400 text-white',
   F: 'bg-gray-500 hover:bg-gray-400 text-white',
 };
 
-const TIER_OPTIONS: Tier[] = ['S', 'A', 'B', 'C', 'E', 'F'];
+const TIER_OPTIONS: Tier[] = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 
 /**
  * Props for CardFilterBar
@@ -95,7 +97,6 @@ export function CardFilterBar({
     clearAllFilters,
     clearAdvancedFilters,
     hasActiveFilters,
-    activeFilterCount,
   } = filters;
 
   // Build sort options (avoid duplicates)

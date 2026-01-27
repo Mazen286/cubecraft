@@ -5,8 +5,9 @@ import { getTierFromScore } from '../lib/utils';
 
 /**
  * Tier options available for filtering
+ * S: 95+, A: 90-94, B: 80-89, C: 70-79, D: 60-69, E: 50-59, F: <50
  */
-export const TIER_OPTIONS = ['S', 'A', 'B', 'C', 'E', 'F'] as const;
+export const TIER_OPTIONS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'] as const;
 export type Tier = typeof TIER_OPTIONS[number];
 
 /**

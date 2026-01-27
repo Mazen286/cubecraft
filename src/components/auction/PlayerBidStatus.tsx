@@ -1,4 +1,4 @@
-import { Coins, Trophy, XCircle, Pointer, Bot } from 'lucide-react';
+import { Coins, Trophy, Pointer, Bot } from 'lucide-react';
 import type { AuctionDraftPlayer } from '../../types';
 import { cn } from '../../lib/utils';
 

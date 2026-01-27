@@ -87,17 +87,20 @@ const TIER_COLORS: Record<string, string> = {
   A: 'bg-red-500 text-white',
   B: 'bg-orange-500 text-white',
   C: 'bg-yellow-500 text-black',
+  D: 'bg-lime-500 text-black',
   E: 'bg-green-500 text-white',
   F: 'bg-gray-500 text-white',
 };
 
 // Get tier letter from score (0-100)
+// S: 95+, A: 90-94, B: 80-89, C: 70-79, D: 60-69, E: 50-59, F: <50
 export function getTierFromScore(score: number | undefined): string {
   if (score === undefined) return 'F';
   if (score >= 95) return 'S';
   if (score >= 90) return 'A';
-  if (score >= 75) return 'B';
-  if (score >= 60) return 'C';
+  if (score >= 80) return 'B';
+  if (score >= 70) return 'C';
+  if (score >= 60) return 'D';
   if (score >= 50) return 'E';
   return 'F';
 }

@@ -11,7 +11,7 @@ import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
 import type { YuGiOhCard as YuGiOhCardType } from '../types';
 import type { Card } from '../types/card';
-import { formatTime } from '../lib/utils';
+import { formatTime, getTierFromScore } from '../lib/utils';
 
 // Helper to convert YuGiOhCard to Card format expected by game config
 function toCardWithAttributes(card: YuGiOhCardType): Card {
@@ -249,9 +249,8 @@ export function Draft() {
       if (card.score !== undefined) {
         totalScore += card.score;
         scoredCards++;
-        // Calculate tier
-        const tier = card.score >= 90 ? 'S' : card.score >= 75 ? 'A' : card.score >= 60 ? 'B' :
-                     card.score >= 40 ? 'C' : card.score >= 20 ? 'E' : 'F';
+        // Calculate tier using shared utility
+        const tier = getTierFromScore(card.score);
         stats.tiers[tier]++;
       }
     });

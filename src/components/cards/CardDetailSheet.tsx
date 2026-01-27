@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { BottomSheet } from '../ui/BottomSheet';
 import { YuGiOhCard } from './YuGiOhCard';
 import { ManaCostWithFaces, OracleText } from './ManaSymbols';
@@ -9,7 +9,6 @@ import type { YuGiOhCard as YuGiOhCardType } from '../../types';
 import type { Card } from '../../types/card';
 import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
 import { ENERGY_COLORS } from '../../config/games/pokemon';
-import type { MTGCardAttributes } from '../../config/games/mtg';
 
 interface CardDetailSheetProps {
   card: YuGiOhCardType | null;
