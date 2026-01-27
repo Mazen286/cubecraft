@@ -950,35 +950,30 @@ export function Draft() {
         </div>
 
         {/* Draft Settings Info Bar */}
-        <div className="glass-card px-3 lg:px-4 py-2 mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs lg:text-sm">
-          {/* Stats row - use compact format on mobile */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 lg:gap-6">
+        <div className="glass-card px-3 lg:px-4 py-2 mb-4 text-xs lg:text-sm">
+          {/* First row: Stats */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 sm:mb-0 sm:inline-flex">
             <span className="whitespace-nowrap">
-              <span className="text-gray-400 hidden sm:inline">Target: </span>
-              <span className="text-white font-medium">{session?.cards_per_player || 60}</span>
-              <span className="text-gray-400 sm:hidden"> cards</span>
-              <span className="text-gray-400 hidden sm:inline"> cards</span>
+              <span className="text-gray-400">Target:</span>{' '}
+              <span className="text-white font-medium">{session?.cards_per_player || 60} cards</span>
             </span>
             <span className="whitespace-nowrap">
-              <span className="text-gray-400 hidden sm:inline">Pack: </span>
+              <span className="text-gray-400">Pack Size:</span>{' '}
               <span className="text-white font-medium">{packSize}</span>
-              <span className="text-gray-400 sm:hidden">/pk</span>
             </span>
             <span className="whitespace-nowrap">
-              <span className="text-gray-400 hidden sm:inline">Picks: </span>
+              <span className="text-gray-400">Picks/Pack:</span>{' '}
               <span className="text-white font-medium">{picksPerPack}</span>
-              <span className="text-gray-400 sm:hidden"> picks</span>
             </span>
             {(session?.burned_per_pack || 0) > 0 && (
               <span className="whitespace-nowrap">
-                <span className="text-gray-400 hidden sm:inline">Burn: </span>
+                <span className="text-gray-400">Burned/Pack:</span>{' '}
                 <span className="text-red-400 font-medium">{session?.burned_per_pack}</span>
-                <span className="text-gray-400 sm:hidden text-red-400"> burn</span>
               </span>
             )}
           </div>
-          {/* Controls row */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          {/* Second row: Controls and pass order */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:float-right sm:-mt-6">
             {/* Keyboard shortcuts hint */}
             <button
               onClick={() => setShowShortcuts(prev => !prev)}
@@ -996,33 +991,32 @@ export function Draft() {
                 onChange={(e) => setAutoSelect(e.target.checked)}
                 className="w-4 h-4 accent-gold-400"
               />
-              <span className="text-gray-300 text-xs sm:text-sm">Auto</span>
+              <span className="text-gray-300">Auto-pick</span>
             </label>
             {/* Host pause button */}
             {isHost && !session?.paused && resumeCountdown === null && session?.status === 'in_progress' && (
               <button
                 onClick={handlePauseClick}
                 disabled={isPausing}
-                className="flex items-center gap-1 px-2 sm:px-4 py-1.5 sm:py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-600/50 text-white rounded text-xs sm:text-sm font-semibold transition-colors shadow-sm whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-600/50 text-white rounded text-sm font-semibold transition-colors shadow-sm whitespace-nowrap"
               >
-                <Pause className="w-3 h-3 sm:w-4 sm:h-4" />
-                {isPausing ? '...' : 'Pause'}
+                <Pause className="w-4 h-4" />
+                {isPausing ? 'Pausing...' : 'Pause'}
               </button>
             )}
             <span className="whitespace-nowrap">
+              <span className="text-gray-400">Players:</span>{' '}
               <span className="text-white font-medium">{players.length}</span>
-              <span className="text-gray-400 hidden sm:inline"> Players</span>
-              <span className="text-gray-400 sm:hidden">P</span>
             </span>
-            {/* Pass order indicator - compact on mobile */}
+            {/* Pass order indicator */}
             {passOrder.fromPlayer && passOrder.toPlayer && (
-              <div className="hidden sm:flex items-center gap-1.5 text-sm whitespace-nowrap">
+              <div className="flex items-center gap-1.5 whitespace-nowrap">
                 <span className="text-gray-500">|</span>
-                <span className="text-gray-400 truncate max-w-[60px]" title={passOrder.fromPlayer}>{passOrder.fromPlayer}</span>
-                <ArrowRight className="w-3 h-3 text-yugi-accent flex-shrink-0" />
+                <span className="text-gray-400">{passOrder.fromPlayer}</span>
+                <ArrowRight className="w-4 h-4 text-yugi-accent flex-shrink-0" />
                 <span className="text-yugi-accent font-medium">You</span>
-                <ArrowRight className="w-3 h-3 text-yugi-accent flex-shrink-0" />
-                <span className="text-gray-400 truncate max-w-[60px]" title={passOrder.toPlayer}>{passOrder.toPlayer}</span>
+                <ArrowRight className="w-4 h-4 text-yugi-accent flex-shrink-0" />
+                <span className="text-gray-400">{passOrder.toPlayer}</span>
               </div>
             )}
           </div>
