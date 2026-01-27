@@ -13,6 +13,8 @@ interface PlayerBidStatusProps {
   isWinning: boolean;
   /** Whether this player is the current selector */
   isSelector?: boolean;
+  /** Maximum cards each player can acquire per grid */
+  maxCardsPerGrid: number;
 }
 
 export function PlayerBidStatus({
@@ -21,13 +23,13 @@ export function PlayerBidStatus({
   hasPassed,
   isWinning,
   isSelector = false,
+  maxCardsPerGrid,
 }: PlayerBidStatusProps) {
   return (
     <div
       className={cn(
         'flex items-center justify-between p-2 rounded-lg transition-colors',
         isCurrentBidder && 'bg-gold-500/20 ring-1 ring-gold-500',
-        hasPassed && 'opacity-50',
         isWinning && !hasPassed && 'bg-green-500/10',
         isSelector && 'bg-purple-500/20 ring-1 ring-purple-500'
       )}
@@ -36,12 +38,11 @@ export function PlayerBidStatus({
         {/* Player indicator */}
         <div className="flex items-center gap-1">
           {player.isBot && (
-            <Bot className={cn('w-3 h-3', hasPassed ? 'text-gray-600' : 'text-gray-500')} />
+            <Bot className="w-3 h-3 text-gray-500" />
           )}
           <span
             className={cn(
               'font-medium truncate max-w-[100px]',
-              hasPassed ? 'text-gray-500 line-through' :
               isCurrentBidder ? 'text-gold-400' : 'text-white'
             )}
           >
@@ -58,7 +59,12 @@ export function PlayerBidStatus({
             Passed
           </span>
         )}
-        {isCurrentBidder && !hasPassed && (
+        {player.cardsAcquiredThisGrid >= maxCardsPerGrid && !hasPassed && (
+          <span className="text-xs text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded">
+            Full
+          </span>
+        )}
+        {isCurrentBidder && !hasPassed && player.cardsAcquiredThisGrid < maxCardsPerGrid && (
           <Pointer className="w-4 h-4 text-gold-400 animate-pulse" />
         )}
         {isSelector && (
@@ -73,10 +79,10 @@ export function PlayerBidStatus({
         <span
           className={cn(
             'text-gray-400',
-            player.cardsAcquiredThisGrid >= 10 && 'text-green-400'
+            player.cardsAcquiredThisGrid >= maxCardsPerGrid && 'text-green-400'
           )}
         >
-          {player.cardsAcquiredThisGrid}/10
+          {player.cardsAcquiredThisGrid}/{maxCardsPerGrid}
         </span>
 
         {/* Bidding points */}

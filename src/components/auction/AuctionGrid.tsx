@@ -12,8 +12,8 @@ interface AuctionGridProps {
   isSelector: boolean;
   /** Card currently being auctioned (highlighted) */
   currentAuctionCardId: number | null;
-  /** Callback when a card is selected for auction */
-  onSelectCard: (cardId: number) => void;
+  /** Callback when a card is clicked (to view details) */
+  onCardClick: (card: YuGiOhCardType) => void;
   /** Whether selection is disabled (e.g., during bidding phase) */
   selectionDisabled?: boolean;
 }
@@ -23,7 +23,7 @@ export function AuctionGrid({
   remainingCardIds,
   isSelector,
   currentAuctionCardId,
-  onSelectCard,
+  onCardClick,
   selectionDisabled = false,
 }: AuctionGridProps) {
   // Create a set for O(1) lookup
@@ -33,9 +33,9 @@ export function AuctionGrid({
   );
 
   const handleCardClick = (card: YuGiOhCardType) => {
-    if (!isSelector || selectionDisabled) return;
+    // Only allow clicking on remaining cards
     if (!remainingSet.has(card.id)) return;
-    onSelectCard(card.id);
+    onCardClick(card);
   };
 
   return (
@@ -44,7 +44,7 @@ export function AuctionGrid({
         {gridCards.map((card) => {
           const isRemaining = remainingSet.has(card.id);
           const isCurrentAuction = card.id === currentAuctionCardId;
-          const isClickable = isSelector && isRemaining && !selectionDisabled;
+          const isClickable = isRemaining; // Any remaining card is clickable to view
 
           return (
             <div
@@ -54,7 +54,6 @@ export function AuctionGrid({
                 !isRemaining && 'opacity-30 grayscale',
                 isCurrentAuction && 'ring-2 ring-gold-400 z-10',
                 isClickable && 'cursor-pointer hover:z-10 hover:ring-2 hover:ring-gold-400/50',
-                !isClickable && isRemaining && 'cursor-default'
               )}
               onClick={() => handleCardClick(card)}
             >

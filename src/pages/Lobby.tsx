@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
+import { useToast } from '../components/ui/Toast';
 import { useDraftSession } from '../hooks/useDraftSession';
 import { draftService, clearLastSession } from '../services/draftService';
 import { cn } from '../lib/utils';
@@ -16,6 +17,10 @@ export function Lobby() {
   const [removingBotId, setRemovingBotId] = useState<string | null>(null);
   const [botError, setBotError] = useState<string | null>(null);
 
+  // Toast notifications
+  const { showToast, ToastContainer } = useToast();
+  const cancelledToastShownRef = useRef(false);
+
   const {
     session,
     players,
@@ -28,7 +33,7 @@ export function Lobby() {
   // Redirect to draft when session starts (use correct route based on mode)
   useEffect(() => {
     if (session?.status === 'in_progress') {
-      if (session.mode === 'auction-grid') {
+      if (session.mode === 'auction-grid' || session.mode === 'open') {
         navigate(`/auction/${sessionId}`);
       } else {
         navigate(`/draft/${sessionId}`);
@@ -38,12 +43,13 @@ export function Lobby() {
 
   // Handle session cancellation
   useEffect(() => {
-    if (session?.status === 'cancelled') {
+    if (session?.status === 'cancelled' && !cancelledToastShownRef.current) {
+      cancelledToastShownRef.current = true;
       clearLastSession();
-      alert('The host has cancelled this draft session.');
+      showToast('The host has cancelled this draft session.', 'info');
       navigate('/');
     }
-  }, [session?.status, navigate]);
+  }, [session?.status, navigate, showToast]);
 
   const handleCopyCode = async () => {
     if (session?.room_code) {
@@ -75,7 +81,7 @@ export function Lobby() {
         navigate('/');
       } catch (err) {
         console.error('Failed to cancel session:', err);
-        alert('Failed to cancel session. Please try again.');
+        showToast('Failed to cancel session. Please try again.', 'error');
         setIsCancelling(false);
       }
     }
@@ -127,6 +133,9 @@ export function Lobby() {
 
   return (
     <Layout>
+      {/* Toast notifications */}
+      <ToastContainer />
+
       <div className="max-w-2xl mx-auto px-4 sm:px-0">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
@@ -281,7 +290,7 @@ export function Lobby() {
               <div>
                 <span className="text-gray-400">Mode:</span>
                 <span className="text-white ml-2 capitalize">
-                  {session.mode === 'auction-grid' ? 'Auction Grid' : session.mode}
+                  {session.mode === 'auction-grid' ? 'Auction Grid' : session.mode === 'open' ? 'Open Draft' : session.mode}
                 </span>
               </div>
               <div>
@@ -299,6 +308,11 @@ export function Lobby() {
                     <span className="text-white ml-2">{session.timer_seconds}s</span>
                   </div>
                 </>
+              ) : session.mode === 'open' ? (
+                <div>
+                  <span className="text-gray-400">Selection Timer:</span>
+                  <span className="text-white ml-2">{session.timer_seconds}s</span>
+                </div>
               ) : (
                 <>
                   <div>

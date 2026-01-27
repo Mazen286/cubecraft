@@ -4,7 +4,7 @@
   "gameId": "mtg",
   "version": "2.0",
   "cardCount": 417,
-  "generatedAt": "2026-01-25T02:44:46.994Z",
+  "generatedAt": "2026-01-27T00:54:48.125Z",
   "cardMap": {
     "1": {
       "id": 1,
@@ -370,16 +370,21 @@
       "id": 16,
       "name": "Archangel Avacyn // Avacyn, the Purifier",
       "type": "Legendary Creature — Angel // Legendary Creature — Angel",
-      "description": "",
-      "imageUrl": "",
+      "description": "Archangel Avacyn\nFlash\nFlying, vigilance\nWhen Archangel Avacyn enters, creatures you control gain indestructible until end of turn.\nWhen a non-Angel creature you control dies, transform Archangel Avacyn at the beginning of the next upkeep.\n\n---\n\nAvacyn, the Purifier\nFlying\nWhen this creature transforms into Avacyn, the Purifier, it deals 3 damage to each other creature and each opponent.",
+      "imageUrl": "https://cards.scryfall.io/normal/front/f/e/fe675f03-cbb5-4177-b7d7-64a30260ee2a.jpg?1736467464",
       "attributes": {
-        "manaCost": "",
+        "manaCost": "{3}{W}{W}",
         "cmc": 5,
-        "colors": [],
+        "colors": [
+          "W",
+          "R"
+        ],
         "colorIdentity": [
           "R",
           "W"
         ],
+        "power": 4,
+        "toughness": 4,
         "rarity": "mythic",
         "setCode": "inr",
         "collectorNumber": "11",
@@ -1399,15 +1404,19 @@
       "id": 61,
       "name": "Delver of Secrets // Insectile Aberration",
       "type": "Creature — Human Wizard // Creature — Human Insect",
-      "description": "",
-      "imageUrl": "",
+      "description": "Delver of Secrets\nAt the beginning of your upkeep, look at the top card of your library. You may reveal that card. If an instant or sorcery card is revealed this way, transform this creature.\n\n---\n\nInsectile Aberration\nFlying",
+      "imageUrl": "https://cards.scryfall.io/normal/front/6/9/6904ea20-e504-47da-95a0-08739fdde260.jpg?1736467707",
       "attributes": {
-        "manaCost": "",
+        "manaCost": "{U}",
         "cmc": 1,
-        "colors": [],
+        "colors": [
+          "U"
+        ],
         "colorIdentity": [
           "U"
         ],
+        "power": 1,
+        "toughness": 1,
         "rarity": "common",
         "setCode": "inr",
         "collectorNumber": "60",
@@ -1539,7 +1548,7 @@
       "id": 67,
       "name": "Brazen Borrower // Petty Theft",
       "type": "Creature — Faerie Rogue // Instant — Adventure",
-      "description": "",
+      "description": "Brazen Borrower\nFlash\nFlying\nThis creature can block only creatures with flying.\n\n---\n\nPetty Theft\nReturn target nonland permanent an opponent controls to its owner's hand.",
       "imageUrl": "https://cards.scryfall.io/normal/front/c/2/c2089ec9-0665-448f-bfe9-d181de127814.jpg?1616182088",
       "attributes": {
         "manaCost": "{1}{U}{U} // {1}{U}",
@@ -1899,7 +1908,7 @@
       "id": 82,
       "name": "Fae of Wishes // Granted",
       "type": "Creature — Faerie Wizard // Sorcery — Adventure",
-      "description": "",
+      "description": "Fae of Wishes\nFlying\n{1}{U}, Discard two cards: Return this creature to its owner's hand.\n\n---\n\nGranted\nYou may reveal a noncreature card you own from outside the game and put it into your hand.",
       "imageUrl": "https://cards.scryfall.io/normal/front/e/3/e3435fd6-8f51-4d99-a278-4ddb088acfe1.jpg?1572489870",
       "attributes": {
         "manaCost": "{1}{U} // {3}{U}",
@@ -2678,15 +2687,19 @@
       "id": 117,
       "name": "Jace, Vryn's Prodigy // Jace, Telepath Unbound",
       "type": "Legendary Creature — Human Wizard // Legendary Planeswalker — Jace",
-      "description": "",
-      "imageUrl": "",
+      "description": "Jace, Vryn's Prodigy\n{T}: Draw a card, then discard a card. If there are five or more cards in your graveyard, exile Jace, then return him to the battlefield transformed under his owner's control.\n\n---\n\nJace, Telepath Unbound\n+1: Up to one target creature gets -2/-0 until your next turn.\n−3: You may cast target instant or sorcery card from your graveyard this turn. If that spell would be put into your graveyard, exile it instead.\n−9: You get an emblem with \"Whenever you cast a spell, target opponent mills five cards.\"",
+      "imageUrl": "https://cards.scryfall.io/normal/front/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1651492800",
       "attributes": {
-        "manaCost": "",
+        "manaCost": "{1}{U}",
         "cmc": 2,
-        "colors": [],
+        "colors": [
+          "U"
+        ],
         "colorIdentity": [
           "U"
         ],
+        "power": 0,
+        "toughness": 2,
         "rarity": "mythic",
         "setCode": "ori",
         "collectorNumber": "60",
@@ -3811,7 +3824,7 @@
       "id": 166,
       "name": "Murderous Rider // Swift End",
       "type": "Creature — Zombie Knight // Instant — Adventure",
-      "description": "",
+      "description": "Murderous Rider\nLifelink\nWhen this creature dies, put it on the bottom of its owner's library.\n\n---\n\nSwift End\nDestroy target creature or planeswalker. You lose 2 life. (Then exile this card. You may cast the creature later from exile.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/8/0/80fffad3-2486-4350-8dff-54a215ebfc28.jpg?1682209129",
       "attributes": {
         "manaCost": "{1}{B}{B} // {1}{B}{B}",
@@ -5499,7 +5512,7 @@
       "id": 240,
       "name": "Bonecrusher Giant // Stomp",
       "type": "Creature — Giant // Instant — Adventure",
-      "description": "",
+      "description": "Bonecrusher Giant\nWhenever this creature becomes the target of a spell, this creature deals 2 damage to that spell's controller.\n\n---\n\nStomp\nDamage can't be prevented this turn. Stomp deals 2 damage to any target.",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/5/b5b71cd2-de35-451f-b16e-2e3936169407.jpg?1674141884",
       "attributes": {
         "manaCost": "{2}{R} // {1}{R}",
@@ -6031,15 +6044,19 @@
       "id": 262,
       "name": "Nissa, Vastwood Seer // Nissa, Sage Animist",
       "type": "Legendary Creature — Elf Scout // Legendary Planeswalker — Nissa",
-      "description": "",
-      "imageUrl": "",
+      "description": "Nissa, Vastwood Seer\nWhen Nissa enters, you may search your library for a basic Forest card, reveal it, put it into your hand, then shuffle.\nWhenever a land you control enters, if you control seven or more lands, exile Nissa, then return her to the battlefield transformed under her owner's control.\n\n---\n\nNissa, Sage Animist\n+1: Reveal the top card of your library. If it's a land card, put it onto the battlefield. Otherwise, put it into your hand.\n−2: Create Ashaya, the Awoken World, a legendary 4/4 green Elemental creature token.\n−7: Untap up to six target lands. They become 6/6 Elemental creatures. They're still lands.",
+      "imageUrl": "https://cards.scryfall.io/normal/front/f/f/ff0063da-ab6b-499d-8e87-8b34d46f0372.jpg?1562209457",
       "attributes": {
-        "manaCost": "",
+        "manaCost": "{2}{G}",
         "cmc": 3,
-        "colors": [],
+        "colors": [
+          "G"
+        ],
         "colorIdentity": [
           "G"
         ],
+        "power": 2,
+        "toughness": 2,
         "rarity": "mythic",
         "setCode": "ori",
         "collectorNumber": "189",
@@ -7432,16 +7449,21 @@
       "id": 321,
       "name": "Huntmaster of the Fells // Ravager of the Fells",
       "type": "Creature — Human Werewolf // Creature — Werewolf",
-      "description": "",
-      "imageUrl": "",
+      "description": "Huntmaster of the Fells\nWhenever this creature enters or transforms into Huntmaster of the Fells, create a 2/2 green Wolf creature token and you gain 2 life.\nAt the beginning of each upkeep, if no spells were cast last turn, transform this creature.\n\n---\n\nRavager of the Fells\nTrample\nWhenever this creature transforms into Ravager of the Fells, it deals 2 damage to target opponent or planeswalker and 2 damage to up to one target creature that player or that planeswalker's controller controls.\nAt the beginning of each upkeep, if a player cast two or more spells last turn, transform this creature.",
+      "imageUrl": "https://cards.scryfall.io/normal/front/b/3/b3819a11-2f3e-4304-a1b0-6abf893c89c5.jpg?1738800669",
       "attributes": {
-        "manaCost": "",
+        "manaCost": "{2}{R}{G}",
         "cmc": 4,
-        "colors": [],
+        "colors": [
+          "G",
+          "R"
+        ],
         "colorIdentity": [
           "G",
           "R"
         ],
+        "power": 2,
+        "toughness": 2,
         "rarity": "rare",
         "setCode": "inr",
         "collectorNumber": "241",

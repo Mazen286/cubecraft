@@ -22,7 +22,7 @@ vi.mock('../../lib/supabase', () => ({
 
 // Mock fetch for loading cubes
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+(globalThis as typeof globalThis & { fetch: typeof fetch }).fetch = mockFetch;
 
 // Sample raw cube data (legacy format)
 const legacyCubeData = {

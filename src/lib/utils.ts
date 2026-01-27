@@ -17,10 +17,12 @@ export function isExtraDeckCard(type: string): boolean {
   const extraDeckTypes = [
     'Fusion Monster',
     'Synchro Monster',
+    'Synchro Tuner Monster',
     'XYZ Monster',
     'Link Monster',
     'Pendulum Effect Fusion Monster',
     'Synchro Pendulum Effect Monster',
+    'Synchro Tuner Pendulum Effect Monster',
     'XYZ Pendulum Effect Monster',
   ];
   return extraDeckTypes.some((t) => type.includes(t));

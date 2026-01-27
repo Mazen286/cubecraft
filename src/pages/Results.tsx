@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
@@ -15,6 +15,7 @@ import { statisticsService } from '../services/statisticsService';
 import { draftService } from '../services/draftService';
 import { useGameConfig } from '../context/GameContext';
 import type { Card } from '../types/card';
+import type { DraftPlayerRow } from '../lib/database.types';
 
 // Type alias for zone IDs
 type DeckZone = string;
@@ -50,10 +51,69 @@ interface DeckCard {
 export function Results() {
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
+  const [searchParams] = useSearchParams();
   const { gameConfig } = useGameConfig();
 
-  // Fetch session data and drafted card IDs
-  const { draftedCardIds, currentPlayer, isLoading: sessionLoading, error: sessionError } = useDraftSession(sessionId);
+  // Check if viewing a specific player's results (from query param)
+  const viewPlayerId = searchParams.get('player');
+
+  // Fetch session data and drafted card IDs (for current user)
+  const { draftedCardIds: currentUserCardIds, currentPlayer: currentUserPlayer, isLoading: sessionLoading, error: sessionError, players } = useDraftSession(sessionId);
+
+  // State for viewing another player's results
+  const [viewedPlayer, setViewedPlayer] = useState<DraftPlayerRow | null>(null);
+  const [viewedPlayerCardIds, setViewedPlayerCardIds] = useState<number[]>([]);
+  const [isLoadingViewedPlayer, setIsLoadingViewedPlayer] = useState(false);
+
+  // Load specific player's data when viewPlayerId changes
+  useEffect(() => {
+    if (!sessionId || !viewPlayerId) {
+      setViewedPlayer(null);
+      setViewedPlayerCardIds([]);
+      return;
+    }
+
+    // If viewing the current user, don't need to fetch separately
+    if (viewPlayerId === currentUserPlayer?.id) {
+      setViewedPlayer(null);
+      setViewedPlayerCardIds([]);
+      return;
+    }
+
+    setIsLoadingViewedPlayer(true);
+
+    // Find the player in the players list or fetch from DB
+    const playerFromList = players.find(p => p.id === viewPlayerId);
+
+    const loadPlayerData = async () => {
+      try {
+        // Get picks for this player
+        const picks = await draftService.getPlayerPicks(sessionId, viewPlayerId);
+        setViewedPlayerCardIds(picks);
+
+        // Set player info if we have it
+        if (playerFromList) {
+          setViewedPlayer(playerFromList);
+        } else {
+          // Fetch player info from database
+          const allPlayers = await draftService.getPlayers(sessionId);
+          const player = allPlayers.find(p => p.id === viewPlayerId);
+          setViewedPlayer(player || null);
+        }
+      } catch (err) {
+        console.error('Failed to load player data:', err);
+      } finally {
+        setIsLoadingViewedPlayer(false);
+      }
+    };
+
+    loadPlayerData();
+  }, [sessionId, viewPlayerId, currentUserPlayer?.id, players]);
+
+  // Use viewed player's data if viewing someone else, otherwise current user's
+  const draftedCardIds = viewPlayerId && viewPlayerId !== currentUserPlayer?.id ? viewedPlayerCardIds : currentUserCardIds;
+  const currentPlayer = viewPlayerId && viewPlayerId !== currentUserPlayer?.id ? viewedPlayer : currentUserPlayer;
+  const isViewingOtherPlayer = viewPlayerId && viewPlayerId !== currentUserPlayer?.id;
 
   // Get unique card IDs for fetching card data
   const uniqueCardIds = useMemo(() => [...new Set(draftedCardIds)], [draftedCardIds]);
@@ -69,7 +129,7 @@ export function Results() {
       .filter((item): item is { card: YuGiOhCardType; index: number } => item.card !== undefined);
   }, [draftedCardIds, uniqueCards]);
 
-  const isLoading = sessionLoading || cardsLoading;
+  const isLoading = sessionLoading || cardsLoading || isLoadingViewedPlayer;
 
   // Deck builder state - track which zone each card is in
   const [deckAssignments, setDeckAssignments] = useState<Map<number, string>>(new Map());
@@ -410,7 +470,9 @@ ${sideDeck}
         <div className="flex items-center justify-center h-[calc(100vh-200px)]">
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-gold-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-300">Loading draft results...</p>
+            <p className="text-gray-300">
+              {isLoadingViewedPlayer ? 'Loading player results...' : 'Loading draft results...'}
+            </p>
           </div>
         </div>
       </Layout>
@@ -435,9 +497,24 @@ ${sideDeck}
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Deck Builder</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              {isViewingOtherPlayer && currentPlayer ? (
+                <>
+                  <span className={currentPlayer.is_bot ? 'text-purple-400' : 'text-gold-400'}>
+                    {currentPlayer.name}
+                  </span>
+                  <span className="text-white">'s Deck</span>
+                  {currentPlayer.is_bot && (
+                    <span className="ml-2 text-sm font-normal text-purple-400">(Bot)</span>
+                  )}
+                </>
+              ) : (
+                'Deck Builder'
+              )}
+            </h1>
             <p className="text-gray-300">
-              {allDraftedCards.length} cards drafted • Drag cards or click to move between zones
+              {allDraftedCards.length} cards drafted
+              {!isViewingOtherPlayer && ' • Drag cards or click to move between zones'}
             </p>
           </div>
           <div className="flex gap-3">

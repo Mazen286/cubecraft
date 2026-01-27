@@ -1,7 +1,8 @@
 import { useState, useMemo, memo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
+import { BottomSheet } from '../components/ui/BottomSheet';
 import { CubeViewer } from '../components/cube/CubeViewer';
 import type { DraftSettings, DraftMode } from '../types';
 import { cn } from '../lib/utils';
@@ -9,7 +10,7 @@ import { draftService, getPlayerName, setPlayerName } from '../services/draftSer
 import { auctionService } from '../services/auctionService';
 import { cubeService } from '../services/cubeService';
 import { useGameConfig } from '../context/GameContext';
-import { Eye } from 'lucide-react';
+import { Eye, HelpCircle } from 'lucide-react';
 
 const DEFAULT_SETTINGS: DraftSettings = {
   mode: 'pack',
@@ -17,9 +18,24 @@ const DEFAULT_SETTINGS: DraftSettings = {
   botCount: 0, // No bots for multiplayer by default
   cardsPerPlayer: 60,
   packSize: 15,
-  burnedPerPack: 0, // Cards discarded per pack (not selected)
+  burnedPerPack: 5, // Cards discarded per pack (not selected)
   timerSeconds: 120, // 2 minute timer
 };
+
+// Shared timer options for auction mode (both Bid Timer and Selection Timer)
+const AUCTION_TIMER_OPTIONS = [10, 15, 20, 30, 45, 60, 90, 120, 180, 300];
+
+// Timer options for pack draft mode
+const PACK_TIMER_OPTIONS = [30, 45, 60, 90, 120, 180, 300];
+
+// Format timer display - show minutes for values >= 60
+function formatTimerOption(seconds: number): string {
+  if (seconds < 60) return `${seconds} Seconds`;
+  if (seconds === 60) return '1 Minute';
+  if (seconds < 120) return `${seconds} Seconds`;
+  const mins = seconds / 60;
+  return `${mins} Minutes`;
+}
 
 export function DraftSetup() {
   const navigate = useNavigate();
@@ -30,6 +46,7 @@ export function DraftSetup() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [viewingCube, setViewingCube] = useState<{ id: string; name: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [infoSheet, setInfoSheet] = useState<'pack' | 'auction' | 'open' | null>(null);
 
   // Update player name in localStorage when it changes
   const handlePlayerNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,7 +88,41 @@ export function DraftSetup() {
     key: K,
     value: DraftSettings[K]
   ) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
+    setSettings((prev) => {
+      // When switching to auction-grid mode, apply auction-specific defaults
+      if (key === 'mode' && value === 'auction-grid') {
+        return {
+          ...prev,
+          [key]: value,
+          packSize: 5, // Cards Acquired per Grid
+          burnedPerPack: 5, // Burned per Grid
+          timerSeconds: 30, // Selection Timer
+          auctionBidTimerSeconds: 20, // Bid Timer
+          auctionBiddingPoints: 100, // Bidding Points
+        };
+      }
+      // When switching to open mode, apply grid-specific defaults (no bidding)
+      if (key === 'mode' && value === 'open') {
+        return {
+          ...prev,
+          [key]: value,
+          packSize: 10, // Cards Acquired per Grid
+          burnedPerPack: 10, // Burned per Grid
+          timerSeconds: 30, // Selection Timer
+        };
+      }
+      // When switching to pack mode, restore pack-specific defaults
+      if (key === 'mode' && value === 'pack') {
+        return {
+          ...prev,
+          [key]: value,
+          packSize: 15,
+          burnedPerPack: 5,
+          timerSeconds: 120,
+        };
+      }
+      return { ...prev, [key]: value };
+    });
   }, []);
 
   const handleStartDraft = useCallback(async () => {
@@ -86,20 +137,23 @@ export function DraftSetup() {
 
       // Calculate cards needed based on mode
       // For auction: gridCount = ceil(cardsPerPlayer / cardsAcquiredPerGrid)
+      // Check if this is a grid-based mode (auction-grid or open)
+      const isGridMode = settings.mode === 'auction-grid' || settings.mode === 'open';
+
       // cardsPerGrid = (totalPlayers * cardsAcquiredPerGrid) + burnedPerGrid
       const cardsAcquiredPerGrid = settings.packSize;
       const burnedPerGrid = settings.burnedPerPack;
       const gridCount = Math.ceil(settings.cardsPerPlayer / cardsAcquiredPerGrid);
       const cardsPerGrid = (totalPlayers * cardsAcquiredPerGrid) + burnedPerGrid;
-      const cardsNeeded = settings.mode === 'auction-grid'
+      const cardsNeeded = isGridMode
         ? cardsPerGrid * gridCount
         : settings.cardsPerPlayer;
 
       // Validate cube has enough cards (this also loads and caches the cube)
-      // For auction mode, cardsNeeded is already the total (not per-player), so pass 1 as playerCount
+      // For grid modes, cardsNeeded is already the total (not per-player), so pass 1 as playerCount
       const validation = await cubeService.validateCubeForDraft(
         selectedCube,
-        settings.mode === 'auction-grid' ? 1 : totalPlayers,
+        isGridMode ? 1 : totalPlayers,
         cardsNeeded
       );
 
@@ -114,7 +168,7 @@ export function DraftSetup() {
 
 
       // Use appropriate service based on mode
-      if (settings.mode === 'auction-grid') {
+      if (isGridMode) {
         const result = await auctionService.createSession(settings, selectedCube, cubeCardIds);
 
         // Navigate to lobby for multiplayer, or directly to auction for solo
@@ -179,25 +233,27 @@ export function DraftSetup() {
 
         {/* Draft Mode */}
         <Section title="Draft Mode">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
             <ModeOption
               title="Pack Draft"
               description="Traditional format. Pick one card, pass the rest."
               selected={settings.mode === 'pack'}
               onClick={() => updateSetting('mode', 'pack')}
+              onInfoClick={() => setInfoSheet('pack')}
             />
             <ModeOption
               title="Auction Grid"
               description="Bid on cards using 100 points across 6 grids."
               selected={settings.mode === 'auction-grid'}
               onClick={() => updateSetting('mode', 'auction-grid' as DraftMode)}
+              onInfoClick={() => setInfoSheet('auction')}
             />
             <ModeOption
               title="Open Draft"
               description="All cards visible. Take turns picking."
               selected={settings.mode === 'open'}
-              onClick={() => updateSetting('mode', 'open')}
-              disabled
+              onClick={() => updateSetting('mode', 'open' as DraftMode)}
+              onInfoClick={() => setInfoSheet('open')}
             />
           </div>
         </Section>
@@ -286,15 +342,15 @@ export function DraftSetup() {
                 </SettingRow>
                 <SettingRow label="Bid Timer">
                   <select
-                    value={settings.auctionBidTimerSeconds ?? 15}
+                    value={settings.auctionBidTimerSeconds ?? 20}
                     onChange={(e) =>
                       updateSetting('auctionBidTimerSeconds', parseInt(e.target.value))
                     }
                     className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
                   >
-                    {[10, 15, 20, 30, 45, 60].map((n) => (
+                    {AUCTION_TIMER_OPTIONS.map((n) => (
                       <option key={n} value={n}>
-                        {n} Seconds
+                        {formatTimerOption(n)}
                       </option>
                     ))}
                   </select>
@@ -318,7 +374,7 @@ export function DraftSetup() {
               </select>
             </SettingRow>
 
-            <SettingRow label={settings.mode === 'auction-grid' ? 'Cards Acquired per Grid' : 'Pack Size'}>
+            <SettingRow label={settings.mode === 'pack' ? 'Pack Size' : 'Cards Acquired per Grid'}>
               <select
                 value={settings.packSize}
                 onChange={(e) =>
@@ -334,7 +390,7 @@ export function DraftSetup() {
               </select>
             </SettingRow>
 
-            <SettingRow label={settings.mode === 'auction-grid' ? 'Burned per Grid' : 'Burned per Pack'}>
+            <SettingRow label={settings.mode === 'pack' ? 'Burned per Pack' : 'Burned per Grid'}>
               <select
                 value={settings.burnedPerPack}
                 onChange={(e) =>
@@ -342,9 +398,9 @@ export function DraftSetup() {
                 }
                 className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
               >
-                {/* For auction mode, allow more burn options (0-30). For pack mode, limit to pack size */}
+                {/* For grid modes, allow more burn options (0-30). For pack mode, limit to pack size */}
                 {Array.from(
-                  { length: settings.mode === 'auction-grid' ? 31 : Math.max(1, settings.packSize + 1) },
+                  { length: settings.mode === 'pack' ? Math.max(1, settings.packSize + 1) : 31 },
                   (_, i) => i
                 ).map((n) => (
                   <option key={n} value={n}>
@@ -354,7 +410,7 @@ export function DraftSetup() {
               </select>
             </SettingRow>
 
-            <SettingRow label={settings.mode === 'auction-grid' ? 'Selection Timer' : 'Pick Timer'}>
+            <SettingRow label={settings.mode === 'pack' ? 'Pick Timer' : 'Selection Timer'}>
               <select
                 value={settings.timerSeconds}
                 onChange={(e) =>
@@ -362,21 +418,29 @@ export function DraftSetup() {
                 }
                 className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
               >
-                {(settings.mode === 'auction-grid' ? [15, 30, 45, 60] : [30, 45, 60, 90, 120]).map((n) => (
+                {(settings.mode === 'pack' ? PACK_TIMER_OPTIONS : AUCTION_TIMER_OPTIONS).map((n) => (
                   <option key={n} value={n}>
-                    {n} Seconds
+                    {formatTimerOption(n)}
                   </option>
                 ))}
               </select>
             </SettingRow>
           </div>
 
-          {/* Auction mode rules summary */}
+          {/* Mode-specific rules summary */}
           {settings.mode === 'auction-grid' && (
             <div className="mt-4 bg-yugi-card/30 rounded-lg p-3 border border-yugi-border/50">
               <p className="text-sm text-gray-400">
                 The selector picks a card, then players bid clockwise. Highest bidder wins.
                 Pass to exit bidding (you cannot re-enter). Remaining cards per grid go to the graveyard.
+              </p>
+            </div>
+          )}
+          {settings.mode === 'open' && (
+            <div className="mt-4 bg-yugi-card/30 rounded-lg p-3 border border-yugi-border/50">
+              <p className="text-sm text-gray-400">
+                Players take turns picking cards from a face-up grid. No bidding - the selector
+                keeps their chosen card. Remaining cards per grid go to the graveyard.
               </p>
             </div>
           )}
@@ -413,6 +477,175 @@ export function DraftSetup() {
           </Button>
         </div>
       </div>
+
+      {/* Pack Draft Info Sheet */}
+      <BottomSheet
+        isOpen={infoSheet === 'pack'}
+        onClose={() => setInfoSheet(null)}
+        title="How Pack Draft Works"
+        maxHeight={90}
+        centerTitle
+      >
+        <div className="p-4 space-y-4 max-w-2xl mx-auto">
+          {/* Overview */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
+            <p className="text-sm text-gray-300">
+              Pack-Based Drafting is the traditional TCG draft format. Players pick cards from packs passed around the table, building their deck one card at a time.
+            </p>
+          </div>
+
+          {/* Drafting */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">1. Drafting Phase</h3>
+            <ul className="text-sm text-gray-300 space-y-1">
+              <li>• Each player receives a <span className="text-white font-medium">pack of cards</span></li>
+              <li>• Pick <span className="text-gold-400">one card</span> to keep, then pass the rest</li>
+              <li>• You have <span className="text-white font-medium">limited time</span> to make your selection</li>
+              <li>• Continue until all cards in the pack are drafted</li>
+            </ul>
+          </div>
+
+          {/* Passing */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">2. Pack Passing</h3>
+            <ul className="text-sm text-gray-300 space-y-1">
+              <li>• Packs pass <span className="text-white font-medium">clockwise</span> in odd rounds</li>
+              <li>• Packs pass <span className="text-white font-medium">counter-clockwise</span> in even rounds</li>
+              <li>• Leftover cards go to the <span className="text-gold-400">Graveyard</span></li>
+            </ul>
+          </div>
+
+          {/* Rulebook Link */}
+          <div className="pt-2 border-t border-yugi-border">
+            <Link
+              to="/rulebook#pack-drafting"
+              className="text-gold-400 hover:text-gold-300 transition-colors text-sm"
+              onClick={() => setInfoSheet(null)}
+            >
+              View full rules in Rulebook →
+            </Link>
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* Auction Grid Info Sheet */}
+      <BottomSheet
+        isOpen={infoSheet === 'auction'}
+        onClose={() => setInfoSheet(null)}
+        title="How Auction Grid Works"
+        maxHeight={90}
+        centerTitle
+      >
+        <div className="p-4 space-y-4 max-w-2xl mx-auto">
+          {/* Overview */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
+            <p className="text-sm text-gray-300">
+              Auction Grid Drafting is a bidding-based format where players use <span className="text-gold-400 font-medium">bidding points</span> to compete for cards across multiple grids. Budget wisely - your points must last the entire draft!
+            </p>
+          </div>
+
+          {/* Selection */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">1. Selection Phase</h3>
+            <ul className="text-sm text-gray-300 space-y-1">
+              <li>• The <span className="text-gold-400">selecting player</span> picks a card from the grid to auction</li>
+              <li>• You have limited time to make your selection</li>
+              <li>• Selection rotates clockwise after each auction</li>
+            </ul>
+          </div>
+
+          {/* Bidding */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">2. Bidding Phase</h3>
+            <ul className="text-sm text-gray-300 space-y-1">
+              <li>• Bidding starts at <span className="text-white font-medium">0 points</span></li>
+              <li>• Players bid <span className="text-white font-medium">clockwise</span> on odd grids, <span className="text-white font-medium">counter-clockwise</span> on even grids</li>
+              <li>• You must <span className="text-gold-400">bid higher</span> than the current bid or <span className="text-red-400">pass</span></li>
+              <li>• <span className="text-red-400 font-medium">Once you pass, you cannot re-enter</span> that auction</li>
+            </ul>
+          </div>
+
+          {/* Winning */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">3. Winning Cards</h3>
+            <ul className="text-sm text-gray-300 space-y-1">
+              <li>• Highest bidder wins and <span className="text-gold-400">deducts points</span> from their total</li>
+              <li>• If <span className="text-white font-medium">no one bids</span>, the selector gets the card for free!</li>
+              <li>• Your points <span className="text-red-400 font-medium">persist across all grids</span> - budget wisely</li>
+            </ul>
+          </div>
+
+          {/* Rulebook Link */}
+          <div className="pt-2 border-t border-yugi-border">
+            <Link
+              to="/rulebook#auction-grid"
+              className="text-gold-400 hover:text-gold-300 transition-colors text-sm"
+              onClick={() => setInfoSheet(null)}
+            >
+              View full rules in Rulebook →
+            </Link>
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* Open Draft Info Sheet */}
+      <BottomSheet
+        isOpen={infoSheet === 'open'}
+        onClose={() => setInfoSheet(null)}
+        title="How Open Draft Works"
+        maxHeight={90}
+        centerTitle
+      >
+        <div className="p-4 space-y-4 max-w-2xl mx-auto">
+          {/* Overview */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
+            <p className="text-sm text-gray-300">
+              In Open Drafting, all cards are visible to all players. Players take turns selecting cards one at a time from a shared grid.
+            </p>
+          </div>
+
+          {/* Drafting */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">1. Grid Setup</h3>
+            <ul className="text-sm text-gray-300 space-y-1">
+              <li>• All cards in the grid are laid <span className="text-white font-medium">face-up</span></li>
+              <li>• Everyone can see all available cards</li>
+              <li>• Selection order is determined randomly</li>
+            </ul>
+          </div>
+
+          {/* Selection */}
+          <div className="bg-yugi-card rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2">2. Selection Phase</h3>
+            <ul className="text-sm text-gray-300 space-y-1">
+              <li>• Players take turns picking <span className="text-gold-400">one card</span> at a time</li>
+              <li>• Selection order rotates each round</li>
+              <li>• Continue until each player has their full deck</li>
+            </ul>
+          </div>
+
+          {/* Coming Soon */}
+          <div className="bg-gold-500/10 border border-gold-500/30 rounded-lg p-4">
+            <p className="text-gold-400 text-sm font-medium">
+              Coming Soon - This mode is currently in development.
+            </p>
+          </div>
+
+          {/* Rulebook Link */}
+          <div className="pt-2 border-t border-yugi-border">
+            <Link
+              to="/rulebook#grid-drafting"
+              className="text-gold-400 hover:text-gold-300 transition-colors text-sm"
+              onClick={() => setInfoSheet(null)}
+            >
+              View full rules in Rulebook →
+            </Link>
+          </div>
+        </div>
+      </BottomSheet>
     </Layout>
   );
 }
@@ -529,34 +762,50 @@ const ModeOption = memo(function ModeOption({
   description,
   selected,
   onClick,
+  onInfoClick,
   disabled,
 }: {
   title: string;
   description: string;
   selected: boolean;
   onClick: () => void;
+  onInfoClick?: () => void;
   disabled?: boolean;
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        'p-4 rounded-lg border transition-all text-left',
-        selected
-          ? 'border-gold-500 bg-gold-500/10'
-          : 'border-yugi-border bg-yugi-card hover:border-yugi-border',
-        disabled && 'opacity-50 cursor-not-allowed'
+    <div className="relative h-full">
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={cn(
+          'w-full h-full p-4 rounded-lg border transition-all text-left flex flex-col',
+          selected
+            ? 'border-gold-500 bg-gold-500/10'
+            : 'border-yugi-border bg-yugi-card hover:border-yugi-border',
+          disabled && 'opacity-50 cursor-not-allowed'
+        )}
+      >
+        <div className="font-semibold text-white mb-1 pr-8">{title}</div>
+        <div className="text-sm text-gray-300 pr-8 flex-1">{description}</div>
+        {disabled && (
+          <span className="text-xs text-gold-500 mt-2 inline-block">
+            Coming Soon
+          </span>
+        )}
+      </button>
+      {onInfoClick && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onInfoClick();
+          }}
+          className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gold-400 hover:bg-white/5 transition-colors"
+          title="How it works"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
       )}
-    >
-      <div className="font-semibold text-white mb-1">{title}</div>
-      <div className="text-sm text-gray-300">{description}</div>
-      {disabled && (
-        <span className="text-xs text-gold-500 mt-2 inline-block">
-          Coming Soon
-        </span>
-      )}
-    </button>
+    </div>
   );
 });
 
@@ -590,10 +839,10 @@ const DraftSummary = memo(function DraftSummary({
   burnedPerPack: number;
   auctionBiddingPoints?: number;
 }) {
-  // Auction grid mode calculations based on settings
+  // Grid mode calculations (auction-grid and open)
   // packSize = cards acquired per grid per player
   // burnedPerPack = burned cards per grid
-  if (mode === 'auction-grid') {
+  if (mode === 'auction-grid' || mode === 'open') {
     const cardsAcquiredPerGrid = packSize;
     const gridCount = Math.ceil(cardsPerPlayer / cardsAcquiredPerGrid);
     const cardsPerGrid = (totalPlayers * cardsAcquiredPerGrid) + burnedPerPack;
@@ -621,10 +870,12 @@ const DraftSummary = memo(function DraftSummary({
               <span className="text-gray-400">Cards per Grid:</span>
               <span className="text-white ml-2">{cardsPerGrid}</span>
             </div>
-            <div>
-              <span className="text-gray-400">Bidding Points:</span>
-              <span className="text-gold-400 ml-2">{auctionBiddingPoints}</span>
-            </div>
+            {mode === 'auction-grid' && (
+              <div>
+                <span className="text-gray-400">Bidding Points:</span>
+                <span className="text-gold-400 ml-2">{auctionBiddingPoints}</span>
+              </div>
+            )}
             <div>
               <span className="text-gray-400">Total Cards Needed:</span>
               <span className="text-white ml-2">{totalCardsNeeded}</span>

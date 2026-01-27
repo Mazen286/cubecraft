@@ -21,6 +21,7 @@ const Rulebook = lazy(() => import('./pages/Rulebook').then(m => ({ default: m.R
 // Auth-related pages
 const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
 const MyCubes = lazy(() => import('./pages/MyCubes').then(m => ({ default: m.MyCubes })));
+const DraftHistory = lazy(() => import('./pages/DraftHistory').then(m => ({ default: m.DraftHistory })));
 const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })));
 const AuthCallback = lazy(() => import('./pages/AuthCallback').then(m => ({ default: m.AuthCallback })));
 
@@ -74,6 +75,11 @@ function App() {
                 <Route path="/my-cubes" element={
                   <ProtectedRoute>
                     <MyCubes />
+                  </ProtectedRoute>
+                } />
+                <Route path="/drafts" element={
+                  <ProtectedRoute>
+                    <DraftHistory />
                   </ProtectedRoute>
                 } />
 

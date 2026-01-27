@@ -8,10 +8,12 @@ import type { YuGiOhCardAttributes } from '../../types/card';
 const EXTRA_DECK_TYPES = [
   'Fusion Monster',
   'Synchro Monster',
+  'Synchro Tuner Monster',
   'XYZ Monster',
   'Link Monster',
   'Pendulum Effect Fusion Monster',
   'Synchro Pendulum Effect Monster',
+  'Synchro Tuner Pendulum Effect Monster',
   'XYZ Pendulum Effect Monster',
 ] as const;
 

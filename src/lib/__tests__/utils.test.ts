@@ -45,6 +45,10 @@ describe('isExtraDeckCard', () => {
     expect(isExtraDeckCard('Synchro Monster')).toBe(true);
   });
 
+  it('should return true for Synchro Tuner Monster', () => {
+    expect(isExtraDeckCard('Synchro Tuner Monster')).toBe(true);
+  });
+
   it('should return true for XYZ Monster', () => {
     expect(isExtraDeckCard('XYZ Monster')).toBe(true);
   });

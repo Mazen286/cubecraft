@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { BottomSheet } from '../components/ui/BottomSheet';
+import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../context/AuthContext';
 import { getSupabase } from '../lib/supabase';
 import { getGameConfig } from '../config/games';
@@ -135,6 +135,7 @@ function TabButton({
 function UserManagement({ currentUserId }: { currentUserId?: string }) {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { showToast } = useToast();
 
   const loadUsers = async () => {
     const supabase = getSupabase();
@@ -157,7 +158,7 @@ function UserManagement({ currentUserId }: { currentUserId?: string }) {
 
   const toggleAdmin = async (userId: string, currentRole: string) => {
     if (userId === currentUserId) {
-      alert("You can't change your own role");
+      showToast("You can't change your own role", 'error');
       return;
     }
 
@@ -988,9 +989,6 @@ interface RecentDraft {
 function DraftManagement() {
   const [drafts, setDrafts] = useState<RecentDraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-  const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const navigate = useNavigate();
 
   const loadDrafts = async () => {
@@ -1008,15 +1006,6 @@ function DraftManagement() {
   useEffect(() => {
     loadDrafts();
   }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!openDropdown) return;
-
-    const handleClickOutside = () => setOpenDropdown(null);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [openDropdown]);
 
   const formatRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -1067,10 +1056,9 @@ function DraftManagement() {
               <tr className="text-left text-sm text-gray-400 border-b border-yugi-border">
                 <th className="px-4 py-3 font-medium">Room</th>
                 <th className="px-4 py-3 font-medium">Cube</th>
-                <th className="px-4 py-3 font-medium">Players</th>
+                <th className="px-4 py-3 font-medium">View Deck</th>
                 <th className="px-4 py-3 font-medium">Cards</th>
                 <th className="px-4 py-3 font-medium">Completed</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1081,90 +1069,38 @@ function DraftManagement() {
                   </td>
                   <td className="px-4 py-3 text-white">{draft.cubeName}</td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {draft.players.map((player) => (
-                        <span
-                          key={player.id}
-                          className="px-2 py-0.5 bg-yugi-darker text-gray-300 text-xs rounded"
-                        >
-                          {player.name}
-                        </span>
-                      ))}
-                      {draft.players.length === 0 && (
-                        <span className="text-gray-500 text-sm">No players</span>
-                      )}
-                    </div>
+                    {draft.players.length > 0 ? (
+                      <select
+                        className="bg-yugi-darker border border-yugi-border rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-gold-500 cursor-pointer min-w-[140px]"
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            navigate(`/results/${draft.sessionId}?player=${e.target.value}`);
+                          }
+                        }}
+                      >
+                        <option value="" disabled>
+                          Select player...
+                        </option>
+                        {draft.players.map((player) => (
+                          <option key={player.id} value={player.id}>
+                            {player.name}{player.isBot ? ' (Bot)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-gray-500 text-sm">No players</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-400">{draft.cardsPerPlayer}/player</td>
                   <td className="px-4 py-3 text-gray-400 text-sm">
                     {formatRelativeTime(draft.completedAt)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => navigate(`/results/${draft.sessionId}`)}
-                        className="px-2 py-1 text-xs bg-gold-600/20 text-gold-400 rounded hover:bg-gold-600/30 transition-colors"
-                      >
-                        View Results
-                      </button>
-                      {draft.players.length > 0 && (
-                        <div className="relative">
-                          <button
-                            ref={(el) => {
-                              if (el) buttonRefs.current.set(draft.sessionId, el);
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (openDropdown === draft.sessionId) {
-                                setOpenDropdown(null);
-                              } else {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setDropdownPosition({
-                                  top: rect.bottom + 4,
-                                  left: rect.right - 192, // 192px = w-48
-                                });
-                                setOpenDropdown(draft.sessionId);
-                              }
-                            }}
-                            className="px-2 py-1 text-xs bg-blue-600/20 text-blue-400 rounded hover:bg-blue-600/30 transition-colors"
-                          >
-                            Player Results
-                          </button>
-                        </div>
-                      )}
-                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-
-      {/* Portal dropdown for player results */}
-      {openDropdown && createPortal(
-        <div
-          className="fixed w-48 bg-yugi-dark border border-yugi-border rounded-lg shadow-xl py-1 z-[100]"
-          style={{
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {drafts.find(d => d.sessionId === openDropdown)?.players.map((player) => (
-            <button
-              key={player.id}
-              onClick={() => {
-                navigate(`/results/${openDropdown}?player=${player.id}`);
-                setOpenDropdown(null);
-              }}
-              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-white/5"
-            >
-              {player.name}
-            </button>
-          ))}
-        </div>,
-        document.body
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useToast } from '../components/ui/Toast';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
 import type { YuGiOhCard as YuGiOhCardType } from '../types';
@@ -125,6 +126,10 @@ export function Draft() {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showMyCardsStats, setShowMyCardsStats] = useState(false);
+
+  // Toast notifications
+  const { showToast, ToastContainer } = useToast();
+  const cancelledToastShownRef = useRef(false);
 
   // Card filters for "My Cards" drawer
   const myCardsFilters = useCardFilters({
@@ -631,11 +636,11 @@ export function Draft() {
       await togglePause(timeRemaining);
     } catch (err) {
       console.error('[Draft] Failed to toggle pause:', err);
-      alert(`Failed to pause: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      showToast(`Failed to pause: ${err instanceof Error ? err.message : 'Unknown error'}`, 'error');
     } finally {
       setIsPausing(false);
     }
-  }, [togglePause, timeRemaining, isPausing]);
+  }, [togglePause, timeRemaining, isPausing, showToast]);
 
   // Handle draft completion
   useEffect(() => {
@@ -650,12 +655,13 @@ export function Draft() {
 
   // Handle session cancellation
   useEffect(() => {
-    if (session?.status === 'cancelled') {
+    if (session?.status === 'cancelled' && !cancelledToastShownRef.current) {
+      cancelledToastShownRef.current = true;
       clearLastSession();
-      alert('The host has cancelled this draft session.');
+      showToast('The host has cancelled this draft session.', 'info');
       navigate('/');
     }
-  }, [session?.status, navigate]);
+  }, [session?.status, navigate, showToast]);
 
   // Server-side timeout enforcement - check periodically for timed-out players
   // This ensures the draft progresses even if some players disconnect
@@ -882,6 +888,9 @@ export function Draft() {
 
   return (
     <Layout>
+      {/* Toast notifications */}
+      <ToastContainer />
+
       <div className="flex flex-col min-h-[calc(100vh-200px)] lg:h-[calc(100vh-200px)] lg:max-h-[calc(100vh-200px)]">
         {/* Header with timer and stats */}
         <div className="flex items-center justify-between mb-6">

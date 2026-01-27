@@ -106,6 +106,7 @@ export function BiddingPanel({
               hasPassed={false}
               isWinning={false}
               isSelector={player.seatPosition === (auctionState?.nextBidderSeat ?? 0)}
+              maxCardsPerGrid={maxCardsPerGrid}
             />
           ))}
         </div>
@@ -153,9 +154,9 @@ export function BiddingPanel({
                 </button>
               )}
             </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-white truncate">{currentCard.name}</h3>
-              <p className="text-sm text-gray-400 truncate">{currentCard.type}</p>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-white break-words">{currentCard.name}</h3>
+              <p className="text-sm text-gray-400">{currentCard.type}</p>
 
               {/* Current bid display */}
               <div className="mt-3 p-3 bg-yugi-dark rounded-lg">
@@ -317,6 +318,7 @@ export function BiddingPanel({
               hasPassed={passedPlayerIds.includes(player.id)}
               isWinning={player.id === currentBidderId}
               isSelector={false}
+              maxCardsPerGrid={maxCardsPerGrid}
             />
           ))}
         </div>

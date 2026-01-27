@@ -44,25 +44,64 @@ async function fetchCardById(scryfallId) {
 function transformCard(card, score = 70) {
   if (!card) return null;
 
-  // Get power/toughness for creatures
+  // Handle dual-faced cards (Adventure, Transform, MDFC, Split)
+  const hasFaces = card.card_faces && card.card_faces.length > 0;
+  const primaryFace = hasFaces ? card.card_faces[0] : card;
+  const secondaryFace = hasFaces ? card.card_faces[1] : null;
+
+  // Get power/toughness for creatures (use primary face for dual-faced cards)
   let power, toughness;
-  if (card.power) power = isNaN(parseInt(card.power)) ? card.power : parseInt(card.power);
-  if (card.toughness) toughness = isNaN(parseInt(card.toughness)) ? card.toughness : parseInt(card.toughness);
+  const ptSource = primaryFace.power !== undefined ? primaryFace : card;
+  if (ptSource.power) power = isNaN(parseInt(ptSource.power)) ? ptSource.power : parseInt(ptSource.power);
+  if (ptSource.toughness) toughness = isNaN(parseInt(ptSource.toughness)) ? ptSource.toughness : parseInt(ptSource.toughness);
 
   // Get image URL from Scryfall
+  // For dual-faced cards without top-level image_uris, use the first face's image
   const scryfallId = card.id;
-  const imageUrl = card.image_uris?.normal || card.image_uris?.large || '';
+  let imageUrl = card.image_uris?.normal || card.image_uris?.large || '';
+  if (!imageUrl && hasFaces && primaryFace.image_uris) {
+    imageUrl = primaryFace.image_uris.normal || primaryFace.image_uris.large || '';
+  }
+
+  // Build oracle text for dual-faced cards
+  let oracleText = card.oracle_text || '';
+  if (!oracleText && hasFaces) {
+    // Combine oracle text from both faces
+    const texts = card.card_faces
+      .filter(face => face.oracle_text)
+      .map(face => `${face.name}\n${face.oracle_text}`);
+    oracleText = texts.join('\n\n---\n\n');
+  }
+
+  // Get mana cost - for dual-faced cards, combine both costs
+  let manaCost = card.mana_cost || '';
+  if (!manaCost && hasFaces) {
+    const costs = card.card_faces
+      .map(face => face.mana_cost)
+      .filter(Boolean);
+    manaCost = costs.join(' // ');
+  }
+
+  // Get colors - for dual-faced cards, combine from both faces
+  let colors = card.colors;
+  if ((!colors || colors.length === 0) && hasFaces) {
+    const allColors = new Set();
+    card.card_faces.forEach(face => {
+      (face.colors || []).forEach(c => allColors.add(c));
+    });
+    colors = Array.from(allColors);
+  }
 
   return {
     id: card.oracle_id ? card.oracle_id.substring(0, 8) : card.id.substring(0, 8),
     name: card.name,
     type: card.type_line,
-    description: card.oracle_text || '',
+    description: oracleText,
     imageUrl, // Store the image URL directly
     attributes: {
-      manaCost: card.mana_cost || '',
+      manaCost,
       cmc: card.cmc || 0,
-      colors: card.colors || [],
+      colors: colors || [],
       colorIdentity: card.color_identity || [],
       power,
       toughness,
