@@ -502,7 +502,7 @@ describe('draftService', () => {
 
     it('should throw error if no pack data', async () => {
       const userId = draftService.getUserId();
-      const mockSession = {
+      const mockSession: Record<string, unknown> = {
         id: 'session-nopack',
         host_id: userId,
         status: 'waiting',

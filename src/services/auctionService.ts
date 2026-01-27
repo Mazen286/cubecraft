@@ -363,7 +363,6 @@ function calculateBotInterest(
   }
 
   // === MTG CREATURE/SPELL BALANCE ===
-  const cardType = card.type.toLowerCase();
   const isMtgCreature = cardType.includes('creature');
   const isMtgNonCreature = cardType.includes('instant') || cardType.includes('sorcery') ||
                            cardType.includes('enchantment') || cardType.includes('planeswalker');
