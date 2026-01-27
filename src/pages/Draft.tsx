@@ -642,7 +642,6 @@ export function Draft() {
       return;
     }
 
-    const timerDuration = session?.timer_seconds || 60;
     const pickStartedAt = session?.pick_started_at ? new Date(session.pick_started_at).getTime() : null;
 
     // Track when new pack arrives (for packStartTimeRef used in pick timing)
@@ -655,15 +654,37 @@ export function Draft() {
       packStartTimeRef.current = pickStartedAt || Date.now();
     }
 
+    // Check if this is the SAME pick round that was paused
+    // The paused pick's pick_started_at is from BEFORE we clicked resume
+    // Any new pick after resume has pick_started_at AFTER resume_at
+    const resumeAt = session?.resume_at ? new Date(session.resume_at).getTime() : null;
+
+    // isOriginalPausedPick: this pick started BEFORE resume_at was set
+    // This means it's the same pick that was active when we paused
+    const isOriginalPausedPick = resumeAt && pickStartedAt && pickStartedAt < resumeAt;
+
+    let timerDuration: number;
+    let startTime: number | null;
+
+    if (isOriginalPausedPick && session?.time_remaining_at_pause !== null && session?.time_remaining_at_pause !== undefined) {
+      // This is the original paused pick: count down from saved time, starting from resume_at
+      timerDuration = session.time_remaining_at_pause;
+      startTime = resumeAt;
+    } else {
+      // Normal case OR new pick after resume: use pick_started_at and full duration
+      timerDuration = session?.timer_seconds || 60;
+      startTime = pickStartedAt;
+    }
+
     // Timer function that calculates remaining time from server timestamp
     // This keeps all clients in sync regardless of when they joined or local clock differences
     const updateTimer = () => {
-      if (!pickStartedAt) {
+      if (!startTime) {
         setTimeRemaining(timerDuration);
         return;
       }
 
-      const elapsed = Math.floor((Date.now() - pickStartedAt) / 1000);
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const remaining = Math.max(0, timerDuration - elapsed);
 
       setTimeRemaining(remaining);
@@ -685,7 +706,7 @@ export function Draft() {
         clearInterval(timerRef.current);
       }
     };
-  }, [session?.status, session?.timer_seconds, session?.current_pack, session?.current_pick, session?.paused, session?.pick_started_at, packReady, resumeCountdown]);
+  }, [session?.status, session?.timer_seconds, session?.current_pack, session?.current_pick, session?.paused, session?.pick_started_at, session?.resume_at, session?.time_remaining_at_pause, packReady, resumeCountdown]);
 
   const handlePickCard = useCallback(
     async (card?: YuGiOhCardType, wasAutoPick = false) => {
@@ -1487,11 +1508,21 @@ export function Draft() {
               {/* Resume button (host only) */}
               {isHost && (
                 <Button
-                  onClick={() => togglePause()}
+                  onClick={handlePauseClick}
+                  disabled={isPausing}
                   className="flex items-center gap-2 mx-auto px-6 py-3"
                 >
-                  <Play className="w-5 h-5" />
-                  Resume Draft
+                  {isPausing ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Resuming...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5" />
+                      Resume Draft
+                    </>
+                  )}
                 </Button>
               )}
 

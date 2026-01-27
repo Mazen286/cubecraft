@@ -72,7 +72,27 @@ interface UseAuctionSessionReturn {
   togglePause: (currentTimeRemaining?: number) => Promise<boolean>;
 }
 
-export function useAuctionSession(sessionId: string | undefined): UseAuctionSessionReturn {
+interface UseAuctionSessionOptions {
+  sessionId: string | undefined;
+  /**
+   * Pass this from useResumeCountdown hook to trigger timer restart when countdown finishes.
+   * When resumeCount changes, the timer effects will re-run and check if countdown is over.
+   */
+  resumeCount?: number;
+}
+
+export function useAuctionSession(options: UseAuctionSessionOptions): UseAuctionSessionReturn;
+export function useAuctionSession(sessionId: string | undefined): UseAuctionSessionReturn;
+export function useAuctionSession(
+  optionsOrSessionId: UseAuctionSessionOptions | string | undefined
+): UseAuctionSessionReturn {
+  // Support both old signature (sessionId) and new signature (options object)
+  const sessionId = typeof optionsOrSessionId === 'object'
+    ? optionsOrSessionId?.sessionId
+    : optionsOrSessionId;
+  const resumeCount = typeof optionsOrSessionId === 'object'
+    ? optionsOrSessionId?.resumeCount ?? 0
+    : 0;
   // Core state
   const [session, setSession] = useState<DraftSessionRow | null>(null);
   const [players, setPlayers] = useState<DraftPlayerRow[]>([]);
@@ -86,6 +106,11 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
   const selectionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bidTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastBidderSeatRef = useRef<number | null>(null);
+
+  // Track when resume countdown completes to restart timers
+  // This counter increments each time a countdown finishes, triggering timer effects to re-run
+  const [internalResumeCount, setInternalResumeCount] = useState(0);
+  const lastResumeAtRef = useRef<string | null>(null);
 
   // Derived state
   const userId = useMemo(() => getUserId(), []);
@@ -281,6 +306,38 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
     };
   }, [sessionId, userId, players]);
 
+  // Track resume countdown completion
+  // When resume_at passes, increment internalResumeCount to trigger timer effects
+  useEffect(() => {
+    // Only track when we have a resume_at and we're not paused (countdown is active/finishing)
+    if (!session?.resume_at || session?.paused) {
+      lastResumeAtRef.current = null;
+      return;
+    }
+
+    // If this is a new resume_at value, start monitoring
+    if (session.resume_at !== lastResumeAtRef.current) {
+      lastResumeAtRef.current = session.resume_at;
+
+      const resumeTime = new Date(session.resume_at).getTime();
+      const now = Date.now();
+
+      // If already in the past, immediately trigger
+      if (resumeTime <= now) {
+        setInternalResumeCount(c => c + 1);
+        return;
+      }
+
+      // Otherwise wait until the countdown completes
+      const timeUntilResume = resumeTime - now;
+      const timer = setTimeout(() => {
+        setInternalResumeCount(c => c + 1);
+      }, timeUntilResume + 100); // Add small buffer to ensure countdown is definitely over
+
+      return () => clearTimeout(timer);
+    }
+  }, [session?.resume_at, session?.paused]);
+
   // Selection timer
   useEffect(() => {
     // Clear existing timer
@@ -311,8 +368,28 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
       return;
     }
 
-    const timerDuration = session.timer_seconds || 30;
-    const startTime = new Date(session.selection_started_at).getTime();
+    // Check if this is the SAME selection round that was paused
+    // The paused turn's selection_started_at is from BEFORE we clicked resume
+    // Any new turn after resume has selection_started_at AFTER resume_at
+    const resumeAt = session?.resume_at ? new Date(session.resume_at).getTime() : null;
+    const selectionStartedAt = new Date(session.selection_started_at).getTime();
+
+    // isOriginalPausedTurn: this selection started BEFORE resume_at was set
+    // This means it's the same turn that was active when we paused
+    const isOriginalPausedTurn = resumeAt && selectionStartedAt < resumeAt;
+
+    let timerDuration: number;
+    let startTime: number;
+
+    if (isOriginalPausedTurn && session?.time_remaining_at_pause !== null && session?.time_remaining_at_pause !== undefined) {
+      // This is the original paused turn: count down from saved time, starting from resume_at
+      timerDuration = session.time_remaining_at_pause;
+      startTime = resumeAt;
+    } else {
+      // Normal case OR new turn after resume: use selection_started_at and full duration
+      timerDuration = session.timer_seconds || 30;
+      startTime = selectionStartedAt;
+    }
 
     const updateTimer = () => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -328,7 +405,8 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
         clearInterval(selectionTimerRef.current);
       }
     };
-  }, [auctionState?.phase, session?.selection_started_at, session?.timer_seconds, session?.paused, session?.time_remaining_at_pause, session?.resume_at]);
+  // internalResumeCount and resumeCount in deps cause re-run when countdown finishes, allowing timer to restart
+  }, [auctionState?.phase, session?.selection_started_at, session?.timer_seconds, session?.paused, session?.time_remaining_at_pause, session?.resume_at, internalResumeCount, resumeCount]);
 
   // Bidding timer - uses server timestamp for accuracy
   useEffect(() => {
@@ -361,11 +439,32 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
       return;
     }
 
-    const bidStartTime = new Date(auctionStateData.bidStartedAt).getTime();
+    // Check if this is the SAME bidding round that was paused
+    // The paused bid's bidStartedAt is from BEFORE we clicked resume
+    // Any new bid after resume has bidStartedAt AFTER resume_at
+    const resumeAt = session?.resume_at ? new Date(session.resume_at).getTime() : null;
+    const bidStartedAt = new Date(auctionStateData.bidStartedAt).getTime();
+
+    // isOriginalPausedBid: this bid started BEFORE resume_at was set
+    // This means it's the same bid round that was active when we paused
+    const isOriginalPausedBid = resumeAt && bidStartedAt < resumeAt;
+
+    let timerDuration: number;
+    let startTime: number;
+
+    if (isOriginalPausedBid && session?.time_remaining_at_pause !== null && session?.time_remaining_at_pause !== undefined) {
+      // This is the original paused bid: count down from saved time, starting from resume_at
+      timerDuration = session.time_remaining_at_pause;
+      startTime = resumeAt;
+    } else {
+      // Normal case OR new bid after resume: use bidStartedAt and configured duration
+      timerDuration = configuredBidTime;
+      startTime = bidStartedAt;
+    }
 
     const updateTimer = () => {
-      const elapsed = Math.floor((Date.now() - bidStartTime) / 1000);
-      const remaining = Math.max(0, configuredBidTime - elapsed);
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, timerDuration - elapsed);
       setBidTimeRemaining(remaining);
     };
 
@@ -378,7 +477,8 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
         clearInterval(bidTimerRef.current);
       }
     };
-  }, [auctionState?.phase, auctionStateData?.bidStartedAt, configuredBidTime, session?.paused, session?.time_remaining_at_pause, session?.resume_at]);
+  // internalResumeCount and resumeCount in deps cause re-run when countdown finishes, allowing timer to restart
+  }, [auctionState?.phase, auctionStateData?.bidStartedAt, configuredBidTime, session?.paused, session?.time_remaining_at_pause, session?.resume_at, internalResumeCount, resumeCount]);
 
   // Auto-pass when bid time runs out (only for current player, not when paused)
   useEffect(() => {
@@ -424,11 +524,16 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
           const freshAuction = freshSession.auction_state as AuctionStateData | null;
 
           const hasChanges =
+            // Grid and auction state changes
             session?.current_grid !== freshSession.current_grid ||
             currentAuction?.phase !== freshAuction?.phase ||
             currentAuction?.cardId !== freshAuction?.cardId ||
             currentAuction?.currentBid !== freshAuction?.currentBid ||
-            currentAuction?.nextBidderSeat !== freshAuction?.nextBidderSeat;
+            currentAuction?.nextBidderSeat !== freshAuction?.nextBidderSeat ||
+            // Pause state changes - critical for resume sync
+            session?.paused !== freshSession.paused ||
+            session?.resume_at !== freshSession.resume_at ||
+            session?.time_remaining_at_pause !== freshSession.time_remaining_at_pause;
 
           if (hasChanges) {
             console.log('[useAuctionSession] Sync fallback detected changes, updating state');
@@ -470,7 +575,20 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
 
   const togglePause = useCallback(async (currentTimeRemaining?: number): Promise<boolean> => {
     if (!sessionId) throw new Error('Not ready');
-    return await auctionService.togglePause(sessionId, currentTimeRemaining);
+    const newPausedState = await auctionService.togglePause(sessionId, currentTimeRemaining);
+
+    // Immediately fetch fresh session to ensure host's UI updates
+    // Don't rely solely on real-time subscription which may not fire for own changes
+    try {
+      const freshSession = await auctionService.getSession(sessionId);
+      if (freshSession) {
+        setSession(freshSession);
+      }
+    } catch (err) {
+      console.error('[useAuctionSession] Failed to fetch session after pause toggle:', err);
+    }
+
+    return newPausedState;
   }, [sessionId]);
 
   return {

@@ -111,6 +111,39 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     };
   }, [sessionId, loadSessionData, userId]);
 
+  // Periodic sync fallback - catches missed Realtime updates (especially pause/resume)
+  // This ensures the UI stays in sync even if WebSocket updates are dropped
+  useEffect(() => {
+    if (!sessionId || session?.status !== 'in_progress') return;
+
+    // Re-fetch session every 5 seconds as a fallback
+    const syncInterval = setInterval(async () => {
+      try {
+        const freshSession = await draftService.getSession(sessionId);
+
+        if (freshSession) {
+          // Check for changes that matter (especially pause state)
+          const hasChanges =
+            session?.current_pack !== freshSession.current_pack ||
+            session?.current_pick !== freshSession.current_pick ||
+            session?.paused !== freshSession.paused ||
+            session?.resume_at !== freshSession.resume_at ||
+            session?.time_remaining_at_pause !== freshSession.time_remaining_at_pause ||
+            session?.status !== freshSession.status;
+
+          if (hasChanges) {
+            console.log('[useDraftSession] Sync fallback detected changes, updating state');
+            setSession(freshSession);
+          }
+        }
+      } catch (err) {
+        console.error('[useDraftSession] Sync fallback failed:', err);
+      }
+    }, 5000);
+
+    return () => clearInterval(syncInterval);
+  }, [sessionId, session?.status, session?.current_pack, session?.current_pick, session?.paused, session?.resume_at, session?.time_remaining_at_pause]);
+
   // Preload cube data when session is loaded (so cards are ready before timer starts)
   useEffect(() => {
     if (!session?.cube_id) {
@@ -256,6 +289,13 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
 
     try {
       await draftService.togglePause(session.id, currentTimeRemaining);
+
+      // Immediately fetch fresh session to ensure host's UI updates
+      // Don't rely solely on real-time subscription which may not fire for own changes
+      const freshSession = await draftService.getSession(session.id);
+      if (freshSession) {
+        setSession(freshSession);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to toggle pause';
       setError(message);

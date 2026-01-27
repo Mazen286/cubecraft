@@ -16,6 +16,8 @@ interface UseResumeCountdownResult {
   isInCountdown: boolean;
   /** Check if timer should run (not paused and not in countdown) */
   shouldTimerRun: boolean;
+  /** Increments each time a countdown completes - use as effect dependency to restart timers */
+  resumeCount: number;
 }
 
 /**
@@ -40,7 +42,9 @@ export function useResumeCountdown({
   status,
 }: UseResumeCountdownOptions): UseResumeCountdownResult {
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [resumeCount, setResumeCount] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastResumeAtRef = useRef<string | null>(null);
 
   // Clean up interval on unmount
   useEffect(() => {
@@ -69,6 +73,10 @@ export function useResumeCountdown({
     if (!paused && resumeAt && status === 'in_progress') {
       const resumeTime = new Date(resumeAt).getTime();
 
+      // Track if this is a new resume_at (new countdown started)
+      const isNewCountdown = resumeAt !== lastResumeAtRef.current;
+      lastResumeAtRef.current = resumeAt;
+
       const updateCountdown = () => {
         const now = Date.now();
         const remaining = Math.ceil((resumeTime - now) / 1000);
@@ -80,6 +88,8 @@ export function useResumeCountdown({
             clearInterval(intervalRef.current);
             intervalRef.current = null;
           }
+          // Signal that countdown completed - this triggers timer effects to re-run
+          setResumeCount(c => c + 1);
         } else {
           setCountdown(remaining);
         }
@@ -87,6 +97,11 @@ export function useResumeCountdown({
 
       // Initial update
       updateCountdown();
+
+      // If countdown already finished (resume_at is in the past), increment resumeCount
+      if (new Date(resumeAt).getTime() <= Date.now() && isNewCountdown) {
+        setResumeCount(c => c + 1);
+      }
 
       // Update every 100ms for smooth countdown
       intervalRef.current = setInterval(updateCountdown, 100);
@@ -110,6 +125,7 @@ export function useResumeCountdown({
     countdown,
     isInCountdown,
     shouldTimerRun,
+    resumeCount,
   };
 }
 

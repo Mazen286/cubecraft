@@ -398,52 +398,37 @@ export function AuctionDraft() {
     switch (e.key) {
       case 'ArrowLeft':
         e.preventDefault();
-        {
-          const newIndex = (selectedCardIndex - 1 + cardsCount) % cardsCount;
-          setSelectedCardIndex(newIndex);
-          setPreviewCard(availableCards[newIndex]);
-        }
+        setSelectedCardIndex((selectedCardIndex - 1 + cardsCount) % cardsCount);
         break;
       case 'ArrowRight':
         e.preventDefault();
-        {
-          const newIndex = (selectedCardIndex + 1) % cardsCount;
-          setSelectedCardIndex(newIndex);
-          setPreviewCard(availableCards[newIndex]);
-        }
+        setSelectedCardIndex((selectedCardIndex + 1) % cardsCount);
         break;
       case 'ArrowUp':
         e.preventDefault();
         {
           const cols = getGridColumns();
-          const newIndex = (selectedCardIndex - cols + cardsCount) % cardsCount;
-          setSelectedCardIndex(newIndex);
-          setPreviewCard(availableCards[newIndex]);
+          setSelectedCardIndex((selectedCardIndex - cols + cardsCount) % cardsCount);
         }
         break;
       case 'ArrowDown':
         e.preventDefault();
         {
           const cols = getGridColumns();
-          const newIndex = (selectedCardIndex + cols) % cardsCount;
-          setSelectedCardIndex(newIndex);
-          setPreviewCard(availableCards[newIndex]);
+          setSelectedCardIndex((selectedCardIndex + cols) % cardsCount);
         }
         break;
       case 'Enter':
       case ' ':
         e.preventDefault();
-        // Only allow selecting cards during selection phase
-        if (auctionState?.phase === 'selecting') {
-          // If preview card is open, select it (if selector)
-          if (previewCard && isSelector && !isActionPending) {
+        if (previewCard) {
+          // Sheet is open - select the card if we're the selector during selection phase
+          if (auctionState?.phase === 'selecting' && isSelector && !isActionPending) {
             handleSelectCard(previewCard.id);
-          } else if (!previewCard && availableCards[selectedCardIndex]) {
-            // Open preview for current card
-            setPreviewCard(availableCards[selectedCardIndex]);
           }
-        } else if (!previewCard && availableCards[selectedCardIndex]) {
-          // During bidding, Enter/Space just opens preview (doesn't select)
+          // Otherwise just close the sheet (or do nothing during bidding)
+        } else if (availableCards[selectedCardIndex]) {
+          // No sheet open - open preview for highlighted card
           setPreviewCard(availableCards[selectedCardIndex]);
         }
         break;
@@ -1527,12 +1512,21 @@ export function AuctionDraft() {
               {/* Resume button for host */}
               {isHost && (
                 <Button
-                  onClick={() => togglePause()}
+                  onClick={handlePauseClick}
                   disabled={isPausing}
                   className="w-full"
                 >
-                  <Play className="w-4 h-4 mr-2" />
-                  {isPausing ? 'Resuming...' : 'Resume Draft'}
+                  {isPausing ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Resuming...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Resume Draft
+                    </>
+                  )}
                 </Button>
               )}
             </div>
