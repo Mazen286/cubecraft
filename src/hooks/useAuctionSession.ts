@@ -2,6 +2,7 @@
 // Provides real-time state management and auction actions
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { isResumeCountdownActive } from './useResumeCountdown';
 import { auctionService } from '../services/auctionService';
 import { cubeService } from '../services/cubeService';
 import { getActiveGameConfig } from '../context/GameContext';
@@ -296,6 +297,14 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
       return;
     }
 
+    // If resume countdown is active (resume_at is in the future), show saved time and wait
+    if (isResumeCountdownActive(session?.resume_at)) {
+      if (session?.time_remaining_at_pause !== null && session?.time_remaining_at_pause !== undefined) {
+        setSelectionTimeRemaining(session.time_remaining_at_pause);
+      }
+      return;
+    }
+
     // Only run timer during selection phase
     if (auctionState?.phase !== 'selecting' || !session?.selection_started_at) {
       setSelectionTimeRemaining(30);
@@ -319,7 +328,7 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
         clearInterval(selectionTimerRef.current);
       }
     };
-  }, [auctionState?.phase, session?.selection_started_at, session?.timer_seconds, session?.paused, session?.time_remaining_at_pause]);
+  }, [auctionState?.phase, session?.selection_started_at, session?.timer_seconds, session?.paused, session?.time_remaining_at_pause, session?.resume_at]);
 
   // Bidding timer - uses server timestamp for accuracy
   useEffect(() => {
@@ -332,6 +341,14 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
     // If paused, show saved time
     if (session?.paused) {
       if (session.time_remaining_at_pause !== null && session.time_remaining_at_pause !== undefined) {
+        setBidTimeRemaining(session.time_remaining_at_pause);
+      }
+      return;
+    }
+
+    // If resume countdown is active (resume_at is in the future), show saved time and wait
+    if (isResumeCountdownActive(session?.resume_at)) {
+      if (session?.time_remaining_at_pause !== null && session?.time_remaining_at_pause !== undefined) {
         setBidTimeRemaining(session.time_remaining_at_pause);
       }
       return;
@@ -361,7 +378,7 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
         clearInterval(bidTimerRef.current);
       }
     };
-  }, [auctionState?.phase, auctionStateData?.bidStartedAt, configuredBidTime, session?.paused, session?.time_remaining_at_pause]);
+  }, [auctionState?.phase, auctionStateData?.bidStartedAt, configuredBidTime, session?.paused, session?.time_remaining_at_pause, session?.resume_at]);
 
   // Auto-pass when bid time runs out (only for current player, not when paused)
   useEffect(() => {
