@@ -247,11 +247,50 @@ export function AuctionDraft() {
       return;
     }
 
-    // Close My Cards detail sheet with Escape
+    // Navigate My Cards while detail sheet is open
     if (mobileViewCard) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setMobileViewCard(null);
+      const cardsCount = filteredDraftedCards.length;
+      if (cardsCount === 0) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          {
+            const newIndex = (myCardsSelectedIndex - 1 + cardsCount) % cardsCount;
+            setMyCardsSelectedIndex(newIndex);
+            setMobileViewCard(filteredDraftedCards[newIndex]);
+          }
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          {
+            const newIndex = (myCardsSelectedIndex + 1) % cardsCount;
+            setMyCardsSelectedIndex(newIndex);
+            setMobileViewCard(filteredDraftedCards[newIndex]);
+          }
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          {
+            const cols = getGridColumns();
+            const newIndex = (myCardsSelectedIndex - cols + cardsCount) % cardsCount;
+            setMyCardsSelectedIndex(newIndex);
+            setMobileViewCard(filteredDraftedCards[newIndex]);
+          }
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          {
+            const cols = getGridColumns();
+            const newIndex = (myCardsSelectedIndex + cols) % cardsCount;
+            setMyCardsSelectedIndex(newIndex);
+            setMobileViewCard(filteredDraftedCards[newIndex]);
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          setMobileViewCard(null);
+          break;
       }
       return;
     }
