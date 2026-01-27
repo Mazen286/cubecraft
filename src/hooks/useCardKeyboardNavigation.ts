@@ -21,6 +21,8 @@ interface UseCardKeyboardNavigationOptions<T> {
   onSortChange?: (sortBy: string) => void;
   /** Callback to toggle sort direction (for 'a' key) */
   onToggleSortDirection?: () => void;
+  /** Callback for Escape when no sheet open and no highlight (e.g., close viewer) */
+  onEscapeNoSelection?: () => void;
 }
 
 interface UseCardKeyboardNavigationResult<T> {
@@ -92,6 +94,7 @@ export function useCardKeyboardNavigation<T>({
   currentSortBy,
   onSortChange,
   onToggleSortDirection,
+  onEscapeNoSelection,
 }: UseCardKeyboardNavigationOptions<T>): UseCardKeyboardNavigationResult<T> {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [sheetCard, setSheetCard] = useState<T | null>(null);
@@ -212,9 +215,12 @@ export function useCardKeyboardNavigation<T>({
         case ' ': {
           e.preventDefault();
           if (isSheetOpen) {
-            // Sheet is open - select the card
-            if (!isActionPending && !hasSelected && onSelect && sheetCardIndexRef.current >= 0) {
+            // Sheet is open - select the card if onSelect provided, otherwise close (toggle)
+            if (onSelect && !isActionPending && !hasSelected && sheetCardIndexRef.current >= 0) {
               onSelect(cards[sheetCardIndexRef.current], sheetCardIndexRef.current);
+              closeSheet();
+            } else if (!onSelect) {
+              // No selection action - just toggle the sheet closed
               closeSheet();
             }
           } else if (highlightedIndex >= 0) {
@@ -228,9 +234,12 @@ export function useCardKeyboardNavigation<T>({
           e.preventDefault();
           if (isSheetOpen) {
             closeSheet();
-          } else {
+          } else if (highlightedIndex >= 0) {
             // Clear highlight
             setHighlightedIndex(-1);
+          } else if (onEscapeNoSelection) {
+            // No sheet and no highlight - call the escape callback (e.g., close viewer)
+            onEscapeNoSelection();
           }
           break;
         }
@@ -296,6 +305,7 @@ export function useCardKeyboardNavigation<T>({
     currentSortBy,
     onSortChange,
     onToggleSortDirection,
+    onEscapeNoSelection,
   ]);
 
   return {

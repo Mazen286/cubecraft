@@ -900,6 +900,16 @@ export function Draft() {
     setShowFullDescription(false);
   }, [selectedCard?.id]);
 
+  // Auto-scroll to keep highlighted card visible
+  useEffect(() => {
+    if (highlightedIndex < 0) return;
+
+    const highlightedCard = document.querySelector(`[data-card-index="${highlightedIndex}"]`);
+    if (highlightedCard) {
+      highlightedCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [highlightedIndex]);
+
   // Calculate pack progress (account for burned cards)
   const picksPerPack = session
     ? session.pack_size - (session.burned_per_pack || 0)
@@ -1229,7 +1239,7 @@ export function Draft() {
             ) : sortedPackCards.length > 0 ? (
               <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
                 {sortedPackCards.map((card, index) => (
-                  <div key={card.id} className="relative">
+                  <div key={card.id} className="relative" data-card-index={index}>
                     <YuGiOhCard
                       card={card}
                       size="full"

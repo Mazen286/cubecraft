@@ -9,6 +9,7 @@ import { CubeStats } from './CubeStats';
 import { cubeService } from '../../services/cubeService';
 import { useGameConfig } from '../../context/GameContext';
 import { useCardFilters, type Tier } from '../../hooks/useCardFilters';
+import { useCardKeyboardNavigation } from '../../hooks/useCardKeyboardNavigation';
 import type { YuGiOhCard as YuGiOhCardType } from '../../types';
 import type { Card } from '../../types/card';
 import type { YuGiOhCardAttributes } from '../../types/card';
@@ -80,10 +81,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     });
   }, []);
 
-  // Selected card for detail view
-  const [selectedCard, setSelectedCard] = useState<YuGiOhCardType | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
-  const [showShortcuts, setShowShortcuts] = useState(false);
+  // Keyboard navigation will be set up after filteredCards is computed
 
   // Grid container ref for virtualization
   const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -302,11 +300,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     overscan: 5, // Render 5 extra rows above/below viewport
   });
 
-  // Memoized card click handler
-  const handleCardClick = useCallback((card: YuGiOhCardType, index: number) => {
-    setSelectedCard(card);
-    setSelectedIndex(index);
-  }, []);
+  // Card click handler comes from keyboard navigation hook
 
   // Stats - game-specific using filterOptions
   const stats = useMemo(() => {
@@ -344,125 +338,57 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     setStatsFilters({});
   }, [currentGameId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      const cardCount = filteredCards.length;
-
-      switch (e.key) {
-        case 'ArrowRight': {
-          e.preventDefault();
-          if (cardCount === 0) return;
-          const nextIndex = selectedIndex < 0 ? 0 : (selectedIndex + 1) % cardCount;
-          setSelectedIndex(nextIndex);
-          setSelectedCard(filteredCards[nextIndex]);
-          break;
-        }
-        case 'ArrowLeft': {
-          e.preventDefault();
-          if (cardCount === 0) return;
-          const prevIndex = selectedIndex < 0 ? cardCount - 1 : (selectedIndex - 1 + cardCount) % cardCount;
-          setSelectedIndex(prevIndex);
-          setSelectedCard(filteredCards[prevIndex]);
-          break;
-        }
-        case 'ArrowDown': {
-          e.preventDefault();
-          if (cardCount === 0) return;
-          if (selectedIndex < 0) {
-            setSelectedIndex(0);
-            setSelectedCard(filteredCards[0]);
-          } else {
-            // Move down one row (add column count)
-            const nextIndex = selectedIndex + columnsCount;
-            if (nextIndex < cardCount) {
-              setSelectedIndex(nextIndex);
-              setSelectedCard(filteredCards[nextIndex]);
-            }
-          }
-          break;
-        }
-        case 'ArrowUp': {
-          e.preventDefault();
-          if (cardCount === 0) return;
-          if (selectedIndex < 0) {
-            setSelectedIndex(cardCount - 1);
-            setSelectedCard(filteredCards[cardCount - 1]);
-          } else {
-            // Move up one row (subtract column count)
-            const prevIndex = selectedIndex - columnsCount;
-            if (prevIndex >= 0) {
-              setSelectedIndex(prevIndex);
-              setSelectedCard(filteredCards[prevIndex]);
-            }
-          }
-          break;
-        }
-        case 'Enter':
-        case ' ': {
-          // If bottom sheet is open, close it; otherwise open it for selected card
-          if (selectedCard) {
-            e.preventDefault();
-            // Toggle the detail view - if already showing this card, close it
-            // The bottom sheet is controlled by selectedCard being non-null
-          } else if (selectedIndex >= 0 && selectedIndex < cardCount) {
-            e.preventDefault();
-            setSelectedCard(filteredCards[selectedIndex]);
-          }
-          break;
-        }
-        case 'Escape': {
-          e.preventDefault();
-          if (selectedCard) {
-            // Close bottom sheet but keep selection
-            setSelectedCard(null);
-          } else if (selectedIndex >= 0) {
-            // Clear selection
-            setSelectedIndex(-1);
-          } else {
-            // Close the viewer
-            onClose();
-          }
-          break;
-        }
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9': {
-          const num = parseInt(e.key) - 1;
-          if (num < cardCount) {
-            e.preventDefault();
-            setSelectedIndex(num);
-            setSelectedCard(filteredCards[num]);
-          }
-          break;
-        }
-        case '?': {
-          e.preventDefault();
-          setShowShortcuts(prev => !prev);
-          break;
-        }
+  // Sort options for keyboard shortcut cycling - use game config options
+  const sortOptions = useMemo(() => {
+    const options: string[] = [];
+    // Add all game config sort options
+    if (gameConfig.sortOptions) {
+      for (const opt of gameConfig.sortOptions) {
+        // Only add score if cube has scores
+        if (opt.id === 'score' && !hasScores) continue;
+        options.push(opt.id);
       }
-    };
+    }
+    return options.length > 0 ? options : ['name'];
+  }, [hasScores, gameConfig.sortOptions]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, filteredCards, selectedIndex, selectedCard, columnsCount, onClose]);
+  // Keyboard navigation using reusable hook
+  const {
+    highlightedIndex,
+    setHighlightedIndex,
+    sheetCard,
+    isSheetOpen,
+    closeSheet,
+    handleCardClick,
+    showShortcuts,
+    toggleShortcuts,
+  } = useCardKeyboardNavigation({
+    cards: filteredCards,
+    columns: columnsCount,
+    enabled: isOpen,
+    // No onSelect - this is view-only, Enter/Space will toggle the sheet
+    sortOptions,
+    currentSortBy: filters.sortState.sortBy,
+    onSortChange: filters.setSortBy,
+    onToggleSortDirection: filters.toggleSortDirection,
+    onEscapeNoSelection: onClose, // Close viewer when Escape pressed with no selection
+  });
 
-  // Reset selection when filters change
+  // Reset highlight when filters change
   useEffect(() => {
-    setSelectedIndex(-1);
-  }, [filters.filterState, filters.sortState, statsFilters]);
+    setHighlightedIndex(-1);
+  }, [filters.filterState, filters.sortState, statsFilters, setHighlightedIndex]);
+
+  // Auto-scroll to keep highlighted card visible
+  useEffect(() => {
+    if (highlightedIndex < 0 || columnsCount === 0) return;
+
+    // Calculate which row the highlighted card is in
+    const rowIndex = Math.floor(highlightedIndex / columnsCount);
+
+    // Scroll to that row (with some padding to show context)
+    rowVirtualizer.scrollToIndex(rowIndex, { align: 'auto' });
+  }, [highlightedIndex, columnsCount, rowVirtualizer]);
 
   if (!isOpen) return null;
 
@@ -493,7 +419,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowShortcuts(prev => !prev)}
+              onClick={toggleShortcuts}
               className={cn(
                 "p-2 rounded-lg border text-sm font-bold transition-colors hidden sm:block",
                 showShortcuts
@@ -519,7 +445,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-white">Keyboard Shortcuts</h3>
               <button
-                onClick={() => setShowShortcuts(false)}
+                onClick={toggleShortcuts}
                 className="text-gray-400 hover:text-white text-sm"
               >
                 Close
@@ -541,6 +467,14 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
               <div className="flex items-center gap-2">
                 <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Enter</kbd>
                 <span className="text-gray-400">View card</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">S</kbd>
+                <span className="text-gray-400">Cycle sort</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">A</kbd>
+                <span className="text-gray-400">Toggle asc/desc</span>
               </div>
               <div className="flex items-center gap-2">
                 <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Esc</kbd>
@@ -675,7 +609,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                             card={card}
                             size="sm"
                             showTier={hasScores}
-                            isSelected={globalIndex === selectedIndex}
+                            isSelected={globalIndex === highlightedIndex}
                             onClick={() => handleCardClick(card, globalIndex)}
                           />
                         );
@@ -691,9 +625,9 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
 
         {/* Card Detail Bottom Sheet */}
         <CardDetailSheet
-          card={selectedCard}
-          isOpen={!!selectedCard}
-          onClose={() => setSelectedCard(null)}
+          card={sheetCard}
+          isOpen={isSheetOpen}
+          onClose={closeSheet}
         />
 
         {/* Footer */}
