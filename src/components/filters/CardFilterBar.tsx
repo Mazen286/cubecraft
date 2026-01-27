@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Search, SortAsc, SortDesc, X, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useGameConfig } from '../../context/GameContext';
 import type { UseCardFiltersReturn, Tier } from '../../hooks/useCardFilters';
+import type { Card } from '../../types/card';
 import { cn } from '../../lib/utils';
+import { ArchetypeFilter } from './ArchetypeFilter';
+import { MultiSelectDropdown } from './MultiSelectDropdown';
 
 /**
  * Tier colors for filter pills (matches utils.ts TIER_COLORS)
@@ -48,6 +51,9 @@ export interface CardFilterBarProps {
   /** Include 'score' sort option */
   includeScoreSort?: boolean;
 
+  /** Whether the cube has scores - when false, hides tier filters and score sort */
+  hasScores?: boolean;
+
   /** Tier counts for display (optional) */
   tierCounts?: Record<Tier, number>;
 
@@ -60,6 +66,18 @@ export interface CardFilterBarProps {
 
   /** Additional class names */
   className?: string;
+
+  /** Cards for archetype filter (Yu-Gi-Oh only) */
+  cards?: Card[];
+
+  /** Selected archetypes */
+  selectedArchetypes?: Set<string>;
+
+  /** Callback when archetype is toggled */
+  onToggleArchetype?: (archetype: string) => void;
+
+  /** Callback to clear all archetypes */
+  onClearArchetypes?: () => void;
 }
 
 /**
@@ -75,11 +93,16 @@ export function CardFilterBar({
   showSort = true,
   includePickSort = false,
   includeScoreSort = true,
+  hasScores = true,
   tierCounts,
   totalCount,
   filteredCount,
   compact = false,
   className,
+  cards,
+  selectedArchetypes,
+  onToggleArchetype,
+  onClearArchetypes,
 }: CardFilterBarProps) {
   const { gameConfig } = useGameConfig();
   const [showAdvancedPanel, setShowAdvancedPanel] = useState(false);
@@ -99,18 +122,37 @@ export function CardFilterBar({
     hasActiveFilters,
   } = filters;
 
-  // Build sort options (avoid duplicates)
+  // Build sort options (avoid duplicates, exclude score if cube has no scores)
   const hasScoreInConfig = gameConfig.sortOptions?.some(o => o.id === 'score');
+  const filteredGameSortOptions = (gameConfig.sortOptions || []).filter(
+    opt => opt.id !== 'score' || hasScores
+  );
   const sortOptions = [
     { id: 'none', label: 'None' },
     ...(includePickSort ? [{ id: 'pick', label: 'Pick Order' }] : []),
-    ...(gameConfig.sortOptions || []),
-    ...(includeScoreSort && !hasScoreInConfig ? [{ id: 'score', label: 'Score' }] : []),
+    ...filteredGameSortOptions,
+    ...(includeScoreSort && hasScores && !hasScoreInConfig ? [{ id: 'score', label: 'Score' }] : []),
   ];
 
   // Check if any advanced filters are active
   const hasAdvancedFilters = Object.values(filterState.advancedFilters).some(set => set.size > 0) ||
-    Object.keys(filterState.rangeFilters).length > 0;
+    Object.keys(filterState.rangeFilters).length > 0 ||
+    (selectedArchetypes && selectedArchetypes.size > 0);
+
+  // Check if archetype filter should be shown
+  const showArchetypeFilter = gameConfig.id === 'yugioh' && cards && cards.length > 0 && onToggleArchetype && onClearArchetypes;
+
+  // Debug: log archetype filter conditions
+  if (import.meta.env.DEV && showAdvancedFilters) {
+    console.log('[CardFilterBar] Archetype filter check:', {
+      gameId: gameConfig.id,
+      hasCards: !!cards,
+      cardsLength: cards?.length,
+      hasOnToggle: !!onToggleArchetype,
+      hasOnClear: !!onClearArchetypes,
+      showArchetypeFilter,
+    });
+  }
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -166,7 +208,7 @@ export function CardFilterBar({
         )}
 
         {/* Advanced filters toggle */}
-        {showAdvancedFilters && gameConfig.filterGroups && gameConfig.filterGroups.length > 0 && (
+        {showAdvancedFilters && (showArchetypeFilter || (gameConfig.filterGroups && gameConfig.filterGroups.length > 0)) && (
           <button
             onClick={() => setShowAdvancedPanel(!showAdvancedPanel)}
             className={cn(
@@ -227,8 +269,8 @@ export function CardFilterBar({
         )}
       </div>
 
-      {/* Tier filter pills */}
-      {showTierFilter && (
+      {/* Tier filter pills - only show if cube has scores */}
+      {showTierFilter && hasScores && (
         <div className="flex flex-wrap items-center gap-1">
           {TIER_OPTIONS.map(tier => {
             const isActive = filterState.tierFilter.includes(tier);
@@ -266,90 +308,96 @@ export function CardFilterBar({
         </div>
       )}
 
-      {/* Advanced filters panel */}
-      {showAdvancedFilters && showAdvancedPanel && gameConfig.filterGroups && (
-        <div className="bg-yugi-card border border-yugi-border rounded-lg p-3 space-y-3">
-          {gameConfig.filterGroups.map(group => (
-            <div key={group.id}>
-              <div className={cn(
-                'text-gray-400 mb-1.5',
-                compact ? 'text-[10px]' : 'text-xs'
-              )}>
-                {group.label}
+      {/* Advanced filters panel - compact dropdown layout */}
+      {showAdvancedFilters && showAdvancedPanel && (showArchetypeFilter || gameConfig.filterGroups) && (
+        <div className="bg-yugi-card border border-yugi-border rounded-lg p-3">
+          {/* All filters as dropdowns in a flex row */}
+          <div className="flex flex-wrap items-start gap-2">
+            {/* Archetype filter for Yu-Gi-Oh */}
+            {showArchetypeFilter && (
+              <ArchetypeFilter
+                cards={cards!}
+                selectedArchetypes={selectedArchetypes || new Set()}
+                onToggleArchetype={onToggleArchetype!}
+                onClearArchetypes={onClearArchetypes!}
+                compact={compact}
+              />
+            )}
+
+            {/* Multi-select filter groups as dropdowns */}
+            {gameConfig.filterGroups?.filter(g => g.type === 'multi-select').map(group => (
+              <MultiSelectDropdown
+                key={group.id}
+                label={group.label}
+                options={group.options || []}
+                selectedIds={filterState.advancedFilters[group.id] || new Set()}
+                onToggle={(optionId) => toggleAdvancedOption(group.id, optionId)}
+                onClear={() => {
+                  // Clear all options in this group
+                  const current = filterState.advancedFilters[group.id];
+                  if (current) {
+                    current.forEach(id => toggleAdvancedOption(group.id, id));
+                  }
+                }}
+                compact={compact}
+              />
+            ))}
+
+            {/* Range filters inline */}
+            {gameConfig.filterGroups?.filter(g => g.type === 'range').map(group => (
+              <div key={group.id} className="flex items-center gap-1.5">
+                <span className={cn(
+                  'text-gray-400',
+                  compact ? 'text-[10px]' : 'text-xs'
+                )}>
+                  {group.label}:
+                </span>
+                <input
+                  type="number"
+                  placeholder="Min"
+                  min={group.rangeConfig!.min}
+                  max={group.rangeConfig!.max}
+                  value={filterState.rangeFilters[group.id]?.[0] ?? ''}
+                  onChange={(e) => {
+                    const min = parseInt(e.target.value) || group.rangeConfig!.min;
+                    const currentMax = filterState.rangeFilters[group.id]?.[1] ?? group.rangeConfig!.max;
+                    setRangeFilter(group.id, [min, currentMax]);
+                  }}
+                  className={cn(
+                    'w-12 bg-yugi-dark border border-yugi-border rounded px-1.5 py-1 text-white focus:border-gold-500 focus:outline-none',
+                    compact ? 'text-[10px]' : 'text-xs'
+                  )}
+                />
+                <span className="text-gray-500 text-xs">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  min={group.rangeConfig!.min}
+                  max={group.rangeConfig!.max}
+                  value={filterState.rangeFilters[group.id]?.[1] ?? ''}
+                  onChange={(e) => {
+                    const max = parseInt(e.target.value) || group.rangeConfig!.max;
+                    const currentMin = filterState.rangeFilters[group.id]?.[0] ?? group.rangeConfig!.min;
+                    setRangeFilter(group.id, [currentMin, max]);
+                  }}
+                  className={cn(
+                    'w-12 bg-yugi-dark border border-yugi-border rounded px-1.5 py-1 text-white focus:border-gold-500 focus:outline-none',
+                    compact ? 'text-[10px]' : 'text-xs'
+                  )}
+                />
               </div>
+            ))}
+          </div>
 
-              {group.type === 'multi-select' && group.options && (
-                <div className="flex flex-wrap gap-1">
-                  {group.options.map(option => {
-                    const isActive = filterState.advancedFilters[group.id]?.has(option.id);
-                    return (
-                      <button
-                        key={option.id}
-                        onClick={() => toggleAdvancedOption(group.id, option.id)}
-                        className={cn(
-                          'rounded transition-all',
-                          compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs',
-                          isActive
-                            ? 'text-white'
-                            : 'bg-yugi-dark text-gray-400 hover:bg-yugi-darker'
-                        )}
-                        style={isActive && option.color ? {
-                          backgroundColor: option.color,
-                          color: isLightColor(option.color) ? '#000' : '#fff',
-                        } : undefined}
-                      >
-                        {option.shortLabel || option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {group.type === 'range' && group.rangeConfig && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    min={group.rangeConfig.min}
-                    max={group.rangeConfig.max}
-                    value={filterState.rangeFilters[group.id]?.[0] ?? ''}
-                    onChange={(e) => {
-                      const min = parseInt(e.target.value) || group.rangeConfig!.min;
-                      const currentMax = filterState.rangeFilters[group.id]?.[1] ?? group.rangeConfig!.max;
-                      setRangeFilter(group.id, [min, currentMax]);
-                    }}
-                    className={cn(
-                      'w-16 bg-yugi-dark border border-yugi-border rounded px-2 py-1 text-white focus:border-gold-500 focus:outline-none',
-                      compact ? 'text-[10px]' : 'text-xs'
-                    )}
-                  />
-                  <span className="text-gray-500">-</span>
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    min={group.rangeConfig.min}
-                    max={group.rangeConfig.max}
-                    value={filterState.rangeFilters[group.id]?.[1] ?? ''}
-                    onChange={(e) => {
-                      const max = parseInt(e.target.value) || group.rangeConfig!.max;
-                      const currentMin = filterState.rangeFilters[group.id]?.[0] ?? group.rangeConfig!.min;
-                      setRangeFilter(group.id, [currentMin, max]);
-                    }}
-                    className={cn(
-                      'w-16 bg-yugi-dark border border-yugi-border rounded px-2 py-1 text-white focus:border-gold-500 focus:outline-none',
-                      compact ? 'text-[10px]' : 'text-xs'
-                    )}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-
+          {/* Clear all button */}
           {hasAdvancedFilters && (
             <button
-              onClick={clearAdvancedFilters}
+              onClick={() => {
+                clearAdvancedFilters();
+                onClearArchetypes?.();
+              }}
               className={cn(
-                'text-gray-400 hover:text-white',
+                'text-red-400 hover:text-red-300 mt-2',
                 compact ? 'text-[10px]' : 'text-xs'
               )}
             >
@@ -382,18 +430,6 @@ export function CardFilterBar({
       )}
     </div>
   );
-}
-
-/**
- * Check if a color is light (for text contrast)
- */
-function isLightColor(hex: string): boolean {
-  const c = hex.replace('#', '');
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 155;
 }
 
 export default CardFilterBar;

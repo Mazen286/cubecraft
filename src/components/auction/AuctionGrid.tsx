@@ -20,6 +20,8 @@ interface AuctionGridProps {
   keyboardSelectedCardId?: number | null;
   /** Whether this is Open Draft mode (no bidding) */
   isOpenMode?: boolean;
+  /** Whether to show tier badges on cards */
+  showTier?: boolean;
 }
 
 export function AuctionGrid({
@@ -31,6 +33,7 @@ export function AuctionGrid({
   selectionDisabled = false,
   keyboardSelectedCardId,
   isOpenMode = false,
+  showTier = true,
 }: AuctionGridProps) {
   // Create a set for O(1) lookup
   const remainingSet = useMemo(
@@ -68,7 +71,7 @@ export function AuctionGrid({
               <YuGiOhCard
                 card={card}
                 size="full"
-                showTier
+                showTier={showTier}
                 flush
               />
               {!isRemaining && (

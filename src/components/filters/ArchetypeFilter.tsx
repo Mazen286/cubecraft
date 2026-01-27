@@ -9,6 +9,7 @@ interface ArchetypeFilterProps {
   selectedArchetypes: Set<string>;
   onToggleArchetype: (archetype: string) => void;
   onClearArchetypes: () => void;
+  compact?: boolean;
 }
 
 export function ArchetypeFilter({
@@ -16,6 +17,7 @@ export function ArchetypeFilter({
   selectedArchetypes,
   onToggleArchetype,
   onClearArchetypes,
+  compact = false,
 }: ArchetypeFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -74,7 +76,8 @@ export function ArchetypeFilter({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors",
+          "flex items-center gap-1.5 rounded-lg transition-colors",
+          compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm",
           hasSelection
             ? "bg-gold-500/20 text-gold-400 ring-1 ring-gold-500"
             : "bg-yugi-card text-gray-300 hover:bg-white/5 border border-yugi-border"
@@ -82,11 +85,18 @@ export function ArchetypeFilter({
       >
         <span>Archetype</span>
         {hasSelection && (
-          <span className="px-1.5 py-0.5 bg-gold-500/30 rounded text-xs">
+          <span className={cn(
+            "px-1 bg-gold-500/30 rounded font-medium",
+            compact ? "text-[10px]" : "text-xs"
+          )}>
             {selectedArchetypes.size}
           </span>
         )}
-        <ChevronDown className={cn("w-4 h-4 transition-transform", isOpen && "rotate-180")} />
+        <ChevronDown className={cn(
+          "transition-transform",
+          compact ? "w-3 h-3" : "w-4 h-4",
+          isOpen && "rotate-180"
+        )} />
       </button>
 
       {isOpen && (

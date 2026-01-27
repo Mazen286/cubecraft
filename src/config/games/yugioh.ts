@@ -401,6 +401,16 @@ export const yugiohConfig: GameConfig = {
   cardAttributes: YUGIOH_ATTRIBUTES,
 
   getCardImageUrl: (card, size) => {
+    // Use card's imageUrl if available (e.g., from API enrichment)
+    // Otherwise fall back to local images
+    if (card.imageUrl) {
+      // For small size, try to use the small version if it's a YGOProDeck URL
+      if (size === 'sm' && card.imageUrl.includes('ygoprodeck.com')) {
+        return card.imageUrl.replace('/cards/', '/cards_small/');
+      }
+      return card.imageUrl;
+    }
+    // Fall back to local images
     const id = card.id;
     if (size === 'sm') {
       return `/images/cards_small/${id}.jpg`;

@@ -129,6 +129,11 @@ export function Results() {
       .filter((item): item is { card: YuGiOhCardType; index: number } => item.card !== undefined);
   }, [draftedCardIds, uniqueCards]);
 
+  // Check if any cards have scores (for conditional tier display)
+  const hasScores = useMemo(() => {
+    return allDraftedCards.some(({ card }) => card.score !== undefined);
+  }, [allDraftedCards]);
+
   const isLoading = sessionLoading || cardsLoading || isLoadingViewedPlayer;
 
   // Deck builder state - track which zone each card is in
@@ -743,7 +748,7 @@ ${sideDeck}
               <div className="pt-0 border-t border-yugi-border">
                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 mt-4">
                   {firstPickCards.map((card, idx) => (
-                    <YuGiOhCard key={`first-${card.id}-${idx}`} card={card} size="full" showTier flush />
+                    <YuGiOhCard key={`first-${card.id}-${idx}`} card={card} size="full" showTier={hasScores} flush />
                   ))}
                 </div>
               </div>
@@ -774,7 +779,7 @@ ${sideDeck}
                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 mt-4">
                   {burnedCards.map(({ card, packNumber }, index) => (
                     <div key={`${card.id}-pack${packNumber}-${index}`} className="relative">
-                      <YuGiOhCard card={card} size="full" showTier flush />
+                      <YuGiOhCard card={card} size="full" showTier={hasScores} flush />
                       <div className="absolute inset-0 bg-red-900/30 pointer-events-none" />
                       <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-[10px] text-center py-0.5 text-gray-300">
                         Pack {packNumber}
@@ -868,6 +873,7 @@ ${sideDeck}
             showAdvancedFilters
             showSort
             includeScoreSort
+            hasScores={hasScores}
             tierCounts={tierCounts}
             totalCount={allDraftedCards.length}
             filteredCount={mainDeckCards.length + extraDeckCards.length + sideDeckCards.length + poolCards.length}
@@ -899,6 +905,7 @@ ${sideDeck}
               selectedIndex={selectedCard?.index}
               onCardClick={handleCardClick}
               onCardDrop={moveCard}
+              showTier={hasScores}
             />
 
             {/* Extra Deck */}
@@ -912,6 +919,7 @@ ${sideDeck}
               selectedIndex={selectedCard?.index}
               onCardClick={handleCardClick}
               onCardDrop={moveCard}
+              showTier={hasScores}
             />
 
             {/* Side Deck */}
@@ -926,6 +934,7 @@ ${sideDeck}
               onCardClick={handleCardClick}
               onCardDrop={moveCard}
               emptyMessage="Drag cards here or click to move"
+              showTier={hasScores}
             />
 
             {/* Unused Pool */}
@@ -941,6 +950,7 @@ ${sideDeck}
               onCardDrop={moveCard}
               emptyMessage="Drag cards here to exclude from deck"
               icon={<Archive className="w-5 h-5" />}
+              showTier={hasScores}
             />
           </div>
         ) : (
@@ -1044,6 +1054,7 @@ function DeckZoneSection({
   onCardDrop,
   emptyMessage,
   icon,
+  showTier = true,
 }: {
   title: string;
   count: number;
@@ -1056,6 +1067,7 @@ function DeckZoneSection({
   onCardDrop: (cardIndex: number, toZone: DeckZone) => void;
   emptyMessage?: string;
   icon?: React.ReactNode;
+  showTier?: boolean;
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const showFilteredCount = filteredCount !== count;
@@ -1120,7 +1132,7 @@ function DeckZoneSection({
               )}
               onClick={() => onCardClick(card, index)}
             >
-              <YuGiOhCard card={card} size="full" showTier flush />
+              <YuGiOhCard card={card} size="full" showTier={showTier} flush />
             </div>
           ))}
           {cards.length === 0 && isDragOver && (

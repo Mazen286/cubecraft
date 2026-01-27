@@ -34,6 +34,7 @@ export interface CubeData {
   cardMap: Record<number, YuGiOhCard>;
   // Derived at load time from cardMap
   cards: YuGiOhCard[];
+  hasScores: boolean;       // Whether any card in the cube has a score
 }
 
 /**
@@ -118,6 +119,9 @@ function processCubeData(rawData: RawCubeData): CubeData {
     }
   }
 
+  const cards = Object.values(cardMap);
+  const hasScores = cards.some(card => card.score !== undefined);
+
   return {
     id: rawData.id,
     name: rawData.name,
@@ -126,7 +130,8 @@ function processCubeData(rawData: RawCubeData): CubeData {
     gameId: rawData.gameId || DEFAULT_GAME_ID,
     version: rawData.version,
     cardMap,
-    cards: Object.values(cardMap),
+    cards,
+    hasScores,
   };
 }
 
@@ -324,7 +329,7 @@ export const cubeService = {
     cardsPerPlayer: number
   ): Promise<{ valid: boolean; error?: string }> {
     try {
-      const cubeData = await this.loadCube(cubeId);
+      const cubeData = await this.loadAnyCube(cubeId);
       const requiredCards = playerCount * cardsPerPlayer;
 
       if (cubeData.cards.length < requiredCards) {
@@ -347,7 +352,7 @@ export const cubeService = {
    * Preload a cube (useful for warming cache)
    */
   async preloadCube(cubeId: string): Promise<void> {
-    await this.loadCube(cubeId);
+    await this.loadAnyCube(cubeId);
   },
 
   /**
@@ -369,7 +374,7 @@ export const cubeService = {
    */
   async reloadCube(cubeId: string): Promise<CubeData> {
     this.clearCubeCache(cubeId);
-    return this.loadCube(cubeId);
+    return this.loadAnyCube(cubeId);
   },
 
   /**
@@ -379,6 +384,15 @@ export const cubeService = {
     const cube = cubeCache.get(cubeId);
     if (!cube) return null;
     return cube.gameId;
+  },
+
+  /**
+   * Check if a loaded cube has scores
+   */
+  cubeHasScores(cubeId: string): boolean {
+    const cube = cubeCache.get(cubeId);
+    if (!cube) return false;
+    return cube.hasScores;
   },
 
   // ============================================
@@ -420,6 +434,133 @@ export const cubeService = {
     } catch (error) {
       console.error('Failed to load database cubes:', error);
       return [];
+    }
+  },
+
+  /**
+   * Load community cubes (public cubes NOT created by the current user)
+   */
+  async loadCommunityCubes(options?: {
+    gameId?: string;
+    excludeUserId?: string;
+    limit?: number;
+  }): Promise<{ cubes: CubeInfo[]; totalCount: number }> {
+    try {
+      const supabase = getSupabase();
+
+      // First get total count
+      let countQuery = supabase
+        .from('cubes')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_public', true);
+
+      if (options?.gameId) {
+        countQuery = countQuery.eq('game_id', options.gameId);
+      }
+      if (options?.excludeUserId) {
+        countQuery = countQuery.neq('creator_id', options.excludeUserId);
+      }
+
+      const { count } = await countQuery;
+
+      // Then get cubes with limit
+      let query = supabase
+        .from('cubes')
+        .select('id, name, description, game_id, creator_id, is_public, card_count')
+        .eq('is_public', true);
+
+      if (options?.gameId) {
+        query = query.eq('game_id', options.gameId);
+      }
+      if (options?.excludeUserId) {
+        query = query.neq('creator_id', options.excludeUserId);
+      }
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Failed to load community cubes:', error);
+        return { cubes: [], totalCount: 0 };
+      }
+
+      const cubes = (data || []).map((row): CubeInfo => ({
+        id: `db:${row.id}`,
+        name: row.name,
+        description: row.description || '',
+        cardCount: row.card_count,
+        gameId: row.game_id,
+        source: 'database',
+        creatorId: row.creator_id || undefined,
+        isPublic: row.is_public,
+      }));
+
+      return { cubes, totalCount: count || 0 };
+    } catch (error) {
+      console.error('Failed to load community cubes:', error);
+      return { cubes: [], totalCount: 0 };
+    }
+  },
+
+  /**
+   * Load user's own cubes (both public and private)
+   */
+  async loadMyCubes(userId: string, options?: {
+    gameId?: string;
+    limit?: number;
+  }): Promise<{ cubes: CubeInfo[]; totalCount: number }> {
+    try {
+      const supabase = getSupabase();
+
+      // First get total count
+      let countQuery = supabase
+        .from('cubes')
+        .select('id', { count: 'exact', head: true })
+        .eq('creator_id', userId);
+
+      if (options?.gameId) {
+        countQuery = countQuery.eq('game_id', options.gameId);
+      }
+
+      const { count } = await countQuery;
+
+      // Then get cubes with limit
+      let query = supabase
+        .from('cubes')
+        .select('id, name, description, game_id, creator_id, is_public, card_count')
+        .eq('creator_id', userId);
+
+      if (options?.gameId) {
+        query = query.eq('game_id', options.gameId);
+      }
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Failed to load user cubes:', error);
+        return { cubes: [], totalCount: 0 };
+      }
+
+      const cubes = (data || []).map((row): CubeInfo => ({
+        id: `db:${row.id}`,
+        name: row.name,
+        description: row.description || '',
+        cardCount: row.card_count,
+        gameId: row.game_id,
+        source: 'database',
+        creatorId: row.creator_id || undefined,
+        isPublic: row.is_public,
+      }));
+
+      return { cubes, totalCount: count || 0 };
+    } catch (error) {
+      console.error('Failed to load user cubes:', error);
+      return { cubes: [], totalCount: 0 };
     }
   },
 
@@ -489,7 +630,11 @@ export const cubeService = {
       const supabase = getSupabase();
       const cardCount = Object.keys(cardMap).length;
 
+      // Generate UUID on client side since table may not have default
+      const cubeId = crypto.randomUUID();
+
       const insertData: CubeInsert = {
+        id: cubeId,
         name,
         description,
         game_id: gameId,

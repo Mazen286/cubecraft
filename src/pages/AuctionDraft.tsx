@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer, Crown, Pause, Play } from 'lucide-react';
+import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer, Crown, Pause, Play, X } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -17,6 +17,7 @@ import type { YuGiOhCard as YuGiOhCardType } from '../types';
 import { useCards } from '../hooks/useCards';
 import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
+import { CubeStats } from '../components/cube/CubeStats';
 import { draftService, clearLastSession } from '../services/draftService';
 import { cubeService } from '../services/cubeService';
 import { useGameConfig } from '../context/GameContext';
@@ -88,6 +89,9 @@ export function AuctionDraft() {
     defaultDirection: 'desc',
   });
 
+  // Stats-based filters for My Cards (cross-filtering from CubeStats)
+  const [myCardsStatsFilters, setMyCardsStatsFilters] = useState<Record<string, Set<string>>>({});
+
   // Card filters for grid sorting (default to no sort - preserves random grid order)
   const gridFilters = useCardFilters({
     includePickSort: false,
@@ -149,31 +153,108 @@ export function AuctionDraft() {
     return sortedGridCards.filter(card => remainingCardIds.includes(card.id));
   }, [sortedGridCards, remainingCardIds]);
 
+  // Helper to convert YuGiOhCard to Card format
+  const toCardWithAttributes = useCallback((card: YuGiOhCardType) => ({
+    id: card.id,
+    name: card.name,
+    type: card.type,
+    description: card.desc,
+    score: card.score,
+    attributes: {
+      atk: card.atk,
+      def: card.def,
+      level: card.level,
+      attribute: card.attribute,
+      race: card.race,
+      linkval: card.linkval,
+      archetype: card.archetype,
+    },
+  }), []);
+
+  // Convert drafted cards to generic Card format for CubeStats
+  const draftedCardsAsGeneric = useMemo(() => {
+    return draftedCards.map(card => toCardWithAttributes(card));
+  }, [draftedCards, toCardWithAttributes]);
+
   // Filter drafted cards for My Cards drawer
   const filteredDraftedCards = useMemo(() => {
     const indexedCards = draftedCards.map((card, index) => ({
-      card: {
-        id: card.id,
-        name: card.name,
-        type: card.type,
-        description: card.desc,
-        score: card.score,
-        attributes: {
-          atk: card.atk,
-          def: card.def,
-          level: card.level,
-          attribute: card.attribute,
-          race: card.race,
-          linkval: card.linkval,
-          archetype: card.archetype,
-        },
-      },
+      card: toCardWithAttributes(card),
       index,
     }));
 
-    const filteredIndexed = myCardsFilters.applyFiltersWithIndex(indexedCards);
+    // Apply filters from CardFilterBar
+    let filteredIndexed = myCardsFilters.applyFiltersWithIndex(indexedCards);
+
+    // Apply stats-based filters (from CubeStats)
+    if (Object.keys(myCardsStatsFilters).length > 0) {
+      filteredIndexed = filteredIndexed.filter(({ card }) => {
+        return Object.entries(myCardsStatsFilters).every(([groupId, selectedValues]) => {
+          if (selectedValues.size === 0) return true;
+
+          // Get the card's value for this filter group
+          let cardValue: string | undefined;
+          const attrs = card.attributes as Record<string, unknown>;
+
+          if (groupId === 'type') {
+            cardValue = card.type;
+          } else if (groupId === 'archetype') {
+            cardValue = attrs?.archetype as string | undefined;
+          } else if (groupId === 'attribute') {
+            cardValue = attrs?.attribute as string | undefined;
+          } else if (groupId === 'race') {
+            cardValue = attrs?.race as string | undefined;
+          } else if (attrs && groupId in attrs) {
+            cardValue = String(attrs[groupId]);
+          }
+
+          return cardValue !== undefined && selectedValues.has(cardValue);
+        });
+      });
+    }
+
     return filteredIndexed.map(({ index }) => draftedCards[index]);
-  }, [draftedCards, myCardsFilters]);
+  }, [draftedCards, myCardsFilters, myCardsStatsFilters, toCardWithAttributes]);
+
+  // Filtered cards as generic format for CubeStats
+  const filteredDraftedCardsAsGeneric = useMemo(() => {
+    return filteredDraftedCards.map(card => toCardWithAttributes(card));
+  }, [filteredDraftedCards, toCardWithAttributes]);
+
+  // Handle stats filter click (from CubeStats)
+  const handleMyCardsStatsFilterClick = useCallback((groupId: string, value: string, additive = false) => {
+    setMyCardsStatsFilters(prev => {
+      const newFilters = { ...prev };
+      const currentSet = newFilters[groupId] || new Set<string>();
+
+      if (additive) {
+        const newSet = new Set(currentSet);
+        if (newSet.has(value)) {
+          newSet.delete(value);
+        } else {
+          newSet.add(value);
+        }
+        if (newSet.size === 0) {
+          delete newFilters[groupId];
+        } else {
+          newFilters[groupId] = newSet;
+        }
+      } else {
+        if (currentSet.size === 1 && currentSet.has(value)) {
+          delete newFilters[groupId];
+        } else {
+          newFilters[groupId] = new Set([value]);
+        }
+      }
+
+      return newFilters;
+    });
+  }, []);
+
+  // Clear all stats filters for My Cards
+  const clearMyCardsStatsFilters = useCallback(() => {
+    setMyCardsStatsFilters({});
+  }, []);
 
   // Handler for selecting a card (moved up to avoid temporal dead zone in useEffect dependency)
   const handleSelectCard = useCallback(async (cardId: number) => {
@@ -389,6 +470,9 @@ export function AuctionDraft() {
       }
     }
   }, [session?.cube_id, isCubeReady, gameConfig.id, setGame]);
+
+  // Check if cube has scores for conditional tier display
+  const cubeHasScores = session?.cube_id ? cubeService.cubeHasScores(session.cube_id) : true;
 
   // Auto-start for solo mode with retry
   useEffect(() => {
@@ -856,6 +940,7 @@ export function AuctionDraft() {
                 showAdvancedFilters={false}
                 showSort
                 includeScoreSort
+                hasScores={cubeHasScores}
                 compact
                 className="flex-shrink-0"
               />
@@ -869,6 +954,7 @@ export function AuctionDraft() {
               selectionDisabled={isActionPending || auctionState?.phase !== 'selecting'}
               keyboardSelectedCardId={availableCards[selectedCardIndex]?.id ?? null}
               isOpenMode={isOpenMode}
+              showTier={cubeHasScores}
             />
           </div>
 
@@ -889,6 +975,7 @@ export function AuctionDraft() {
                 bidTimeRemaining={bidTimeRemaining}
                 totalBidTime={totalBidTime}
                 onViewCard={() => setShowAuctionCardDetail(true)}
+                showTier={cubeHasScores}
               />
             </div>
           )}
@@ -1114,20 +1201,70 @@ export function AuctionDraft() {
                     showAdvancedFilters
                     showSort
                     includeScoreSort
+                    hasScores={cubeHasScores}
                     tierCounts={myCardsStats.tiers as Record<'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F', number>}
                     totalCount={draftedCards.length}
                     filteredCount={filteredDraftedCards.length}
                     compact
+                    cards={draftedCardsAsGeneric}
+                    selectedArchetypes={myCardsStatsFilters['archetype']}
+                    onToggleArchetype={(archetype) => handleMyCardsStatsFilterClick('archetype', archetype, true)}
+                    onClearArchetypes={() => {
+                      setMyCardsStatsFilters(prev => {
+                        const { archetype: _, ...rest } = prev;
+                        return rest;
+                      });
+                    }}
                   />
+
+                  {/* Stats filters row - show active non-archetype filters */}
+                  {Object.keys(myCardsStatsFilters).filter(k => k !== 'archetype').length > 0 && draftedCards.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      {/* Active stats filter chips (excluding archetype, which is in CardFilterBar) */}
+                      {Object.entries(myCardsStatsFilters).map(([groupId, values]) => {
+                        if (groupId === 'archetype') return null;
+                        return Array.from(values).map(value => (
+                          <button
+                            key={`${groupId}-${value}`}
+                            onClick={() => handleMyCardsStatsFilterClick(groupId, value)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-gold-500/20 text-gold-400 rounded-lg ring-1 ring-gold-500"
+                          >
+                            <span className="text-gray-400 capitalize">{groupId}:</span>
+                            <span>{value}</span>
+                            <X className="w-3 h-3" />
+                          </button>
+                        ));
+                      })}
+                      {/* Clear all stats filters button */}
+                      {Object.keys(myCardsStatsFilters).filter(k => k !== 'archetype').length > 0 && (
+                        <button
+                          onClick={clearMyCardsStatsFilters}
+                          className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                        >
+                          Clear all
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
+              {/* Cube Statistics Dashboard */}
+              {draftedCards.length > 0 && (
+                <CubeStats
+                  cards={draftedCardsAsGeneric}
+                  filteredCards={filteredDraftedCardsAsGeneric}
+                  onFilterClick={handleMyCardsStatsFilterClick}
+                  activeFilters={myCardsStatsFilters}
+                />
+              )}
+
               {/* Content */}
-              <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <div className="flex-1 overflow-y-auto overscroll-contain p-2 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {draftedCards.length > 0 ? (
-                  /* Cards grid */
+                  /* Cards grid - smaller cards for more visibility */
                   filteredDraftedCards.length > 0 ? (
-                    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14">
                       {filteredDraftedCards.map((card, index) => (
                         <div
                           key={card.id}
@@ -1138,7 +1275,7 @@ export function AuctionDraft() {
                               : ''
                           }`}
                         >
-                          <YuGiOhCard card={card} size="full" showTier flush />
+                          <YuGiOhCard card={card} size="full" showTier={cubeHasScores} flush />
                         </div>
                       ))}
                     </div>

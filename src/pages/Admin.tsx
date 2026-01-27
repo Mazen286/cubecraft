@@ -264,16 +264,46 @@ function CubeManagement() {
 
   const loadCubes = async () => {
     const supabase = getSupabase();
-    const { data, error } = await supabase
+
+    // First, get all cubes
+    const { data: cubesData, error: cubesError } = await supabase
       .from('cubes')
-      .select('id, name, description, game_id, creator_id, is_public, card_count, created_at, user_profiles(display_name)')
+      .select('id, name, description, game_id, creator_id, is_public, card_count, created_at')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Failed to load cubes:', error);
-    } else {
-      setCubes(data || []);
+    if (cubesError) {
+      console.error('Failed to load cubes:', cubesError);
+      console.error('RLS may be blocking access. Check that your user has admin role in user_profiles table.');
+      setIsLoading(false);
+      return;
     }
+
+    console.log('[Admin] Loaded cubes:', cubesData?.length || 0);
+
+    // Then, get creator names for cubes that have creator_id
+    const creatorIds = [...new Set((cubesData || []).map(c => c.creator_id).filter(Boolean))];
+    let profilesMap: Record<string, string> = {};
+
+    if (creatorIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, display_name')
+        .in('id', creatorIds);
+
+      if (profiles) {
+        profilesMap = Object.fromEntries(profiles.map(p => [p.id, p.display_name]));
+      }
+    }
+
+    // Merge the data
+    const cubesWithProfiles = (cubesData || []).map(cube => ({
+      ...cube,
+      user_profiles: cube.creator_id && profilesMap[cube.creator_id]
+        ? [{ display_name: profilesMap[cube.creator_id] }]
+        : null,
+    }));
+
+    setCubes(cubesWithProfiles);
     setIsLoading(false);
   };
 
@@ -282,11 +312,11 @@ function CubeManagement() {
   }, []);
 
   const deleteCube = async (cubeId: string) => {
-    const supabase = getSupabase();
-    const { error } = await supabase.from('cubes').delete().eq('id', cubeId);
+    const result = await cubeService.deleteDatabaseCube(cubeId);
 
-    if (error) {
-      console.error('Failed to delete cube:', error);
+    if (result.error) {
+      console.error('Failed to delete cube:', result.error);
+      alert(`Failed to delete cube: ${result.error}`);
     } else {
       setCubes((prev) => prev.filter((c) => c.id !== cubeId));
     }
@@ -446,8 +476,8 @@ function ScoreManagement() {
       setMessage(null);
 
       try {
-        // Load cube cards
-        const cubeData = await cubeService.loadCube(selectedCubeId);
+        // Load cube cards (supports both local and database cubes)
+        const cubeData = await cubeService.loadAnyCube(selectedCubeId);
         setCards(cubeData.cards);
 
         // Load scores from Supabase

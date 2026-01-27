@@ -3,6 +3,7 @@ import { Boxes } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getSupabase } from '../lib/supabase';
+import { cubeService } from '../services/cubeService';
 import { CubeUpload } from '../components/cube/CubeUpload';
 import { getGameConfig } from '../config/games';
 
@@ -48,11 +49,11 @@ export function MyCubes() {
   }, [user]);
 
   const handleDelete = async (cubeId: string) => {
-    const supabase = getSupabase();
-    const { error } = await supabase.from('cubes').delete().eq('id', cubeId);
+    const result = await cubeService.deleteDatabaseCube(cubeId);
 
-    if (error) {
-      console.error('Failed to delete cube:', error);
+    if (result.error) {
+      console.error('Failed to delete cube:', result.error);
+      alert(`Failed to delete cube: ${result.error}`);
     } else {
       setCubes((prev) => prev.filter((c) => c.id !== cubeId));
     }

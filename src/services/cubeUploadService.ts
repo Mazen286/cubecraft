@@ -3,6 +3,8 @@
 
 import type { Card } from '../types/card';
 import { getGameConfig } from '../config/games';
+import { cardService } from './cardService';
+import { mtgCardService } from './mtgCardService';
 
 export interface ParsedCube {
   name: string;
@@ -24,8 +26,39 @@ export interface CsvParseOptions {
 }
 
 /**
+ * Detect CSV column layout from header row
+ */
+function detectCsvLayout(headerValues: string[]): {
+  idColumn?: number;
+  nameColumn: number;
+  typeColumn?: number;
+  descriptionColumn?: number;
+  scoreColumn?: number;
+} {
+  const lower = headerValues.map(h => h.toLowerCase().trim());
+
+  const idColumn = lower.findIndex(h => h === 'id' || h === 'card_id' || h === 'cardid');
+  const nameColumn = lower.findIndex(h => h === 'name' || h === 'card_name' || h === 'cardname');
+  const typeColumn = lower.findIndex(h => h === 'type' || h === 'card_type');
+  const descriptionColumn = lower.findIndex(h => h === 'description' || h === 'desc' || h === 'text');
+  const scoreColumn = lower.findIndex(h => h === 'score' || h === 'rating' || h === 'tier');
+
+  return {
+    idColumn: idColumn >= 0 ? idColumn : undefined,
+    nameColumn: nameColumn >= 0 ? nameColumn : (idColumn >= 0 ? -1 : 0), // -1 means no name column
+    typeColumn: typeColumn >= 0 ? typeColumn : undefined,
+    descriptionColumn: descriptionColumn >= 0 ? descriptionColumn : undefined,
+    scoreColumn: scoreColumn >= 0 ? scoreColumn : undefined,
+  };
+}
+
+/**
  * Parse a CSV file into cube cards
- * Expected format: name,type,description,score (or with header row)
+ * Supports multiple formats:
+ * - ID only: id (for Yu-Gi-Oh, will be enriched via API)
+ * - ID,Name: id,name
+ * - ID,Name,Score: id,name,score
+ * - Full: name,type,description,score
  */
 export function parseCsvCube(
   csvContent: string,
@@ -36,63 +69,122 @@ export function parseCsvCube(
   const warnings: string[] = [];
   const cards: Card[] = [];
 
-  const {
-    gameId,
-    hasHeader = true,
-    nameColumn = 0,
-    typeColumn = 1,
-    descriptionColumn = 2,
-    scoreColumn = 3,
-    idColumn,
-  } = options;
+  const { gameId, hasHeader = true } = options;
 
-  const startLine = hasHeader ? 1 : 0;
+  if (lines.length === 0) {
+    errors.push('Empty file');
+    return { name: 'Uploaded Cube', description: '', gameId, cards, errors, warnings };
+  }
 
-  for (let i = startLine; i < lines.length; i++) {
-    const line = lines[i];
-    const lineNum = i + 1;
+  // Parse header to detect layout
+  const headerValues = parseCSVLine(lines[0]);
+  const layout = hasHeader ? detectCsvLayout(headerValues) : {
+    nameColumn: 0,
+    typeColumn: 1,
+    descriptionColumn: 2,
+    scoreColumn: 3,
+  };
 
-    // Parse CSV line (handle quoted values)
-    const values = parseCSVLine(line);
+  // Check if first column looks like numeric IDs (Yu-Gi-Oh card IDs)
+  const firstDataLine = lines[hasHeader ? 1 : 0];
+  const firstValues = parseCSVLine(firstDataLine || '');
+  const firstValueIsNumericId = firstValues[0] && /^\d{5,}$/.test(firstValues[0].trim());
 
-    if (values.length < 2) {
-      warnings.push(`Line ${lineNum}: Skipped - not enough columns`);
-      continue;
-    }
+  // For Yu-Gi-Oh, if first column is numeric ID and no explicit name column, treat as ID-only format
+  const isYuGiOhIdFormat = gameId === 'yugioh' && firstValueIsNumericId &&
+    (layout.nameColumn === -1 || layout.nameColumn === undefined ||
+      (layout.idColumn === 0 && layout.nameColumn === 0));
 
-    const name = values[nameColumn]?.trim();
-    const type = values[typeColumn]?.trim() || 'Unknown';
-    const description = values[descriptionColumn]?.trim() || '';
-    const scoreStr = values[scoreColumn]?.trim();
-    const idStr = idColumn !== undefined ? values[idColumn]?.trim() : undefined;
+  if (isYuGiOhIdFormat) {
+    // ID-only or ID,Name,Score format for Yu-Gi-Oh
+    const startLine = hasHeader ? 1 : 0;
 
-    if (!name) {
-      warnings.push(`Line ${lineNum}: Skipped - missing card name`);
-      continue;
-    }
+    for (let i = startLine; i < lines.length; i++) {
+      const line = lines[i];
+      const lineNum = i + 1;
+      const values = parseCSVLine(line);
 
-    // Generate ID if not provided
-    const id = idStr ? parseInt(idStr, 10) : generateCardId(name);
+      if (values.length === 0) continue;
 
-    // Parse score
-    let score: number | undefined;
-    if (scoreStr) {
-      const parsed = parseInt(scoreStr, 10);
-      if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
-        score = parsed;
-      } else {
-        warnings.push(`Line ${lineNum}: Invalid score "${scoreStr}", using default`);
+      const idStr = values[0]?.trim();
+      const id = parseInt(idStr, 10);
+
+      if (isNaN(id) || id <= 0) {
+        warnings.push(`Line ${lineNum}: Invalid card ID "${idStr}"`);
+        continue;
       }
-    }
 
-    cards.push({
-      id,
-      name,
-      type,
-      description,
-      score,
-      attributes: {},
-    });
+      // Optional name in column 1 (may be provided for reference)
+      const name = values[1]?.trim() || `Card #${id}`;
+
+      // Optional score - check common positions
+      let score: number | undefined;
+      const scoreCol = layout.scoreColumn ?? (values.length > 2 ? 2 : -1);
+      if (scoreCol >= 0 && values[scoreCol]) {
+        const parsed = parseInt(values[scoreCol].trim(), 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+          score = parsed;
+        }
+      }
+
+      cards.push({
+        id,
+        name,
+        type: 'Unknown', // Will be enriched via API
+        description: '',
+        score,
+        attributes: {},
+      });
+    }
+  } else {
+    // Standard format: name,type,description,score or detected layout
+    const startLine = hasHeader ? 1 : 0;
+    const {
+      nameColumn = 0,
+      typeColumn,
+      descriptionColumn,
+      scoreColumn,
+      idColumn,
+    } = layout;
+
+    for (let i = startLine; i < lines.length; i++) {
+      const line = lines[i];
+      const lineNum = i + 1;
+      const values = parseCSVLine(line);
+
+      if (values.length === 0) continue;
+
+      const name = nameColumn >= 0 ? values[nameColumn]?.trim() : '';
+      const type = typeColumn !== undefined ? values[typeColumn]?.trim() || 'Unknown' : 'Unknown';
+      const description = descriptionColumn !== undefined ? values[descriptionColumn]?.trim() || '' : '';
+      const idStr = idColumn !== undefined ? values[idColumn]?.trim() : undefined;
+
+      if (!name) {
+        warnings.push(`Line ${lineNum}: Skipped - missing card name`);
+        continue;
+      }
+
+      const id = idStr ? parseInt(idStr, 10) : generateCardId(name);
+
+      let score: number | undefined;
+      if (scoreColumn !== undefined && values[scoreColumn]) {
+        const parsed = parseInt(values[scoreColumn].trim(), 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+          score = parsed;
+        } else {
+          warnings.push(`Line ${lineNum}: Invalid score "${values[scoreColumn]}", using default`);
+        }
+      }
+
+      cards.push({
+        id,
+        name,
+        type,
+        description,
+        score,
+        attributes: {},
+      });
+    }
   }
 
   if (cards.length === 0) {
@@ -306,20 +398,6 @@ export function validateCube(
     errors.push(`Cube needs at least ${minCards} cards (found ${cube.cards.length})`);
   }
 
-  // Check for duplicate names
-  const names = new Set<string>();
-  const duplicates: string[] = [];
-  for (const card of cube.cards) {
-    if (names.has(card.name.toLowerCase())) {
-      duplicates.push(card.name);
-    }
-    names.add(card.name.toLowerCase());
-  }
-
-  if (duplicates.length > 0) {
-    errors.push(`Duplicate card names found: ${duplicates.slice(0, 5).join(', ')}${duplicates.length > 5 ? ` and ${duplicates.length - 5} more` : ''}`);
-  }
-
   // Validate game config exists
   try {
     getGameConfig(cube.gameId);
@@ -378,4 +456,189 @@ export async function parseUploadedFile(
       return parseCsvCube(content, { gameId });
     }
   }
+}
+
+/**
+ * Enrich Yu-Gi-Oh cards with data from YGOProDeck API
+ * Call this after parsing a Yu-Gi-Oh cube to fetch full card metadata
+ */
+export async function enrichYuGiOhCube(
+  cube: ParsedCube,
+  onProgress?: (current: number, total: number) => void
+): Promise<ParsedCube> {
+  if (cube.gameId !== 'yugioh') {
+    return cube;
+  }
+
+  // Extract card IDs that need enrichment
+  const cardIds = cube.cards
+    .map(card => typeof card.id === 'number' ? card.id : parseInt(String(card.id), 10))
+    .filter(id => !isNaN(id) && id > 0);
+
+  if (cardIds.length === 0) {
+    cube.errors.push('No valid Yu-Gi-Oh card IDs found');
+    return cube;
+  }
+
+  // Fetch card data from API in batches
+  const enrichedCards: Card[] = [];
+  const batchSize = 50;
+  const userScores = new Map<number, number>();
+
+  // Preserve user-provided scores
+  for (const card of cube.cards) {
+    const id = typeof card.id === 'number' ? card.id : parseInt(String(card.id), 10);
+    if (card.score !== undefined) {
+      userScores.set(id, card.score);
+    }
+  }
+
+  for (let i = 0; i < cardIds.length; i += batchSize) {
+    const batch = cardIds.slice(i, i + batchSize);
+    onProgress?.(i, cardIds.length);
+
+    try {
+      const apiCards = await cardService.getCards(batch);
+
+      for (const apiCard of apiCards) {
+        enrichedCards.push({
+          id: apiCard.id,
+          name: apiCard.name,
+          type: apiCard.type,
+          description: apiCard.desc || '',
+          score: userScores.get(apiCard.id),
+          // Use YGOProDeck image URL for cards without local images
+          imageUrl: `https://images.ygoprodeck.com/images/cards/${apiCard.id}.jpg`,
+          attributes: {
+            atk: apiCard.atk,
+            def: apiCard.def,
+            level: apiCard.level,
+            attribute: apiCard.attribute,
+            race: apiCard.race,
+            archetype: apiCard.archetype,
+            linkval: apiCard.linkval,
+          },
+        });
+      }
+
+      // Track cards not found in API
+      const foundIds = new Set(apiCards.map(c => c.id));
+      for (const id of batch) {
+        if (!foundIds.has(id)) {
+          cube.warnings.push(`Card ID ${id} not found in YGOProDeck database`);
+        }
+      }
+    } catch (error) {
+      cube.warnings.push(`Failed to fetch batch starting at ${i}: ${error}`);
+    }
+  }
+
+  onProgress?.(cardIds.length, cardIds.length);
+
+  return {
+    ...cube,
+    cards: enrichedCards,
+  };
+}
+
+/**
+ * Enrich MTG cards with data from Scryfall API
+ * Call this after parsing an MTG cube to fetch full card metadata
+ */
+export async function enrichMTGCube(
+  cube: ParsedCube,
+  onProgress?: (current: number, total: number) => void
+): Promise<ParsedCube> {
+  if (cube.gameId !== 'mtg') {
+    return cube;
+  }
+
+  // Extract card names that need enrichment
+  const cardNames = cube.cards
+    .map(card => card.name)
+    .filter(name => name && name !== 'Unknown');
+
+  if (cardNames.length === 0) {
+    cube.errors.push('No valid MTG card names found');
+    return cube;
+  }
+
+  // Preserve user-provided scores by name
+  const userScores = new Map<string, number>();
+  for (const card of cube.cards) {
+    if (card.score !== undefined) {
+      userScores.set(card.name.toLowerCase(), card.score);
+    }
+  }
+
+  onProgress?.(0, cardNames.length);
+
+  try {
+    const { cards: apiCards, notFound } = await mtgCardService.getCardsByNames(cardNames);
+
+    // Apply user scores to fetched cards
+    const enrichedCards: Card[] = apiCards.map(card => ({
+      ...card,
+      score: userScores.get(card.name.toLowerCase()),
+    }));
+
+    // Report cards not found
+    for (const name of notFound) {
+      cube.warnings.push(`Card "${name}" not found in Scryfall database`);
+    }
+
+    onProgress?.(cardNames.length, cardNames.length);
+
+    return {
+      ...cube,
+      cards: enrichedCards,
+    };
+  } catch (error) {
+    cube.errors.push(`Failed to fetch MTG card data: ${error}`);
+    return cube;
+  }
+}
+
+/**
+ * Check if a cube needs enrichment (missing essential data)
+ */
+export function cubeNeedsEnrichment(cube: ParsedCube): boolean {
+  // Yu-Gi-Oh enrichment
+  if (cube.gameId === 'yugioh') {
+    // Check if cards are missing essential data (type is 'Unknown' or description is empty)
+    const needsEnrichment = cube.cards.some(card =>
+      card.type === 'Unknown' ||
+      !card.description ||
+      (typeof card.id === 'number' && card.id > 1000000) // Large numeric ID suggests YGOProDeck ID
+    );
+    return needsEnrichment;
+  }
+
+  // MTG enrichment
+  if (cube.gameId === 'mtg') {
+    // Check if cards are missing essential data
+    const needsEnrichment = cube.cards.some(card =>
+      card.type === 'Unknown' ||
+      !card.imageUrl
+    );
+    return needsEnrichment;
+  }
+
+  return false;
+}
+
+/**
+ * Enrich a cube based on its game type
+ */
+export async function enrichCube(
+  cube: ParsedCube,
+  onProgress?: (current: number, total: number) => void
+): Promise<ParsedCube> {
+  if (cube.gameId === 'yugioh') {
+    return enrichYuGiOhCube(cube, onProgress);
+  }
+  if (cube.gameId === 'mtg') {
+    return enrichMTGCube(cube, onProgress);
+  }
+  return cube;
 }

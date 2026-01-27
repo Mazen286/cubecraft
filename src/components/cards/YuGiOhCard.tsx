@@ -23,6 +23,7 @@ function toGenericCard(yugiohCard: YuGiOhCardType): Card {
     type: yugiohCard.type,
     description: yugiohCard.desc,
     score: yugiohCard.score,
+    imageUrl: yugiohCard.imageUrl, // Preserve image URL from API enrichment
     attributes: {
       // Spread original game-specific attributes first (MTG scryfallId, Pokemon setId, etc.)
       ...(yugiohCard.attributes || {}),

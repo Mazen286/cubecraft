@@ -42,6 +42,7 @@ const ATTRIBUTE_COLORS: Record<string, string> = {
 export function CubeStats({ cards, filteredCards, onFilterClick, activeFilters }: CubeStatsProps) {
   const { gameConfig } = useGameConfig();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Check if there are any active filters (calculate early for conditional logic)
   const hasActiveFilters = Object.keys(activeFilters).some(key => activeFilters[key].size > 0);
@@ -202,60 +203,79 @@ export function CubeStats({ cards, filteredCards, onFilterClick, activeFilters }
           className="p-2 pt-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1.5 max-h-[35vh] overflow-y-auto custom-scrollbar"
           onWheel={(e) => e.stopPropagation()}
         >
-          {statsGroups.map(group => (
-            <div key={group.id} className="bg-yugi-card/30 rounded p-1.5">
-              <h4 className="text-[9px] font-semibold text-gray-500 uppercase mb-0.5">{group.label}</h4>
-              <div className="space-y-0">
-                {group.distributions.slice(0, 12).map((dist) => {
-                  const maxCount = getMaxCount(group.distributions);
-                  const isActive = activeFilters[group.id]?.has(String(dist.value));
+          {statsGroups.map(group => {
+            const isGroupExpanded = expandedGroups.has(group.id);
+            const displayLimit = isGroupExpanded ? group.distributions.length : 12;
+            const hasMore = group.distributions.length > 12;
 
-                  // Get filtered count for this value (0 if not in filtered results)
-                  const filteredCount = filteredCounts[group.id]?.[String(dist.value)] ?? 0;
+            return (
+              <div key={group.id} className="bg-yugi-card/30 rounded p-1.5">
+                <h4 className="text-[9px] font-semibold text-gray-500 uppercase mb-0.5">{group.label}</h4>
+                <div className="space-y-0">
+                  {group.distributions.slice(0, displayLimit).map((dist) => {
+                    const maxCount = getMaxCount(group.distributions);
+                    const isActive = activeFilters[group.id]?.has(String(dist.value));
 
-                  // Use filtered count for bar when filters are active, otherwise use total
-                  const displayCount = hasActiveFilters ? filteredCount : dist.count;
-                  const percentage = (displayCount / maxCount) * 100;
+                    // Get filtered count for this value (0 if not in filtered results)
+                    const filteredCount = filteredCounts[group.id]?.[String(dist.value)] ?? 0;
 
-                  // Dim items with 0 filtered count (but still clickable for multi-select)
-                  const isDimmed = hasActiveFilters && filteredCount === 0 && !isActive;
+                    // Use filtered count for bar when filters are active, otherwise use total
+                    const displayCount = hasActiveFilters ? filteredCount : dist.count;
+                    const percentage = (displayCount / maxCount) * 100;
 
-                  return (
+                    // Dim items with 0 filtered count (but still clickable for multi-select)
+                    const isDimmed = hasActiveFilters && filteredCount === 0 && !isActive;
+
+                    return (
+                      <button
+                        key={dist.value}
+                        onClick={(e) => onFilterClick(group.id, String(dist.value), e.metaKey || e.ctrlKey)}
+                        className={cn(
+                          "w-full flex items-center gap-1 text-[10px] py-px px-0.5 rounded transition-colors",
+                          isActive ? "bg-gold-500/20 ring-1 ring-gold-500" : "hover:bg-white/5",
+                          isDimmed && "opacity-40"
+                        )}
+                      >
+                        <span className={cn("w-12 text-left truncate", isDimmed ? "text-gray-500" : "text-gray-300")} title={dist.label}>
+                          {dist.label}
+                        </span>
+                        <div className="flex-1 h-2 bg-yugi-darker rounded overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full transition-all",
+                              dist.color || DEFAULT_BAR_COLOR
+                            )}
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className={cn("w-5 text-right text-[9px]", isDimmed ? "text-gray-600" : "text-gray-500")}>
+                          {displayCount}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {hasMore && (
                     <button
-                      key={dist.value}
-                      onClick={(e) => onFilterClick(group.id, String(dist.value), e.metaKey || e.ctrlKey)}
-                      className={cn(
-                        "w-full flex items-center gap-1 text-[10px] py-px px-0.5 rounded transition-colors",
-                        isActive ? "bg-gold-500/20 ring-1 ring-gold-500" : "hover:bg-white/5",
-                        isDimmed && "opacity-40"
-                      )}
+                      onClick={() => {
+                        setExpandedGroups(prev => {
+                          const next = new Set(prev);
+                          if (next.has(group.id)) {
+                            next.delete(group.id);
+                          } else {
+                            next.add(group.id);
+                          }
+                          return next;
+                        });
+                      }}
+                      className="w-full text-[10px] text-gold-400 hover:text-gold-300 text-center pt-0.5 transition-colors"
                     >
-                      <span className={cn("w-12 text-left truncate", isDimmed ? "text-gray-500" : "text-gray-300")} title={dist.label}>
-                        {dist.label}
-                      </span>
-                      <div className="flex-1 h-2 bg-yugi-darker rounded overflow-hidden">
-                        <div
-                          className={cn(
-                            "h-full transition-all",
-                            dist.color || DEFAULT_BAR_COLOR
-                          )}
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                      <span className={cn("w-5 text-right text-[9px]", isDimmed ? "text-gray-600" : "text-gray-500")}>
-                        {displayCount}
-                      </span>
+                      {isGroupExpanded ? 'Show less' : `+${group.distributions.length - 12} more`}
                     </button>
-                  );
-                })}
-                {group.distributions.length > 12 && (
-                  <p className="text-[10px] text-gray-600 text-center pt-0.5">
-                    +{group.distributions.length - 12} more
-                  </p>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -351,11 +371,11 @@ function calculateYuGiOhStats(cards: Card[]): StatsGroup[] {
     });
   }
 
-  // Race/Type
+  // Race/Type (covers Monster Type, Spell Type, Trap Type)
   if (raceCounts.size > 0) {
     groups.push({
       id: 'race',
-      label: 'Monster Type',
+      label: 'Type',
       distributions: Array.from(raceCounts.entries())
         .sort((a, b) => b[1] - a[1])
         .map(([race, count]) => ({

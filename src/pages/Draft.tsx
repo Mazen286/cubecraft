@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Pause, Play, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
+import { Layers, Pause, Play, ChevronDown, ChevronUp, ArrowRight, X } from 'lucide-react';
 import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
+import { CubeStats } from '../components/cube/CubeStats';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -71,6 +72,9 @@ export function Draft() {
     }
   }, [session?.cube_id, isCubeReady, gameConfig.id, setGame]);
 
+  // Check if cube has scores for conditional tier display
+  const cubeHasScores = session?.cube_id ? cubeService.cubeHasScores(session.cube_id) : true;
+
   // Auto-start solo drafts (only when cube is ready so cards load instantly)
   // Solo mode: 1 human player + any number of bots
   const humanPlayers = players.filter((p) => !p.is_bot);
@@ -138,6 +142,10 @@ export function Draft() {
     defaultSort: 'pick',
     defaultDirection: 'asc',
   });
+
+  // Stats-based filters for My Cards (cross-filtering from CubeStats)
+  const [myCardsStatsFilters, setMyCardsStatsFilters] = useState<Record<string, Set<string>>>({});
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -259,6 +267,11 @@ export function Draft() {
     return stats;
   }, [draftedCards]);
 
+  // Convert drafted cards to generic Card format for CubeStats
+  const draftedCardsAsGeneric = useMemo(() => {
+    return draftedCards.map(card => toCardWithAttributes(card));
+  }, [draftedCards]);
+
   // Filter and sort drafted cards using the reusable filter hook
   const filteredDraftedCards = useMemo(() => {
     // Convert to indexed Card format for filtering
@@ -267,12 +280,81 @@ export function Draft() {
       index,
     }));
 
-    // Apply filters and sorting
-    const filteredIndexed = myCardsFilters.applyFiltersWithIndex(indexedCards);
+    // Apply filters and sorting from CardFilterBar
+    let filteredIndexed = myCardsFilters.applyFiltersWithIndex(indexedCards);
+
+    // Apply stats-based filters (from CubeStats)
+    if (Object.keys(myCardsStatsFilters).length > 0) {
+      filteredIndexed = filteredIndexed.filter(({ card }) => {
+        return Object.entries(myCardsStatsFilters).every(([groupId, selectedValues]) => {
+          if (selectedValues.size === 0) return true;
+
+          // Get the card's value for this filter group
+          let cardValue: string | undefined;
+          const attrs = card.attributes as Record<string, unknown>;
+
+          if (groupId === 'type') {
+            cardValue = card.type;
+          } else if (groupId === 'archetype') {
+            cardValue = attrs?.archetype as string | undefined;
+          } else if (groupId === 'attribute') {
+            cardValue = attrs?.attribute as string | undefined;
+          } else if (groupId === 'race') {
+            cardValue = attrs?.race as string | undefined;
+          } else if (attrs && groupId in attrs) {
+            cardValue = String(attrs[groupId]);
+          }
+
+          return cardValue !== undefined && selectedValues.has(cardValue);
+        });
+      });
+    }
 
     // Map back to original YuGiOhCard objects
     return filteredIndexed.map(({ index }) => draftedCards[index]);
-  }, [draftedCards, myCardsFilters]);
+  }, [draftedCards, myCardsFilters, myCardsStatsFilters]);
+
+  // Filtered cards as generic format for CubeStats
+  const filteredDraftedCardsAsGeneric = useMemo(() => {
+    return filteredDraftedCards.map(card => toCardWithAttributes(card));
+  }, [filteredDraftedCards]);
+
+  // Handle stats filter click (from CubeStats)
+  const handleMyCardsStatsFilterClick = useCallback((groupId: string, value: string, additive = false) => {
+    setMyCardsStatsFilters(prev => {
+      const newFilters = { ...prev };
+      const currentSet = newFilters[groupId] || new Set<string>();
+
+      if (additive) {
+        // Toggle the value in the set
+        const newSet = new Set(currentSet);
+        if (newSet.has(value)) {
+          newSet.delete(value);
+        } else {
+          newSet.add(value);
+        }
+        if (newSet.size === 0) {
+          delete newFilters[groupId];
+        } else {
+          newFilters[groupId] = newSet;
+        }
+      } else {
+        // Single-select mode: if already selected, deselect; otherwise select only this
+        if (currentSet.size === 1 && currentSet.has(value)) {
+          delete newFilters[groupId];
+        } else {
+          newFilters[groupId] = new Set([value]);
+        }
+      }
+
+      return newFilters;
+    });
+  }, []);
+
+  // Clear all stats filters for My Cards
+  const clearMyCardsStatsFilters = useCallback(() => {
+    setMyCardsStatsFilters({});
+  }, []);
 
   // Initialize statistics when draft starts
   useEffect(() => {
@@ -1105,7 +1187,7 @@ export function Draft() {
                       size="full"
                       isSelected={selectedCard?.id === card.id}
                       onClick={() => setSelectedCard(card)}
-                      showTier
+                      showTier={cubeHasScores}
                       flush
                       draggable={!hasPicked}
                       onDragStart={(e) => handleDragStart(e, card)}
@@ -1145,7 +1227,7 @@ export function Draft() {
               {selectedCard ? (
                 <div className="space-y-3">
                   <div className="flex justify-center">
-                    <YuGiOhCard card={selectedCard} size="lg" showTier />
+                    <YuGiOhCard card={selectedCard} size="lg" showTier={cubeHasScores} />
                   </div>
                   <div>
                     <h4 className="font-semibold" style={{ color: gameConfig.theme.primaryColor }}>
@@ -1242,7 +1324,7 @@ export function Draft() {
                         onClick={() => setSelectedCard(card)}
                         className="cursor-pointer transition-transform hover:scale-105"
                       >
-                        <YuGiOhCard card={card} size="sm" showTier />
+                        <YuGiOhCard card={card} size="sm" showTier={cubeHasScores} />
                       </div>
                     ))}
                   </div>
@@ -1519,27 +1601,78 @@ export function Draft() {
                     showSort
                     includePickSort
                     includeScoreSort
+                    hasScores={cubeHasScores}
                     tierCounts={myCardsStats.tiers as Record<'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F', number>}
                     totalCount={draftedCards.length}
                     filteredCount={filteredDraftedCards.length}
                     compact
+                    cards={draftedCardsAsGeneric}
+                    selectedArchetypes={myCardsStatsFilters['archetype']}
+                    onToggleArchetype={(archetype) => handleMyCardsStatsFilterClick('archetype', archetype, true)}
+                    onClearArchetypes={() => {
+                      setMyCardsStatsFilters(prev => {
+                        const { archetype: _, ...rest } = prev;
+                        return rest;
+                      });
+                    }}
                   />
+
+                  {/* Stats filters row - active filter chips (excluding archetype) */}
+                  {Object.keys(myCardsStatsFilters).some(k => k !== 'archetype' && myCardsStatsFilters[k].size > 0) && draftedCards.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      {Object.entries(myCardsStatsFilters).map(([groupId, values]) => {
+                        if (groupId === 'archetype') return null;
+                        return Array.from(values).map(value => (
+                          <button
+                            key={`${groupId}-${value}`}
+                            onClick={() => handleMyCardsStatsFilterClick(groupId, value)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-gold-500/20 text-gold-400 rounded-lg ring-1 ring-gold-500"
+                          >
+                            <span className="text-gray-400 capitalize">{groupId}:</span>
+                            <span>{value}</span>
+                            <X className="w-3 h-3" />
+                          </button>
+                        ));
+                      })}
+                      <button
+                        onClick={() => {
+                          setMyCardsStatsFilters(prev => {
+                            const { archetype } = prev;
+                            return archetype ? { archetype } : {};
+                          });
+                        }}
+                        className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
+              {/* Cube Statistics Dashboard */}
+              {draftedCards.length > 0 && (
+                <CubeStats
+                  cards={draftedCardsAsGeneric}
+                  filteredCards={filteredDraftedCardsAsGeneric}
+                  onFilterClick={handleMyCardsStatsFilterClick}
+                  activeFilters={myCardsStatsFilters}
+                />
+              )}
+
               {/* Content - with proper touch scrolling */}
-              <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <div className="flex-1 overflow-y-auto overscroll-contain p-2 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {draftedCards.length > 0 ? (
-                  /* Cards grid - larger cards for easier tapping */
+                  /* Cards grid - smaller cards for more visibility */
                   filteredDraftedCards.length > 0 ? (
-                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+                    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
                       {filteredDraftedCards.map((card) => (
                         <div
                           key={card.id}
                           onClick={() => setMobileViewCard(card)}
                           className="cursor-pointer active:scale-95 transition-transform"
                         >
-                          <YuGiOhCard card={card} size="full" showTier flush />
+                          <YuGiOhCard card={card} size="full" showTier={cubeHasScores} flush />
                         </div>
                       ))}
                     </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo, memo, useCallback } from 'react';
+import { useState, useMemo, memo, useCallback, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
@@ -8,9 +8,10 @@ import type { DraftSettings, DraftMode } from '../types';
 import { cn } from '../lib/utils';
 import { draftService, getPlayerName, setPlayerName } from '../services/draftService';
 import { auctionService } from '../services/auctionService';
-import { cubeService } from '../services/cubeService';
+import { cubeService, type CubeInfo } from '../services/cubeService';
 import { useGameConfig } from '../context/GameContext';
-import { Eye, HelpCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Eye, HelpCircle, ChevronRight, Lock, Globe } from 'lucide-react';
 
 const DEFAULT_SETTINGS: DraftSettings = {
   mode: 'pack',
@@ -37,9 +38,13 @@ function formatTimerOption(seconds: number): string {
   return `${mins} Minutes`;
 }
 
+// Maximum cubes to show per section before "View All"
+const CUBES_PER_SECTION = 6;
+
 export function DraftSetup() {
   const navigate = useNavigate();
   const { setGame } = useGameConfig();
+  const { user } = useAuth();
   const [settings, setSettings] = useState<DraftSettings>(DEFAULT_SETTINGS);
   const [selectedCube, setSelectedCube] = useState<string>('the-library');
   const [playerName, setPlayerNameState] = useState<string>(() => getPlayerName());
@@ -47,6 +52,13 @@ export function DraftSetup() {
   const [viewingCube, setViewingCube] = useState<{ id: string; name: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [infoSheet, setInfoSheet] = useState<'pack' | 'auction' | 'open' | null>(null);
+
+  // Database cubes state
+  const [myCubes, setMyCubes] = useState<CubeInfo[]>([]);
+  const [myCubesCount, setMyCubesCount] = useState(0);
+  const [communityCubes, setCommunityCubes] = useState<CubeInfo[]>([]);
+  const [communityCubesCount, setCommunityCubesCount] = useState(0);
+  const [cubesLoading, setCubesLoading] = useState(false);
 
   // Update player name in localStorage when it changes
   const handlePlayerNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,7 +68,43 @@ export function DraftSetup() {
   }, []);
 
   // Memoize available cubes to prevent re-computation on every render
-  const availableCubes = useMemo(() => cubeService.getAvailableCubes(), []);
+  const featuredCubes = useMemo(() => cubeService.getAvailableCubes(), []);
+
+  // Load database cubes on mount
+  useEffect(() => {
+    const loadDatabaseCubes = async () => {
+      setCubesLoading(true);
+      try {
+        // Load my cubes if logged in
+        if (user?.id) {
+          const myResult = await cubeService.loadMyCubes(user.id, { limit: CUBES_PER_SECTION });
+          setMyCubes(myResult.cubes);
+          setMyCubesCount(myResult.totalCount);
+        }
+
+        // Load community cubes (exclude user's own cubes)
+        const communityResult = await cubeService.loadCommunityCubes({
+          excludeUserId: user?.id,
+          limit: CUBES_PER_SECTION,
+        });
+        setCommunityCubes(communityResult.cubes);
+        setCommunityCubesCount(communityResult.totalCount);
+      } catch (error) {
+        console.error('Failed to load database cubes:', error);
+      } finally {
+        setCubesLoading(false);
+      }
+    };
+
+    loadDatabaseCubes();
+  }, [user?.id]);
+
+  // Combined cubes for selection (used to find cube info)
+  const allCubes = useMemo(() => [
+    ...featuredCubes,
+    ...myCubes,
+    ...communityCubes,
+  ], [featuredCubes, myCubes, communityCubes]);
 
   // Calculate total players (for solo: 1 human + bots, for multiplayer: playerCount)
   const totalPlayers = settings.playerCount === 1
@@ -67,11 +115,11 @@ export function DraftSetup() {
   const handleCubeSelect = useCallback((cubeId: string) => {
     setSelectedCube(cubeId);
     // Update game context based on cube's game
-    const cube = availableCubes.find(c => c.id === cubeId);
+    const cube = allCubes.find(c => c.id === cubeId);
     if (cube?.gameId) {
       setGame(cube.gameId);
     }
-  }, [availableCubes, setGame]);
+  }, [allCubes, setGame]);
 
   // Memoized view cards handler
   const handleViewCards = useCallback((cube: { id: string; name: string }) => {
@@ -203,22 +251,42 @@ export function DraftSetup() {
 
         {/* Cube Selection */}
         <Section title="Select Cube">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {availableCubes.map((cube) => (
-              <CubeOption
-                key={cube.id}
-                cubeId={cube.id}
-                name={cube.name}
-                description={cube.description}
-                cardCount={cube.cardCount}
-                gameId={cube.gameId}
-                selected={selectedCube === cube.id}
-                onSelect={handleCubeSelect}
-                onViewCards={cube.cardCount > 0 ? handleViewCards : undefined}
-                disabled={cube.cardCount === 0}
-              />
-            ))}
-          </div>
+          {/* Featured Cubes */}
+          <CubeSection
+            title="Featured"
+            cubes={featuredCubes}
+            selectedCube={selectedCube}
+            onSelect={handleCubeSelect}
+            onViewCards={handleViewCards}
+          />
+
+          {/* My Cubes - only show if user has cubes */}
+          {user && myCubesCount > 0 && (
+            <CubeSection
+              title="My Cubes"
+              cubes={myCubes}
+              selectedCube={selectedCube}
+              onSelect={handleCubeSelect}
+              onViewCards={handleViewCards}
+              showPrivateBadge
+              totalCount={myCubesCount}
+              viewAllLink="/my-cubes"
+              loading={cubesLoading}
+            />
+          )}
+
+          {/* Community Cubes */}
+          {communityCubesCount > 0 && (
+            <CubeSection
+              title="Community Cubes"
+              cubes={communityCubes}
+              selectedCube={selectedCube}
+              onSelect={handleCubeSelect}
+              onViewCards={handleViewCards}
+              totalCount={communityCubesCount}
+              loading={cubesLoading}
+            />
+          )}
         </Section>
 
         {/* Cube Viewer Modal */}
@@ -672,6 +740,79 @@ const GAME_BADGES: Record<string, { label: string; color: string; bg: string }> 
   pokemon: { label: 'PKM', color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
 };
 
+// CubeSection component - renders a titled section with cube grid
+const CubeSection = memo(function CubeSection({
+  title,
+  cubes,
+  selectedCube,
+  onSelect,
+  onViewCards,
+  showPrivateBadge,
+  totalCount,
+  viewAllLink,
+  loading,
+}: {
+  title: string;
+  cubes: CubeInfo[];
+  selectedCube: string;
+  onSelect: (cubeId: string) => void;
+  onViewCards: (cube: { id: string; name: string }) => void;
+  showPrivateBadge?: boolean;
+  totalCount?: number;
+  viewAllLink?: string;
+  loading?: boolean;
+}) {
+  const hasMore = totalCount !== undefined && totalCount > cubes.length;
+
+  return (
+    <div className="mb-6 last:mb-0">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+          {title}
+          {totalCount !== undefined && (
+            <span className="ml-2 text-gray-500">({totalCount})</span>
+          )}
+        </h3>
+        {viewAllLink && hasMore && (
+          <Link
+            to={viewAllLink}
+            className="text-sm text-gold-400 hover:text-gold-300 flex items-center gap-1"
+          >
+            View All <ChevronRight className="w-4 h-4" />
+          </Link>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="w-6 h-6 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : cubes.length === 0 ? (
+        <p className="text-gray-500 text-sm py-4">No cubes available</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {cubes.map((cube) => (
+            <CubeOption
+              key={cube.id}
+              cubeId={cube.id}
+              name={cube.name}
+              description={cube.description}
+              cardCount={cube.cardCount}
+              gameId={cube.gameId}
+              selected={selectedCube === cube.id}
+              onSelect={onSelect}
+              onViewCards={cube.cardCount > 0 ? onViewCards : undefined}
+              disabled={cube.cardCount === 0}
+              isPublic={cube.isPublic}
+              showVisibilityBadge={showPrivateBadge}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
 const CubeOption = memo(function CubeOption({
   cubeId,
   name,
@@ -682,6 +823,8 @@ const CubeOption = memo(function CubeOption({
   onSelect,
   onViewCards,
   disabled,
+  isPublic,
+  showVisibilityBadge,
 }: {
   cubeId: string;
   name: string;
@@ -692,6 +835,8 @@ const CubeOption = memo(function CubeOption({
   onSelect: (cubeId: string) => void;
   onViewCards?: (cube: { id: string; name: string }) => void;
   disabled?: boolean;
+  isPublic?: boolean;
+  showVisibilityBadge?: boolean;
 }) {
   const handleClick = useCallback(() => {
     onSelect(cubeId);
@@ -722,7 +867,7 @@ const CubeOption = memo(function CubeOption({
           disabled && 'cursor-not-allowed'
         )}
       >
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           {badge && (
             <span className={cn(
               'text-xs font-bold px-1.5 py-0.5 rounded',
@@ -733,8 +878,19 @@ const CubeOption = memo(function CubeOption({
             </span>
           )}
           <span className="font-semibold text-white">{name}</span>
+          {showVisibilityBadge && (
+            <span className={cn(
+              'text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1',
+              isPublic
+                ? 'bg-green-500/20 text-green-400'
+                : 'bg-gray-600/50 text-gray-400'
+            )}>
+              {isPublic ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+              {isPublic ? 'Public' : 'Private'}
+            </span>
+          )}
         </div>
-        <div className="text-sm text-gray-300 mb-1">{description}</div>
+        <div className="text-sm text-gray-300 mb-1 line-clamp-2">{description}</div>
         {cardCount > 0 && (
           <div className="text-xs text-gray-400">{cardCount} cards</div>
         )}

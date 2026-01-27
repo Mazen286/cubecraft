@@ -444,6 +444,9 @@ export const draftService = {
         pick_started_at: now,
       })
       .eq('id', sessionId);
+
+    // Trigger immediate bot picks (bots should pick right away, not wait for timer)
+    await this.makeBotPicks(sessionId, session.cube_id, 1, 1);
   },
 
   /**
@@ -975,6 +978,9 @@ export const draftService = {
             .eq('id', player.id);
         }
       }
+
+      // Trigger immediate bot picks for the new pack
+      await this.makeBotPicks(sessionId, session.cube_id, nextPackNumber, 1);
     } else {
       // Pass hands to next player
       const hands: { [seat: number]: number[] } = {};
@@ -1012,6 +1018,9 @@ export const draftService = {
           .update({ current_hand: hands[sourceSeat], pick_made: false })
           .eq('id', player.id);
       }
+
+      // Trigger immediate bot picks after hands are passed
+      await this.makeBotPicks(sessionId, session.cube_id, session.current_pack, session.current_pick + 1);
     }
   },
 

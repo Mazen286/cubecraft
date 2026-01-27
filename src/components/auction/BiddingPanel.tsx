@@ -33,6 +33,8 @@ interface BiddingPanelProps {
   totalBidTime?: number;
   /** Callback to view card details */
   onViewCard?: () => void;
+  /** Whether to show tier badges on cards */
+  showTier?: boolean;
 }
 
 export function BiddingPanel({
@@ -49,6 +51,7 @@ export function BiddingPanel({
   bidTimeRemaining,
   totalBidTime = 15,
   onViewCard,
+  showTier = true,
 }: BiddingPanelProps) {
   const [customBidAmount, setCustomBidAmount] = useState<string>('');
 
@@ -146,7 +149,7 @@ export function BiddingPanel({
               )}
               onClick={onViewCard}
             >
-              <YuGiOhCard card={currentCard} size="sm" showTier />
+              <YuGiOhCard card={currentCard} size="sm" showTier={showTier} />
               {onViewCard && (
                 <button className="w-full mt-1 flex items-center justify-center gap-1 text-xs text-gold-400 hover:text-gold-300">
                   <Eye className="w-3 h-3" />

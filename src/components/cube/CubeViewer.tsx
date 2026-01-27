@@ -6,7 +6,6 @@ import { CardDetailSheet } from '../cards/CardDetailSheet';
 import { Button } from '../ui/Button';
 import { CardFilterBar } from '../filters/CardFilterBar';
 import { CubeStats } from './CubeStats';
-import { ArchetypeFilter } from '../filters/ArchetypeFilter';
 import { cubeService } from '../../services/cubeService';
 import { useGameConfig } from '../../context/GameContext';
 import { useCardFilters, type Tier } from '../../hooks/useCardFilters';
@@ -34,6 +33,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   const [pendingCards, setPendingCards] = useState<YuGiOhCardType[]>([]); // Hold cards until game context switches
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasScores, setHasScores] = useState(true); // Whether cube has score data
 
   // Card filters using the reusable hook
   const filters = useCardFilters({
@@ -121,12 +121,13 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
       setIsLoading(true);
       setError(null);
       try {
-        // Load the cube first to get its gameId
-        const cubeData = await cubeService.loadCube(cubeId);
+        // Load the cube first to get its gameId (supports both local and database cubes)
+        const cubeData = await cubeService.loadAnyCube(cubeId);
         const cubeCards = cubeService.getCubeCards(cubeId);
         const targetGameId = cubeData.gameId || 'yugioh';
 
         setCubeGameId(targetGameId);
+        setHasScores(cubeData.hasScores);
 
         // If already on correct game, set cards immediately
         if (targetGameId === currentGameId) {
@@ -566,30 +567,25 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             showAdvancedFilters
             showSort
             includeScoreSort
+            hasScores={hasScores}
             tierCounts={tierCounts}
             totalCount={cards.length}
             filteredCount={filteredCards.length}
+            cards={cardsAsGeneric}
+            selectedArchetypes={statsFilters['archetype']}
+            onToggleArchetype={(archetype) => handleStatsFilterClick('archetype', archetype, true)}
+            onClearArchetypes={() => {
+              setStatsFilters(prev => {
+                const { archetype: _, ...rest } = prev;
+                return rest;
+              });
+            }}
           />
-          {/* Stats filters row */}
-          {(gameConfig.id === 'yugioh' || Object.keys(statsFilters).length > 0) && cards.length > 0 && (
+          {/* Stats filters row - active filter chips (excluding archetype which is in advanced filters) */}
+          {Object.keys(statsFilters).some(k => k !== 'archetype' && statsFilters[k].size > 0) && cards.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              {/* Archetype filter for Yu-Gi-Oh */}
-              {gameConfig.id === 'yugioh' && (
-                <ArchetypeFilter
-                  cards={cardsAsGeneric}
-                  selectedArchetypes={statsFilters['archetype'] || new Set()}
-                  onToggleArchetype={(archetype) => handleStatsFilterClick('archetype', archetype, true)}
-                  onClearArchetypes={() => {
-                    setStatsFilters(prev => {
-                      const { archetype: _, ...rest } = prev;
-                      return rest;
-                    });
-                  }}
-                />
-              )}
-              {/* Active stats filter chips */}
               {Object.entries(statsFilters).map(([groupId, values]) => {
-                if (groupId === 'archetype') return null; // Handled by ArchetypeFilter
+                if (groupId === 'archetype') return null; // Now in advanced filters
                 return Array.from(values).map(value => (
                   <button
                     key={`${groupId}-${value}`}
@@ -602,15 +598,19 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                   </button>
                 ));
               })}
-              {/* Clear all stats filters button */}
-              {Object.keys(statsFilters).length > 0 && (
-                <button
-                  onClick={clearStatsFilters}
-                  className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                >
-                  Clear all
-                </button>
-              )}
+              {/* Clear non-archetype stats filters button */}
+              <button
+                onClick={() => {
+                  setStatsFilters(prev => {
+                    // Keep archetype, clear others
+                    const { archetype } = prev;
+                    return archetype ? { archetype } : {};
+                  });
+                }}
+                className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors"
+              >
+                Clear
+              </button>
             </div>
           )}
         </div>
@@ -674,7 +674,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                             key={card.id}
                             card={card}
                             size="sm"
-                            showTier
+                            showTier={hasScores}
                             isSelected={globalIndex === selectedIndex}
                             onClick={() => handleCardClick(card, globalIndex)}
                           />
