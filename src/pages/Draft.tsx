@@ -717,9 +717,9 @@ export function Draft() {
     return 3;                      // default
   }, []);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts (allow browsing even after picking)
   useEffect(() => {
-    if (hasPicked || isPicking || session?.status !== 'in_progress') return;
+    if (isPicking || session?.status !== 'in_progress') return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if typing in an input
@@ -1101,13 +1101,13 @@ export function Draft() {
                       card={card}
                       size="full"
                       isSelected={selectedCard?.id === card.id}
-                      onClick={hasPicked ? undefined : () => setSelectedCard(card)}
+                      onClick={() => setSelectedCard(card)}
                       showTier
                       flush
                       draggable={!hasPicked}
                       onDragStart={(e) => handleDragStart(e, card)}
                       onDragEnd={handleDragEnd}
-                      className={hasPicked ? 'opacity-50 cursor-not-allowed' : ''}
+                      className={hasPicked ? 'opacity-60' : ''}
                     />
                   </div>
                 ))}
@@ -1196,17 +1196,23 @@ export function Draft() {
                       )}
                     </div>
                   </div>
-                  <Button
-                    onClick={() => handlePickCard()}
-                    className="w-full"
-                    disabled={isPicking || hasPicked}
-                  >
-                    {isPicking ? 'Picking...' : hasPicked ? 'Pick Made' : 'Pick Card'}
-                  </Button>
+                  {hasPicked ? (
+                    <div className="text-center text-gray-400 py-2 bg-yugi-card rounded-lg">
+                      <span className="text-green-400">Pick made</span> — Viewing remaining cards
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => handlePickCard()}
+                      className="w-full"
+                      disabled={isPicking}
+                    >
+                      {isPicking ? 'Picking...' : 'Pick Card'}
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="h-40 flex items-center justify-center text-gray-500 text-sm">
-                  {hasPicked ? 'Waiting for next pack...' : 'Select a card to pick'}
+                  {hasPicked ? 'Browse remaining cards while waiting...' : 'Select a card to pick'}
                 </div>
               )}
             </div>
@@ -1549,19 +1555,25 @@ export function Draft() {
           </div>
         )}
 
-        {/* Card Selection Bottom Sheet (for picking from hand) */}
+        {/* Card Selection Bottom Sheet (for picking from hand or viewing while waiting) */}
         <CardDetailSheet
           card={selectedCard}
-          isOpen={!!selectedCard && !hasPicked}
+          isOpen={!!selectedCard}
           onClose={() => setSelectedCard(null)}
           footer={
-            <Button
-              onClick={() => handlePickCard()}
-              className="w-full py-3 text-lg"
-              disabled={isPicking}
-            >
-              {isPicking ? 'Picking...' : 'Pick This Card'}
-            </Button>
+            hasPicked ? (
+              <div className="text-center text-gray-400 py-2">
+                <span className="text-green-400">Pick made</span> — Waiting for other players...
+              </div>
+            ) : (
+              <Button
+                onClick={() => handlePickCard()}
+                className="w-full py-3 text-lg"
+                disabled={isPicking}
+              >
+                {isPicking ? 'Picking...' : 'Pick This Card'}
+              </Button>
+            )
           }
         />
 
