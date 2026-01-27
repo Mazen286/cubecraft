@@ -76,6 +76,9 @@ export function AuctionDraft() {
   const [showTurnOrder, setShowTurnOrder] = useState(true);
   // Auto-pick: automatically select highest-rated card when it's your turn
   const [autoSelect, setAutoSelect] = useState(false);
+  // Resume countdown after pause
+  const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
+  const resumeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Toast notifications
   const { showToast, ToastContainer } = useToast();
@@ -603,6 +606,55 @@ export function AuctionDraft() {
       }
     }
   }, [autoSelect, isOpenMode, isSelector, auctionState?.phase, isActionPending, remainingCardIds, gridCards, handleSelectCard, showToast, session?.paused]);
+
+  // Handle resume countdown using server-side resume_at timestamp
+  useEffect(() => {
+    // If paused, clear any existing countdown
+    if (session?.paused) {
+      setResumeCountdown(null);
+      if (resumeCountdownRef.current) {
+        clearInterval(resumeCountdownRef.current);
+        resumeCountdownRef.current = null;
+      }
+      return;
+    }
+
+    // If not paused and we have a resume_at timestamp, sync countdown to it
+    if (!session?.paused && session?.resume_at && session?.status === 'in_progress') {
+      const resumeTime = new Date(session.resume_at).getTime();
+
+      // Calculate remaining countdown based on server timestamp
+      const updateCountdown = () => {
+        const now = Date.now();
+        const remaining = Math.ceil((resumeTime - now) / 1000);
+
+        if (remaining <= 0) {
+          // Countdown finished
+          setResumeCountdown(null);
+          if (resumeCountdownRef.current) {
+            clearInterval(resumeCountdownRef.current);
+            resumeCountdownRef.current = null;
+          }
+        } else {
+          setResumeCountdown(remaining);
+        }
+      };
+
+      // Initial update
+      updateCountdown();
+
+      // Update every 100ms for smooth countdown
+      const countdownInterval = setInterval(updateCountdown, 100);
+      resumeCountdownRef.current = countdownInterval;
+
+      return () => {
+        clearInterval(countdownInterval);
+      };
+    } else {
+      // No resume_at or not in progress - clear countdown
+      setResumeCountdown(null);
+    }
+  }, [session?.paused, session?.resume_at, session?.status]);
 
   // Drafted cards stats
   const myCardsStats = useMemo(() => {
@@ -1520,6 +1572,18 @@ export function AuctionDraft() {
                   {isPausing ? 'Resuming...' : 'Resume Draft'}
                 </Button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Resume Countdown Overlay */}
+        {resumeCountdown !== null && resumeCountdown > 0 && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="text-center">
+              <div className="text-8xl font-bold text-green-400 animate-pulse mb-4">
+                {resumeCountdown}
+              </div>
+              <p className="text-2xl text-white">Resuming draft...</p>
             </div>
           </div>
         )}
