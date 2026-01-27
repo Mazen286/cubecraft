@@ -11,6 +11,8 @@ interface SelectionTimerProps {
   isMyTurn: boolean;
   /** Label to show */
   label?: string;
+  /** Whether this is Open Draft mode (no bidding) */
+  isOpenMode?: boolean;
 }
 
 export function SelectionTimer({
@@ -18,6 +20,7 @@ export function SelectionTimer({
   totalTime,
   isMyTurn,
   label = 'Time to select',
+  isOpenMode = false,
 }: SelectionTimerProps) {
   const percentage = useMemo(() => {
     return Math.max(0, Math.min(100, (timeRemaining / totalTime) * 100));
@@ -82,7 +85,9 @@ export function SelectionTimer({
         >
           {isCritical
             ? 'Hurry! Auto-select in ' + timeRemaining + 's'
-            : 'Click a card to put it up for auction'}
+            : isOpenMode
+              ? 'Click a card to add it to your collection'
+              : 'Click a card to put it up for auction'}
         </p>
       )}
     </div>

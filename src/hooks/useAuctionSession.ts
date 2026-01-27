@@ -68,6 +68,7 @@ interface UseAuctionSessionReturn {
   selectCard: (cardId: number) => Promise<void>;
   placeBid: (amount: number) => Promise<void>;
   passBid: () => Promise<void>;
+  togglePause: (currentTimeRemaining?: number) => Promise<boolean>;
 }
 
 export function useAuctionSession(sessionId: string | undefined): UseAuctionSessionReturn {
@@ -287,6 +288,14 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
       selectionTimerRef.current = null;
     }
 
+    // If paused, show saved time
+    if (session?.paused) {
+      if (session.time_remaining_at_pause !== null && session.time_remaining_at_pause !== undefined) {
+        setSelectionTimeRemaining(session.time_remaining_at_pause);
+      }
+      return;
+    }
+
     // Only run timer during selection phase
     if (auctionState?.phase !== 'selecting' || !session?.selection_started_at) {
       setSelectionTimeRemaining(30);
@@ -310,7 +319,7 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
         clearInterval(selectionTimerRef.current);
       }
     };
-  }, [auctionState?.phase, session?.selection_started_at, session?.timer_seconds]);
+  }, [auctionState?.phase, session?.selection_started_at, session?.timer_seconds, session?.paused, session?.time_remaining_at_pause]);
 
   // Bidding timer - uses server timestamp for accuracy
   useEffect(() => {
@@ -318,6 +327,14 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
     if (bidTimerRef.current) {
       clearInterval(bidTimerRef.current);
       bidTimerRef.current = null;
+    }
+
+    // If paused, show saved time
+    if (session?.paused) {
+      if (session.time_remaining_at_pause !== null && session.time_remaining_at_pause !== undefined) {
+        setBidTimeRemaining(session.time_remaining_at_pause);
+      }
+      return;
     }
 
     // Only run timer during bidding phase
@@ -344,17 +361,17 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
         clearInterval(bidTimerRef.current);
       }
     };
-  }, [auctionState?.phase, auctionStateData?.bidStartedAt, configuredBidTime]);
+  }, [auctionState?.phase, auctionStateData?.bidStartedAt, configuredBidTime, session?.paused, session?.time_remaining_at_pause]);
 
-  // Auto-pass when bid time runs out (only for current player)
+  // Auto-pass when bid time runs out (only for current player, not when paused)
   useEffect(() => {
-    if (bidTimeRemaining === 0 && isMyBidTurn && sessionId && currentPlayer) {
+    if (bidTimeRemaining === 0 && isMyBidTurn && sessionId && currentPlayer && !session?.paused) {
       // Auto-pass
       auctionService.passBid(sessionId, currentPlayer.id).catch(err => {
         console.error('[useAuctionSession] Auto-pass failed:', err);
       });
     }
-  }, [bidTimeRemaining, isMyBidTurn, sessionId, currentPlayer]);
+  }, [bidTimeRemaining, isMyBidTurn, sessionId, currentPlayer, session?.paused]);
 
   // Server-side timeout check (fallback for stuck auctions, especially with bots)
   useEffect(() => {
@@ -434,6 +451,11 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
     await auctionService.passBid(sessionId, currentPlayer.id);
   }, [sessionId, currentPlayer]);
 
+  const togglePause = useCallback(async (currentTimeRemaining?: number): Promise<boolean> => {
+    if (!sessionId) throw new Error('Not ready');
+    return await auctionService.togglePause(sessionId, currentTimeRemaining);
+  }, [sessionId]);
+
   return {
     session,
     players: auctionPlayers,
@@ -460,5 +482,6 @@ export function useAuctionSession(sessionId: string | undefined): UseAuctionSess
     selectCard,
     placeBid,
     passBid,
+    togglePause,
   };
 }

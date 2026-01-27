@@ -1825,4 +1825,69 @@ export const auctionService = {
     console.log(`[auctionService] Auto-passing for timed-out player ${currentBidder.name}`);
     await this.passBid(sessionId, currentBidder.id);
   },
+
+  /**
+   * Toggle pause state for a session (host only)
+   */
+  async togglePause(sessionId: string, currentTimeRemaining?: number): Promise<boolean> {
+    const supabase = getSupabase();
+    const userId = getUserId();
+
+    // Get current session state
+    const { data: session, error: fetchError } = await supabase
+      .from('draft_sessions')
+      .select()
+      .eq('id', sessionId)
+      .single();
+
+    if (fetchError) {
+      console.error('[auctionService] Failed to fetch session for pause:', fetchError);
+      throw new Error(`Failed to fetch session: ${fetchError.message}`);
+    }
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    if (session.host_id !== userId) {
+      throw new Error('Only the host can pause/unpause the draft');
+    }
+
+    const newPausedState = !session.paused;
+
+    // Build update data
+    const updateData: {
+      paused: boolean;
+      time_remaining_at_pause?: number | null;
+      resume_at?: string | null;
+      paused_at?: string | null;
+    } = {
+      paused: newPausedState,
+    };
+
+    if (newPausedState && currentTimeRemaining !== undefined) {
+      // Pausing - save current time remaining, clear resume_at, set paused_at
+      updateData.time_remaining_at_pause = currentTimeRemaining;
+      updateData.resume_at = null;
+      updateData.paused_at = new Date().toISOString();
+    } else if (!newPausedState) {
+      // Resuming - set resume_at to 5 seconds from now (server timestamp)
+      // All clients will sync to this absolute time for the countdown
+      const resumeTime = new Date(Date.now() + 5000).toISOString();
+      updateData.resume_at = resumeTime;
+      // Keep time_remaining_at_pause - clients need it after countdown ends
+    }
+
+    const { error } = await supabase
+      .from('draft_sessions')
+      .update(updateData)
+      .eq('id', sessionId);
+
+    if (error) {
+      console.error('[auctionService] Failed to toggle pause:', error);
+      throw new Error(`Failed to pause: ${error.message}`);
+    }
+
+    return newPausedState;
+  },
 };

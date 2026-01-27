@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer, Crown } from 'lucide-react';
+import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer, Crown, Pause, Play } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -52,6 +52,7 @@ export function AuctionDraft() {
     selectCard,
     placeBid,
     passBid,
+    togglePause,
   } = useAuctionSession(sessionId);
 
   // Check if this is Open Draft mode (no bidding)
@@ -59,6 +60,7 @@ export function AuctionDraft() {
 
   // UI state
   const [showMobileCards, setShowMobileCards] = useState(false);
+  const [isPausing, setIsPausing] = useState(false);
   const [mobileViewCard, setMobileViewCard] = useState<YuGiOhCardType | null>(null);
   const [showMyCardsStats, setShowMyCardsStats] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -71,6 +73,8 @@ export function AuctionDraft() {
   const [previewCard, setPreviewCard] = useState<YuGiOhCardType | null>(null);
   // Show turn order panel (for Open mode)
   const [showTurnOrder, setShowTurnOrder] = useState(true);
+  // Auto-pick: automatically select highest-rated card when it's your turn
+  const [autoSelect, setAutoSelect] = useState(false);
 
   // Toast notifications
   const { showToast, ToastContainer } = useToast();
@@ -314,7 +318,8 @@ export function AuctionDraft() {
       selectionTimeRemaining === 0 &&
       !isActionPending &&
       remainingCardIds.length > 0 &&
-      !autoPickTriggeredRef.current
+      !autoPickTriggeredRef.current &&
+      !session?.paused
     ) {
       // Mark as triggered to prevent double-firing
       autoPickTriggeredRef.current = true;
@@ -327,7 +332,33 @@ export function AuctionDraft() {
       setPreviewCard(null);
       handleSelectCard(cardToSelect);
     }
-  }, [selectionTimeRemaining, isSelector, auctionState?.phase, previewCard, remainingCardIds, isActionPending, handleSelectCard]);
+  }, [selectionTimeRemaining, isSelector, auctionState?.phase, previewCard, remainingCardIds, isActionPending, handleSelectCard, session?.paused]);
+
+  // Auto-select: automatically pick highest-rated card when it's your turn (Open mode only)
+  useEffect(() => {
+    if (
+      autoSelect &&
+      isOpenMode &&
+      isSelector &&
+      auctionState?.phase === 'selecting' &&
+      !isActionPending &&
+      remainingCardIds.length > 0 &&
+      !autoPickTriggeredRef.current &&
+      !session?.paused
+    ) {
+      // Find the highest-rated available card
+      const availableCardsWithScores = gridCards
+        .filter(card => remainingCardIds.includes(card.id))
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+      if (availableCardsWithScores.length > 0) {
+        autoPickTriggeredRef.current = true;
+        const highestRated = availableCardsWithScores[0];
+        showToast(`Auto-picked: ${highestRated.name}`, 'info');
+        handleSelectCard(highestRated.id);
+      }
+    }
+  }, [autoSelect, isOpenMode, isSelector, auctionState?.phase, isActionPending, remainingCardIds, gridCards, handleSelectCard, showToast, session?.paused]);
 
   // Drafted cards stats
   const myCardsStats = useMemo(() => {
@@ -435,6 +466,22 @@ export function AuctionDraft() {
     }
   };
 
+  // Handle pause button click
+  const handlePauseClick = useCallback(async () => {
+    if (isPausing) return;
+    setIsPausing(true);
+    try {
+      // Use selection time for Open mode, bid time for Auction mode
+      const currentTime = isOpenMode ? selectionTimeRemaining : (auctionState?.phase === 'bidding' ? bidTimeRemaining : selectionTimeRemaining);
+      await togglePause(currentTime);
+    } catch (err) {
+      console.error('[AuctionDraft] Failed to toggle pause:', err);
+      showToast(err instanceof Error ? err.message : 'Failed to pause', 'error');
+    } finally {
+      setIsPausing(false);
+    }
+  }, [isPausing, togglePause, isOpenMode, selectionTimeRemaining, bidTimeRemaining, auctionState?.phase, showToast]);
+
   // Loading state
   if (!sessionId) {
     return (
@@ -536,6 +583,18 @@ export function AuctionDraft() {
             </p>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
+            {/* Auto-pick checkbox (Open mode only) */}
+            {isOpenMode && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoSelect}
+                  onChange={(e) => setAutoSelect(e.target.checked)}
+                  className="w-4 h-4 accent-gold-400"
+                />
+                <span className="text-gray-300 text-sm">Auto-pick</span>
+              </label>
+            )}
             {/* Help button */}
             <button
               onClick={() => setShowHowItWorks(true)}
@@ -544,6 +603,17 @@ export function AuctionDraft() {
             >
               <HelpCircle className="w-5 h-5" />
             </button>
+            {/* Host pause button */}
+            {isHost && !session?.paused && session?.status === 'in_progress' && (
+              <button
+                onClick={handlePauseClick}
+                disabled={isPausing}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-600/50 text-white rounded text-sm font-semibold transition-colors"
+              >
+                <Pause className="w-4 h-4" />
+                {isPausing ? 'Pausing...' : 'Pause'}
+              </button>
+            )}
             {/* Player info - only show points in auction mode */}
             {!isOpenMode && (
               <div className="text-center">
@@ -576,6 +646,7 @@ export function AuctionDraft() {
               totalTime={session?.timer_seconds || 30}
               isMyTurn={isSelector}
               label={isSelector ? 'Your turn to select' : `Waiting for ${players.find(p => p.seatPosition === session?.current_selector_seat)?.name || 'player'}...`}
+              isOpenMode={isOpenMode}
             />
           </div>
         )}
@@ -1167,6 +1238,46 @@ export function AuctionDraft() {
             </div>
           </div>
         </BottomSheet>
+
+        {/* Pause Overlay Screen */}
+        {session?.paused && session?.status === 'in_progress' && (
+          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-yugi-darker border border-yugi-border rounded-2xl p-8 max-w-md mx-4 text-center">
+              {/* Pause Icon */}
+              <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-6">
+                <Pause className="w-12 h-12 text-yellow-400" />
+              </div>
+
+              <h2 className="text-2xl font-bold text-white mb-4">Draft Paused</h2>
+
+              <p className="text-gray-300 mb-6">
+                The host has paused the draft. Please wait for them to resume.
+              </p>
+
+              {/* Time remaining when paused */}
+              {session.time_remaining_at_pause && (
+                <div className="mb-6">
+                  <p className="text-sm text-gray-400 mb-1">Time remaining when paused</p>
+                  <p className="text-3xl font-bold text-gold-400">
+                    {session.time_remaining_at_pause}s
+                  </p>
+                </div>
+              )}
+
+              {/* Resume button for host */}
+              {isHost && (
+                <Button
+                  onClick={() => togglePause()}
+                  disabled={isPausing}
+                  className="w-full"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  {isPausing ? 'Resuming...' : 'Resume Draft'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
