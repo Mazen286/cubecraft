@@ -498,8 +498,7 @@ ${sideDeck}
       .filter(({ index }) => deckAssignments.get(index) === 'side')
       .map(({ card }) => card.name);
 
-    let text = `My CubeCraft Draft Deck\n\n`;
-    text += `Main Deck (${mainCards.length}):\n${mainCards.join('\n')}\n\n`;
+    let text = `Main Deck (${mainCards.length}):\n${mainCards.join('\n')}\n\n`;
     if (extraCards.length > 0) {
       text += `Extra Deck (${extraCards.length}):\n${extraCards.join('\n')}\n\n`;
     }
