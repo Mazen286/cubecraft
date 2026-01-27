@@ -838,21 +838,49 @@ export function AuctionDraft() {
 
       <div className="flex flex-col min-h-[calc(100vh-200px)]">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              {isOpenMode ? (
-                <MousePointer className="w-6 h-6 text-gold-400" />
-              ) : (
-                <Gavel className="w-6 h-6 text-gold-400" />
+        <div className="mb-4">
+          {/* Top row: Title and stats */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                {isOpenMode ? (
+                  <MousePointer className="w-5 h-5 sm:w-6 sm:h-6 text-gold-400 flex-shrink-0" />
+                ) : (
+                  <Gavel className="w-5 h-5 sm:w-6 sm:h-6 text-gold-400 flex-shrink-0" />
+                )}
+                <span className="whitespace-nowrap">{isOpenMode ? 'Open Draft' : 'Auction Grid Draft'}</span>
+              </h1>
+              <p className="text-gray-300 text-sm sm:text-base whitespace-nowrap">
+                Grid {currentGrid} of {totalGrids} &bull; {remainingCardIds.length} cards remaining
+              </p>
+            </div>
+            {/* Stats - always visible */}
+            <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
+              {/* Player info - only show points in auction mode */}
+              {!isOpenMode && (
+                <div className="text-center">
+                  <div className="text-lg sm:text-2xl font-bold text-gold-400">
+                    {currentPlayer?.biddingPoints ?? 100}
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-gray-300 whitespace-nowrap">My Points</div>
+                </div>
               )}
-              {isOpenMode ? 'Open Draft' : 'Auction Grid Draft'}
-            </h1>
-            <p className="text-gray-300">
-              Grid {currentGrid} of {totalGrids} &bull; {remainingCardIds.length} cards remaining
-            </p>
+              <div className="text-center">
+                <div className="text-lg sm:text-2xl font-bold text-white">
+                  {currentPlayer?.cardsAcquiredThisGrid ?? 0}/{maxCardsPerGrid}
+                </div>
+                <div className="text-[10px] sm:text-xs text-gray-300 whitespace-nowrap">This Grid</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg sm:text-2xl font-bold text-white">
+                  {draftedCards.length}
+                </div>
+                <div className="text-[10px] sm:text-xs text-gray-300 whitespace-nowrap">Total Cards</div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-4 sm:gap-6">
+          {/* Bottom row: Controls */}
+          <div className="flex items-center gap-3 mt-2">
             {/* Auto-pick checkbox (Open mode only) */}
             {isOpenMode && (
               <label className="flex items-center gap-2 cursor-pointer">
@@ -862,7 +890,7 @@ export function AuctionDraft() {
                   onChange={(e) => setAutoSelect(e.target.checked)}
                   className="w-4 h-4 accent-gold-400"
                 />
-                <span className="text-gray-300 text-sm">Auto-pick</span>
+                <span className="text-gray-300 text-sm whitespace-nowrap">Auto-pick</span>
               </label>
             )}
             {/* Help button */}
@@ -878,33 +906,12 @@ export function AuctionDraft() {
               <button
                 onClick={handlePauseClick}
                 disabled={isPausing}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-600/50 text-white rounded text-sm font-semibold transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-600/50 text-white rounded text-sm font-semibold transition-colors whitespace-nowrap"
               >
                 <Pause className="w-4 h-4" />
                 {isPausing ? 'Pausing...' : 'Pause'}
               </button>
             )}
-            {/* Player info - only show points in auction mode */}
-            {!isOpenMode && (
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-gold-400">
-                  {currentPlayer?.biddingPoints ?? 100}
-                </div>
-                <div className="text-xs text-gray-300">My Points</div>
-              </div>
-            )}
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold text-white">
-                {currentPlayer?.cardsAcquiredThisGrid ?? 0}/{maxCardsPerGrid}
-              </div>
-              <div className="text-xs text-gray-300">This Grid</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold text-white">
-                {draftedCards.length}
-              </div>
-              <div className="text-xs text-gray-300">Total Cards</div>
-            </div>
           </div>
         </div>
 
