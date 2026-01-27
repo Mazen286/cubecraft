@@ -218,7 +218,7 @@ export function AuctionDraft() {
       spells: 0,
       traps: 0,
       avgScore: 0,
-      tiers: { S: 0, A: 0, B: 0, C: 0, E: 0, F: 0 } as Record<string, number>,
+      tiers: { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 } as Record<string, number>,
     };
 
     if (draftedCards.length === 0) return stats;
@@ -732,7 +732,7 @@ export function AuctionDraft() {
                     showAdvancedFilters
                     showSort
                     includeScoreSort
-                    tierCounts={myCardsStats.tiers as Record<'S' | 'A' | 'B' | 'C' | 'E' | 'F', number>}
+                    tierCounts={myCardsStats.tiers as Record<'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F', number>}
                     totalCount={draftedCards.length}
                     filteredCount={filteredDraftedCards.length}
                     compact

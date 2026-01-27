@@ -330,7 +330,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
 
   // Calculate tier counts for filter display
   const tierCounts = useMemo(() => {
-    const counts: Record<Tier, number> = { S: 0, A: 0, B: 0, C: 0, E: 0, F: 0 };
+    const counts: Record<Tier, number> = { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
     for (const card of cardsAsGeneric) {
       const tier = getTierFromScore(card.score) as Tier;
       if (tier in counts) {

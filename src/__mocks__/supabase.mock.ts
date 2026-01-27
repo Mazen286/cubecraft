@@ -16,7 +16,7 @@ interface MockResponse<T> {
 class MockQueryBuilder<T = unknown> {
   private response: MockResponse<T> = { data: null, error: null };
 
-  constructor(private tableName: string) {}
+  constructor(_tableName: string) {}
 
   // Set the mock response
   mockResponse(data: T | null, error?: { message: string } | null): this {
