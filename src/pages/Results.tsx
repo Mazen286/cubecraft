@@ -143,6 +143,9 @@ export function Results() {
   const [showCardDetail, setShowCardDetail] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 
+  // State for viewing non-deck cards (burned/first picks)
+  const [viewOnlyCard, setViewOnlyCard] = useState<YuGiOhCardType | null>(null);
+
   // Ref for capturing deck zones as image
   const deckZonesRef = useRef<HTMLDivElement>(null);
 
@@ -334,7 +337,20 @@ export function Results() {
   const handleCloseCardDetail = useCallback(() => {
     setShowCardDetail(false);
     setSelectedCard(null);
+    setViewOnlyCard(null);
   }, []);
+
+  // Handle clicking on view-only cards (burned cards, first picks)
+  const handleViewOnlyCardClick = useCallback((card: YuGiOhCardType) => {
+    if (viewOnlyCard?.id === card.id && showCardDetail) {
+      setShowCardDetail(false);
+      setViewOnlyCard(null);
+    } else {
+      setViewOnlyCard(card);
+      setSelectedCard(null);
+      setShowCardDetail(true);
+    }
+  }, [viewOnlyCard, showCardDetail]);
 
   // Reset deck to initial state (with extra deck limit)
   const resetDeck = useCallback(() => {
@@ -499,33 +515,49 @@ ${sideDeck}
 
   // Share deck as image + text
   const handleShare = useCallback(async () => {
-    if (!deckZonesRef.current) return;
-
     setIsSharing(true);
+    const deckText = generateDeckText();
+    let imageBlob: Blob | null = null;
+
+    // Try to capture deck zones as image (may fail due to CORS with external card images)
+    if (deckZonesRef.current) {
+      try {
+        const canvas = await html2canvas(deckZonesRef.current, {
+          backgroundColor: '#1a1a2e',
+          scale: 2,
+          useCORS: true,
+          allowTaint: false, // Don't allow tainted canvas - we need to export it
+          logging: false,
+          // Ignore images that fail to load
+          onclone: (doc) => {
+            // Remove any broken images to prevent errors
+            const images = doc.querySelectorAll('img');
+            images.forEach(img => {
+              if (!img.complete || img.naturalWidth === 0) {
+                img.remove();
+              }
+            });
+          },
+        });
+
+        // Try to convert to blob
+        imageBlob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob(
+            (b) => resolve(b),
+            'image/png',
+            0.95
+          );
+        });
+      } catch (err) {
+        console.warn('Could not capture deck image (CORS issue with external card images):', err);
+        // Continue without image
+      }
+    }
+
     try {
-      // Capture the deck zones as an image
-      const canvas = await html2canvas(deckZonesRef.current, {
-        backgroundColor: '#1a1a2e',
-        scale: 2, // Higher quality
-        useCORS: true, // Allow cross-origin images
-        allowTaint: true,
-        logging: false,
-      });
-
-      // Convert to blob
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error('Failed to create blob'))),
-          'image/png',
-          0.95
-        );
-      });
-
-      const deckText = generateDeckText();
-
-      // Check if Web Share API is available and supports files
-      if (navigator.share && navigator.canShare) {
-        const file = new File([blob], 'cubecraft-deck.png', { type: 'image/png' });
+      // If we have an image, try to share with it
+      if (imageBlob && navigator.share && navigator.canShare) {
+        const file = new File([imageBlob], 'cubecraft-deck.png', { type: 'image/png' });
         const shareData = {
           title: 'My CubeCraft Draft Deck',
           text: deckText,
@@ -538,22 +570,45 @@ ${sideDeck}
         }
       }
 
-      // Fallback: Download image and copy text to clipboard
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `cubecraft-deck-${Date.now()}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // Try to share just text if no image or image sharing not supported
+      if (navigator.share) {
+        const textShareData = {
+          title: 'My CubeCraft Draft Deck',
+          text: deckText,
+        };
+
+        if (navigator.canShare && navigator.canShare(textShareData)) {
+          await navigator.share(textShareData);
+          return;
+        }
+      }
+
+      // Fallback: Download image (if available) and copy text to clipboard
+      if (imageBlob) {
+        const url = URL.createObjectURL(imageBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cubecraft-deck-${Date.now()}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
 
       // Copy text to clipboard
       await navigator.clipboard.writeText(deckText);
-      alert('Deck image downloaded and deck list copied to clipboard!');
+      alert(imageBlob
+        ? 'Deck image downloaded and deck list copied to clipboard!'
+        : 'Deck list copied to clipboard!');
     } catch (error) {
       console.error('Failed to share:', error);
       // If share was cancelled by user, don't show error
       if (error instanceof Error && error.name !== 'AbortError') {
-        alert('Failed to share deck. Please try again.');
+        // Last resort: try to at least copy to clipboard
+        try {
+          await navigator.clipboard.writeText(deckText);
+          alert('Deck list copied to clipboard!');
+        } catch {
+          alert('Failed to share deck. Please try again.');
+        }
       }
     } finally {
       setIsSharing(false);
@@ -848,7 +903,16 @@ ${sideDeck}
               <div className="pt-0 border-t border-yugi-border">
                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 mt-4">
                   {firstPickCards.map((card, idx) => (
-                    <YuGiOhCard key={`first-${card.id}-${idx}`} card={card} size="full" showTier={hasScores} flush />
+                    <div
+                      key={`first-${card.id}-${idx}`}
+                      onClick={() => handleViewOnlyCardClick(card)}
+                      className={cn(
+                        'cursor-pointer transition-all',
+                        viewOnlyCard?.id === card.id && 'ring-2 ring-gold-400 z-10'
+                      )}
+                    >
+                      <YuGiOhCard card={card} size="full" showTier={hasScores} flush />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -878,7 +942,14 @@ ${sideDeck}
               <div className="pt-0 border-t border-yugi-border">
                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 mt-4">
                   {burnedCards.map(({ card, packNumber }, index) => (
-                    <div key={`${card.id}-pack${packNumber}-${index}`} className="relative">
+                    <div
+                      key={`${card.id}-pack${packNumber}-${index}`}
+                      onClick={() => handleViewOnlyCardClick(card)}
+                      className={cn(
+                        'relative cursor-pointer transition-all',
+                        viewOnlyCard?.id === card.id && 'ring-2 ring-gold-400 z-10'
+                      )}
+                    >
                       <YuGiOhCard card={card} size="full" showTier={hasScores} flush />
                       <div className="absolute inset-0 bg-red-900/30 pointer-events-none" />
                       <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-[10px] text-center py-0.5 text-gray-300">
@@ -1066,20 +1137,22 @@ ${sideDeck}
 
         {/* Card Detail Bottom Sheet */}
         <CardDetailSheet
-          card={selectedCard?.card || null}
-          isOpen={showCardDetail && selectedCard !== null}
+          card={selectedCard?.card || viewOnlyCard || null}
+          isOpen={showCardDetail && (selectedCard !== null || viewOnlyCard !== null)}
           onClose={handleCloseCardDetail}
           zoneLabel={
+            viewOnlyCard ? 'View Only' :
             selectedCard?.zone === 'main' ? 'Main Deck' :
             selectedCard?.zone === 'extra' ? 'Extra Deck' :
             selectedCard?.zone === 'side' ? 'Side Deck' : 'Unused Pool'
           }
           zoneColor={
+            viewOnlyCard ? 'text-gray-400' :
             selectedCard?.zone === 'main' ? 'text-blue-400' :
             selectedCard?.zone === 'extra' ? 'text-purple-400' :
             selectedCard?.zone === 'side' ? 'text-orange-400' : 'text-gray-400'
           }
-          footer={selectedCard && (
+          footer={selectedCard && !viewOnlyCard && (
             <div>
               <p className="text-xs text-gray-400 mb-2">Move to:</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
