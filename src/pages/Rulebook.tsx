@@ -5,29 +5,56 @@ import { ChevronDown, ChevronRight, Printer, Download, BookOpen } from 'lucide-r
 // Table of contents structure
 const TOC = [
   { id: 'introduction', title: 'Introduction' },
+  { id: 'quick-reference', title: 'Quick Reference' },
   { id: 'general-rules', title: '1. General Rules' },
-  { id: 'drafting', title: '2. Drafting', children: [
-    { id: 'grid-drafting', title: '2.1 Grid Drafting' },
-    { id: 'standard-grid', title: 'Standard Grid Drafting' },
-    { id: 'auction-grid', title: 'Auction Grid Drafting' },
-    { id: 'pack-drafting', title: '2.2 Pack-Based Drafting' },
+  { id: 'drafting', title: '2. Drafting Modes', children: [
+    { id: 'pack-drafting', title: '2.1 Pack Draft' },
+    { id: 'auction-grid', title: '2.2 Auction Grid Draft' },
+    { id: 'open-draft', title: '2.3 Open Draft' },
   ]},
-  { id: 'deck-construction', title: '3. Deck Construction' },
-  { id: 'tournament', title: '4. Tournament Structure' },
-  { id: 'guidelines', title: '5. Additional Guidelines' },
+  { id: 'digital-features', title: '3. Digital Features', children: [
+    { id: 'solo-mode', title: '3.1 Solo Mode & AI Bots' },
+    { id: 'card-ratings', title: '3.2 Card Ratings & Tiers' },
+    { id: 'sessions', title: '3.3 Sessions & Reconnection' },
+  ]},
+  { id: 'deck-construction', title: '4. Deck Construction' },
+  { id: 'tournament', title: '5. Tournament Structure' },
   { id: 'appendix', title: '6. Appendix', children: [
     { id: 'grid-calc', title: '6.1 Grid Calculations' },
     { id: 'pack-calc', title: '6.2 Pack Calculations' },
     { id: 'auction-tips', title: '6.3 Auction Tips' },
-    { id: 'graveyard-strat', title: '6.4 Graveyard Strategies' },
-    { id: 'timing', title: '6.5 Timing Etiquette' },
-    { id: 'variants', title: '6.6 Optional Rules' },
+    { id: 'timing', title: '6.4 Timing Etiquette' },
   ]},
   { id: 'conclusion', title: 'Conclusion' },
 ];
 
+// Default settings for reference
+const DEFAULTS = {
+  pack: {
+    packSize: 15,
+    burnedPerPack: 5,
+    picksPerPack: 10,
+    timerSeconds: 120,
+    cardsPerPlayer: 60,
+  },
+  auction: {
+    cardsAcquiredPerGrid: 5,
+    burnedPerGrid: 5,
+    biddingPoints: 100,
+    selectionTimer: 30,
+    bidTimer: 20,
+    cardsPerPlayer: 60,
+  },
+  open: {
+    cardsAcquiredPerGrid: 10,
+    burnedPerGrid: 10,
+    selectionTimer: 30,
+    cardsPerPlayer: 60,
+  },
+};
+
 export function Rulebook() {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['drafting', 'appendix']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['drafting', 'digital-features', 'appendix']));
   const [activeSection, setActiveSection] = useState('introduction');
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -151,7 +178,7 @@ export function Rulebook() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 print:hidden">
             <div>
               <h1 className="text-3xl font-bold text-gold-400">CubeCraft Rulebook</h1>
-              <p className="text-gray-400 mt-1">Cube Drafting System - Version 1.0</p>
+              <p className="text-gray-400 mt-1">Cube Drafting System - Version 2.0</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -191,8 +218,59 @@ export function Rulebook() {
               <p className="text-gray-300 leading-relaxed mb-4">
                 Welcome to the CubeCraft Drafting System! This format allows players to build decks from a curated collection of trading card game cards - known as a Cube - and compete in a tournament-style event. The Cube features a diverse selection of cards, offering a fresh and strategic experience every time you play.
               </p>
+              <p className="text-gray-300 leading-relaxed mb-4">
+                CubeCraft supports three drafting modes: <strong className="text-white">Pack Draft</strong> (traditional pick-and-pass), <strong className="text-white">Auction Grid Draft</strong> (bidding-based), and <strong className="text-white">Open Draft</strong> (turn-based grid selection). All settings are configurable to suit your group's preferences.
+              </p>
               <p className="text-gray-300 leading-relaxed">
-                This rulebook outlines the procedures for the drafting phase, including two primary methods: Grid Drafting and Pack-Based Drafting. The rules are designed to be game-agnostic - refer to your specific game's rulebook for gameplay rules. Please read carefully to ensure a smooth and enjoyable event for all participants.
+                This rulebook outlines the procedures for each drafting mode. The rules are designed to be game-agnostic - refer to your specific game's rulebook for gameplay rules.
+              </p>
+            </section>
+
+            {/* Quick Reference */}
+            <section id="quick-reference" className="mb-12">
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Quick Reference - Default Settings</h2>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                {/* Pack Draft */}
+                <div className="bg-yugi-darker rounded-lg p-4">
+                  <h3 className="text-gold-400 font-semibold mb-3">Pack Draft</h3>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>Cards per Pack: <span className="text-white">{DEFAULTS.pack.packSize}</span></li>
+                    <li>Picks per Pack: <span className="text-white">{DEFAULTS.pack.picksPerPack}</span></li>
+                    <li>Burned per Pack: <span className="text-white">{DEFAULTS.pack.burnedPerPack}</span></li>
+                    <li>Pick Timer: <span className="text-white">{DEFAULTS.pack.timerSeconds}s</span></li>
+                    <li>Cards per Player: <span className="text-white">{DEFAULTS.pack.cardsPerPlayer}</span></li>
+                  </ul>
+                </div>
+
+                {/* Auction Grid */}
+                <div className="bg-yugi-darker rounded-lg p-4">
+                  <h3 className="text-gold-400 font-semibold mb-3">Auction Grid</h3>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>Cards Acquired/Grid: <span className="text-white">{DEFAULTS.auction.cardsAcquiredPerGrid}</span></li>
+                    <li>Burned per Grid: <span className="text-white">{DEFAULTS.auction.burnedPerGrid}</span></li>
+                    <li>Bidding Points: <span className="text-white">{DEFAULTS.auction.biddingPoints}</span></li>
+                    <li>Selection Timer: <span className="text-white">{DEFAULTS.auction.selectionTimer}s</span></li>
+                    <li>Bid Timer: <span className="text-white">{DEFAULTS.auction.bidTimer}s</span></li>
+                    <li>Cards per Player: <span className="text-white">{DEFAULTS.auction.cardsPerPlayer}</span></li>
+                  </ul>
+                </div>
+
+                {/* Open Draft */}
+                <div className="bg-yugi-darker rounded-lg p-4">
+                  <h3 className="text-gold-400 font-semibold mb-3">Open Draft</h3>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>Cards Acquired/Grid: <span className="text-white">{DEFAULTS.open.cardsAcquiredPerGrid}</span></li>
+                    <li>Burned per Grid: <span className="text-white">{DEFAULTS.open.burnedPerGrid}</span></li>
+                    <li>Selection Timer: <span className="text-white">{DEFAULTS.open.selectionTimer}s</span></li>
+                    <li>Cards per Player: <span className="text-white">{DEFAULTS.open.cardsPerPlayer}</span></li>
+                    <li className="text-gray-500 italic">No bidding</li>
+                  </ul>
+                </div>
+              </div>
+
+              <p className="text-gray-400 text-sm mt-4">
+                All settings can be customized when creating a draft. Player count: 1-12 players (solo mode uses AI bots).
               </p>
             </section>
 
@@ -202,13 +280,14 @@ export function Rulebook() {
 
               <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Objective</h3>
               <p className="text-gray-300 mb-4">
-                The CubeCraft drafting system provides a unique and engaging experience by allowing players to build decks from a curated card pool. Players draft cards using innovative methods and then compete in matches following the rules of their chosen trading card game.
+                The CubeCraft drafting system provides a unique and engaging experience by allowing players to build decks from a curated card pool. Players draft cards using one of three methods and then compete in matches following the rules of their chosen trading card game.
               </p>
 
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Players (n)</h3>
+              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Players</h3>
               <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
-                <li>The Cube is designed for groups of players, where <strong className="text-white">n</strong> represents the number of participants.</li>
-                <li>The system accommodates various group sizes, ensuring balanced gameplay and drafting opportunities.</li>
+                <li>CubeCraft supports <strong className="text-white">1-12 players</strong>.</li>
+                <li>Solo mode (1 player) uses AI bots to fill remaining seats.</li>
+                <li>The number of players affects grid/pack sizes and total cards needed.</li>
               </ul>
 
               <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Cube Composition</h3>
@@ -216,252 +295,310 @@ export function Rulebook() {
                 <li>The Cube contains a diverse mix of cards from your chosen game.</li>
                 <li>There are no duplicate cards in the Cube; each card is unique (singleton format).</li>
                 <li>Cards are carefully selected to promote strategic variety and fair competition.</li>
-                <li>Special cards (Extra Deck, Sideboard staples, etc.) are mixed throughout, providing equal chances for all players.</li>
+                <li>Special cards (Extra Deck, Sideboard staples, etc.) are mixed throughout.</li>
               </ul>
 
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Equipment</h3>
+              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">The Graveyard</h3>
               <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
-                <li><strong className="text-white">Life Tracking:</strong> Use calculators, apps, or pen and paper to keep track of life totals during matches.</li>
-                <li><strong className="text-white">Game Accessories:</strong> Tokens, counters, and dice may be required for certain card effects.</li>
-                <li><strong className="text-white">20-Sided Die:</strong> A die is used for random player selection and resolving ties during drafting and matches.</li>
-                <li><strong className="text-white">Timer App:</strong> A timer app (e.g., "You Turn: Board Game Timer") is used to enforce time limits during the drafting phase.</li>
+                <li>Cards not drafted go to the <strong className="text-gold-400">Graveyard</strong>.</li>
+                <li>In Pack Draft: leftover cards from each pack (default 5 per pack).</li>
+                <li>In Grid modes: remaining cards when a grid completes.</li>
+                <li>The Graveyard can be used for deck completion if needed (see Deck Construction).</li>
               </ul>
 
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Random Player Selection</h3>
-              <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
-                <li><strong className="text-white">Method:</strong> Players roll a 20-sided die to determine random outcomes, such as drafting order and initial turn in matches.</li>
-                <li><strong className="text-white">Highest Roll:</strong> The player with the highest roll wins the selection or resolves the tie in their favor.</li>
-                <li><strong className="text-white">Tie Resolution:</strong> In case of a tie, only the tied players re-roll until a winner is determined.</li>
-              </ul>
-
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Sportsmanship and Fair Play</h3>
-              <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
-                <li><strong className="text-white">Respect:</strong> Players are expected to exhibit fairness, respect, and good sportsmanship at all times.</li>
-                <li><strong className="text-white">Honesty:</strong> Maintain honesty about game states, card effects, and interactions.</li>
-                <li><strong className="text-white">No Outside Assistance:</strong> Players should not receive help from others during drafting or matches.</li>
-              </ul>
-
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Time Limits</h3>
-              <div className="bg-yugi-darker rounded-lg p-4 mb-4">
-                <p className="text-white font-semibold mb-2">Drafting Time Limits:</p>
-                <ul className="list-disc list-inside text-gray-300 space-y-1 mb-4">
-                  <li>Players have a finite, agreed-upon time (e.g., 30 seconds) to make each card selection during drafting.</li>
-                  <li>A timer app is used to track each player's time.</li>
-                </ul>
-                <p className="text-white font-semibold mb-2">Match Play:</p>
-                <ul className="list-disc list-inside text-gray-300 space-y-1">
-                  <li>There are no time limits for matches, allowing players to enjoy the game at their own pace.</li>
-                  <li>While there are no time constraints during matches, players should be mindful of the overall event schedule and avoid unnecessary delays.</li>
-                </ul>
-              </div>
-
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Dispute Resolution</h3>
+              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Sportsmanship</h3>
               <ul className="list-disc list-inside text-gray-300 space-y-2">
-                <li><strong className="text-white">Calm Communication:</strong> Resolve disagreements calmly through discussion.</li>
-                <li><strong className="text-white">Refer to Rules:</strong> Use this rulebook and your game's official rulebook as references.</li>
-                <li><strong className="text-white">Designated Judge:</strong> If available, consult a designated judge or event organizer for clarification.</li>
+                <li><strong className="text-white">Respect:</strong> Players are expected to exhibit fairness and good sportsmanship.</li>
+                <li><strong className="text-white">Honesty:</strong> Maintain honesty about game states and card effects.</li>
+                <li><strong className="text-white">Timely Play:</strong> Make selections within the allotted time to keep the draft moving.</li>
               </ul>
             </section>
 
-            {/* 2. Drafting */}
+            {/* 2. Drafting Modes */}
             <section id="drafting" className="mb-12">
-              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">2. Drafting</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">2. Drafting Modes</h2>
 
-              {/* 2.1 Grid Drafting */}
-              <section id="grid-drafting" className="mb-8">
-                <h3 className="text-lg font-semibold text-gold-400 mb-3">2.1 Grid Drafting</h3>
+              {/* 2.1 Pack Draft */}
+              <section id="pack-drafting" className="mb-8 pl-4 border-l-2 border-yugi-border">
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">2.1 Pack Draft</h3>
                 <p className="text-gray-300 mb-4">
-                  Grid Drafting involves players selecting cards from face-up grids on the table. This method leverages the large size of the Cube and provides strategic depth through open information.
+                  The classic drafting format. Players receive packs, pick one card, and pass the rest to their neighbor. Simple, fast, and familiar to TCG players.
                 </p>
 
-                {/* Standard Grid */}
-                <section id="standard-grid" className="mb-6 pl-4 border-l-2 border-yugi-border">
-                  <h4 className="text-md font-semibold text-white mb-3">Standard Grid Drafting</h4>
+                <p className="text-gray-400 font-medium mb-2">How It Works:</p>
+                <ol className="list-decimal list-inside text-gray-300 space-y-2 mb-4">
+                  <li>Each player receives a pack of cards (default: {DEFAULTS.pack.packSize} cards).</li>
+                  <li>Examine your pack and select one card to keep.</li>
+                  <li>Pass the remaining cards to the next player.</li>
+                  <li>Repeat until you've picked the configured number from each pack (default: {DEFAULTS.pack.picksPerPack}).</li>
+                  <li>Leftover cards (default: {DEFAULTS.pack.burnedPerPack} per pack) go to the Graveyard.</li>
+                  <li>Direction alternates each round (left, then right, then left...).</li>
+                  <li>Continue until each player has their target card count (default: {DEFAULTS.pack.cardsPerPlayer}).</li>
+                </ol>
 
-                  <p className="text-gray-400 font-medium mb-2">Setup:</p>
-                  <ol className="list-decimal list-inside text-gray-300 space-y-2 mb-4">
-                    <li>Randomly decide the initial drafting order of players.</li>
-                    <li>Calculate the number of grids needed (see Appendix 6.1).</li>
-                    <li>From the shuffled Cube, create the required number of grids.</li>
-                    <li>Each grid consists of <strong className="text-white">(n + 1) x 10</strong> cards (e.g., 50 cards for 4 players).</li>
-                    <li>Lay out the cards face-down in stacks corresponding to each grid.</li>
-                    <li>At the start of each drafting round, lay out all cards face-up to form the grid.</li>
-                  </ol>
+                <p className="text-gray-400 font-medium mb-2">Timer:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
+                  <li>Default pick timer: <strong className="text-white">{DEFAULTS.pack.timerSeconds} seconds</strong> per pick.</li>
+                  <li>If time expires, the highest-rated card in your pack is auto-picked.</li>
+                  <li>Timer is configurable from 30-300 seconds.</li>
+                </ul>
 
-                  <p className="text-gray-400 font-medium mb-2">Drafting Procedure:</p>
-                  <ol className="list-decimal list-inside text-gray-300 space-y-2 mb-4">
-                    <li>Starting with the first player, each player selects one card per turn.</li>
-                    <li>Each player has <strong className="text-white">30 seconds</strong> to make their selection.</li>
-                    <li>If a player does not select a card within the time limit, they must take the card closest to them.</li>
-                    <li>Proceed until each player has selected 10 cards.</li>
-                    <li>Remaining 10 cards are placed into the <strong className="text-gold-400">Graveyard</strong>.</li>
-                    <li>Rotate drafting order clockwise for the next round.</li>
-                    <li>Continue until each player has 60 cards.</li>
-                  </ol>
-                </section>
-
-                {/* Auction Grid */}
-                <section id="auction-grid" className="mb-6 pl-4 border-l-2 border-yugi-border">
-                  <h4 className="text-md font-semibold text-white mb-3">Auction Grid Drafting</h4>
-                  <p className="text-gray-300 mb-4">
-                    Auction Grid Drafting adds a bidding element to Grid Drafting, introducing resource management and deeper strategic planning.
-                  </p>
-
-                  <p className="text-gray-400 font-medium mb-2">Setup:</p>
-                  <ol className="list-decimal list-inside text-gray-300 space-y-2 mb-4">
-                    <li>Players roll a 20-sided die. Highest roll becomes first player. Order proceeds clockwise.</li>
-                    <li>Each player receives <strong className="text-white">100 bidding points</strong> for the entire session (points persist across all 6 grids).</li>
-                    <li>Prepare grids same as Standard Grid Drafting: <strong className="text-white">(n + 1) x 10</strong> cards per grid.</li>
-                    <li>Configure the <strong className="text-white">bid timer</strong> (10-60 seconds per turn, default 15 seconds).</li>
-                  </ol>
-
-                  <p className="text-gray-400 font-medium mb-2">Drafting Procedure:</p>
-                  <ol className="list-decimal list-inside text-gray-300 space-y-2 mb-4">
-                    <li>The <strong className="text-white">selecting player</strong> chooses a card from the grid to put up for auction (30 seconds).</li>
-                    <li>Bidding starts at <strong className="text-white">0</strong>. The selector does not make the first bid.</li>
-                    <li>Clockwise from the selector, each player must <strong className="text-white">bid higher</strong> or <strong className="text-white">pass</strong>.</li>
-                    <li>Each player has the configured <strong className="text-white">bid timer</strong> to make their decision.</li>
-                    <li>Bids must be <em>strictly higher</em> than the previous bid.</li>
-                    <li>Players who pass <strong className="text-red-400">cannot re-enter</strong> bidding for that card.</li>
-                    <li>If a player's <strong className="text-white">timer expires</strong>, they automatically pass.</li>
-                    <li>Highest bidder wins and deducts bid from their points.</li>
-                    <li>If <strong className="text-gold-400">no one bids</strong>, the selecting player receives the card for free (0 points).</li>
-                    <li>Selection role passes clockwise regardless of who won the auction.</li>
-                  </ol>
-
-                  <p className="text-gray-400 font-medium mb-2">Max Cards Per Grid:</p>
-                  <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
-                    <li>Each player can acquire a <strong className="text-white">maximum of 10 cards per grid</strong>.</li>
-                    <li>Once a player reaches 10 cards, they are <strong className="text-white">automatically skipped</strong> in bidding rotation.</li>
-                    <li>If it becomes a player's turn to <strong className="text-white">select</strong> but they have 10 cards, selection passes to the next eligible player.</li>
-                    <li>A grid completes when all eligible players have 10 cards OR no cards remain.</li>
-                    <li>Remaining cards at grid completion go to the <strong className="text-gold-400">Graveyard</strong>.</li>
+                <div className="bg-yugi-darker rounded-lg p-4 example-box">
+                  <p className="text-gold-400 font-semibold mb-2">Example (4 Players, Default Settings):</p>
+                  <ul className="text-gray-300 text-sm space-y-1">
+                    <li>Packs needed: 4 players × 6 packs = 24 packs</li>
+                    <li>Cards per pack: 15 (pick 10, burn 5)</li>
+                    <li>Total cards needed: 24 × 15 = 360 cards</li>
+                    <li>Each player ends with: 60 cards</li>
                   </ul>
-
-                  <p className="text-gray-400 font-medium mb-2">Grid Completion:</p>
-                  <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
-                    <li>After a grid is complete, all players' "cards acquired this grid" counter resets to 0.</li>
-                    <li>Bidding points do <strong className="text-red-400">NOT</strong> reset between grids.</li>
-                    <li>The draft continues for <strong className="text-white">6 grids total</strong>, resulting in 60 cards per player.</li>
-                  </ul>
-
-                  <div className="bg-yugi-darker rounded-lg p-4 mt-4 example-box">
-                    <p className="text-gold-400 font-semibold mb-2">Example Auction (Normal Bidding):</p>
-                    <p className="text-gray-300 text-sm mb-2">
-                      <strong>Alice</strong> selects a powerful creature. Bidding starts at 0. <strong>Bob</strong> bids 1, <strong>Carol</strong> bids 2, <strong>Dave</strong> bids 3, Alice bids 5, Bob bids 6, Carol passes, Dave bids 7, Alice passes, Bob bids 8, Dave passes.
-                    </p>
-                    <p className="text-white text-sm">
-                      <strong>Result:</strong> Bob wins the card for 8 points. (Remaining: 92 points)
-                    </p>
-                  </div>
-
-                  <div className="bg-yugi-darker rounded-lg p-4 mt-4 example-box">
-                    <p className="text-gold-400 font-semibold mb-2">Example Auction (No Bids):</p>
-                    <p className="text-gray-300 text-sm mb-2">
-                      <strong>Alice</strong> selects a low-value card. Bidding starts at 0. <strong>Bob</strong> passes, <strong>Carol</strong> passes, <strong>Dave</strong> passes, then Alice also passes (everyone passes).
-                    </p>
-                    <p className="text-white text-sm">
-                      <strong>Result:</strong> Alice (the selector) receives the card for free (0 points).
-                    </p>
-                  </div>
-
-                  <div className="bg-yugi-darker rounded-lg p-4 mt-4 example-box">
-                    <p className="text-gold-400 font-semibold mb-2">Example (Timer Expiration):</p>
-                    <p className="text-gray-300 text-sm mb-2">
-                      It's <strong>Bob's</strong> turn to bid. The timer counts down from 15 seconds. Bob doesn't respond in time.
-                    </p>
-                    <p className="text-white text-sm">
-                      <strong>Result:</strong> Bob automatically passes. Bidding continues to the next player.
-                    </p>
-                  </div>
-                </section>
+                </div>
               </section>
 
-              {/* 2.2 Pack-Based Drafting */}
-              <section id="pack-drafting" className="mb-8">
-                <h3 className="text-lg font-semibold text-gold-400 mb-3">2.2 Pack-Based Drafting</h3>
+              {/* 2.2 Auction Grid */}
+              <section id="auction-grid" className="mb-8 pl-4 border-l-2 border-yugi-border">
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">2.2 Auction Grid Draft</h3>
                 <p className="text-gray-300 mb-4">
-                  In Pack-Based Drafting, players pick cards from packs passed around the table.
+                  A strategic format where players bid on cards using limited points. Combines open information with resource management for deep tactical play.
                 </p>
 
                 <p className="text-gray-400 font-medium mb-2">Setup:</p>
                 <ol className="list-decimal list-inside text-gray-300 space-y-2 mb-4">
-                  <li>Calculate the number of packs needed (see Appendix 6.2).</li>
-                  <li>From the shuffled Cube, create the exact number of packs needed.</li>
-                  <li>Each pack contains <strong className="text-white">15 cards</strong>.</li>
-                  <li>Each player receives one pack at the start of each drafting round.</li>
+                  <li>Each player receives <strong className="text-white">bidding points</strong> (default: {DEFAULTS.auction.biddingPoints}) for the entire draft.</li>
+                  <li>Cards are divided into grids. Number of grids = cards per player ÷ cards acquired per grid.</li>
+                  <li>Each grid contains enough cards for all players plus extras that will be burned.</li>
+                  <li>A random player is selected to be the first selector.</li>
                 </ol>
 
                 <p className="text-gray-400 font-medium mb-2">Drafting Procedure:</p>
                 <ol className="list-decimal list-inside text-gray-300 space-y-2 mb-4">
-                  <li>Each player examines their pack and selects one card to keep (30 seconds).</li>
-                  <li>Place the chosen card face-down in front of you.</li>
-                  <li>Pass the remaining cards to the next player clockwise.</li>
-                  <li>Repeat until each player has drafted <strong className="text-white">10 cards</strong>.</li>
-                  <li>Place leftover cards (5 per pack) into the <strong className="text-gold-400">Graveyard</strong>.</li>
-                  <li>Alternate passing direction each round (clockwise, then counterclockwise).</li>
-                  <li>Continue until each player has 60 cards.</li>
+                  <li>The <strong className="text-white">selector</strong> chooses any card from the grid to auction (default: {DEFAULTS.auction.selectionTimer}s).</li>
+                  <li>Bidding starts at <strong className="text-white">0</strong>. The selector does NOT make the first bid.</li>
+                  <li>Starting clockwise from the selector, each player must <strong className="text-white">bid higher</strong> or <strong className="text-white">pass</strong>.</li>
+                  <li>Each player has the <strong className="text-white">bid timer</strong> (default: {DEFAULTS.auction.bidTimer}s) to decide.</li>
+                  <li>Players who pass <strong className="text-red-400">cannot re-enter</strong> bidding for that card.</li>
+                  <li>If timer expires, the player automatically passes.</li>
+                  <li>Highest bidder wins and deducts the bid from their points.</li>
+                  <li>If <strong className="text-gold-400">everyone passes</strong>, the selector gets the card for free!</li>
+                  <li>Selection role rotates clockwise regardless of who won.</li>
                 </ol>
+
+                <p className="text-gray-400 font-medium mb-2">Grid Completion:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
+                  <li>Each player can acquire up to <strong className="text-white">{DEFAULTS.auction.cardsAcquiredPerGrid} cards per grid</strong> (configurable).</li>
+                  <li>Players who reach the limit are skipped in bidding and selection.</li>
+                  <li>When all players have their cards OR no cards remain, the grid ends.</li>
+                  <li>Remaining cards go to the Graveyard.</li>
+                  <li>Bidding points do <strong className="text-red-400">NOT</strong> reset between grids - budget wisely!</li>
+                </ul>
+
+                <div className="bg-yugi-darker rounded-lg p-4 mt-4 example-box">
+                  <p className="text-gold-400 font-semibold mb-2">Example Auction:</p>
+                  <p className="text-gray-300 text-sm mb-2">
+                    <strong>Alice</strong> selects a powerful card. <strong>Bob</strong> bids 5, <strong>Carol</strong> bids 8, <strong>Dave</strong> passes, Alice bids 10, Bob passes, Carol bids 12, Alice passes.
+                  </p>
+                  <p className="text-white text-sm">
+                    <strong>Result:</strong> Carol wins for 12 points. Selection passes to Bob.
+                  </p>
+                </div>
+
+                <div className="bg-yugi-darker rounded-lg p-4 mt-4 example-box">
+                  <p className="text-gold-400 font-semibold mb-2">Example (Everyone Passes):</p>
+                  <p className="text-gray-300 text-sm mb-2">
+                    <strong>Alice</strong> selects a niche card. Bob passes, Carol passes, Dave passes. Since everyone passed without bidding...
+                  </p>
+                  <p className="text-white text-sm">
+                    <strong>Result:</strong> Alice gets the card for FREE (0 points)!
+                  </p>
+                </div>
+              </section>
+
+              {/* 2.3 Open Draft */}
+              <section id="open-draft" className="mb-8 pl-4 border-l-2 border-yugi-border">
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">2.3 Open Draft</h3>
+                <p className="text-gray-300 mb-4">
+                  A streamlined grid format without bidding. Players simply take turns selecting cards from the grid. Faster than Auction Grid while maintaining open information.
+                </p>
+
+                <p className="text-gray-400 font-medium mb-2">How It Works:</p>
+                <ol className="list-decimal list-inside text-gray-300 space-y-2 mb-4">
+                  <li>Cards are laid out in grids, visible to all players.</li>
+                  <li>A random player goes first.</li>
+                  <li>On your turn, select any card from the grid (default: {DEFAULTS.open.selectionTimer}s timer).</li>
+                  <li>Selection rotates clockwise.</li>
+                  <li>Each player acquires up to <strong className="text-white">{DEFAULTS.open.cardsAcquiredPerGrid} cards per grid</strong> (configurable).</li>
+                  <li>When all players have their cards, remaining cards go to the Graveyard.</li>
+                  <li>Continue through all grids until each player reaches their target (default: {DEFAULTS.open.cardsPerPlayer} cards).</li>
+                </ol>
+
+                <p className="text-gray-400 font-medium mb-2">Key Differences from Auction Grid:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
+                  <li><strong className="text-white">No bidding</strong> - simply pick and go.</li>
+                  <li><strong className="text-white">No points</strong> to manage.</li>
+                  <li><strong className="text-white">Faster</strong> pace of play.</li>
+                  <li>Turn order matters more since there's no way to outbid.</li>
+                </ul>
+
+                <div className="bg-yugi-darker rounded-lg p-4 example-box">
+                  <p className="text-gold-400 font-semibold mb-2">When to Choose Open Draft:</p>
+                  <ul className="text-gray-300 text-sm space-y-1">
+                    <li>You want open information but faster gameplay</li>
+                    <li>Players are new to drafting</li>
+                    <li>You prefer simpler decision-making</li>
+                    <li>Time is limited</li>
+                  </ul>
+                </div>
               </section>
             </section>
 
-            {/* 3. Deck Construction */}
+            {/* 3. Digital Features */}
+            <section id="digital-features" className="mb-12">
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">3. Digital Features</h2>
+
+              {/* 3.1 Solo Mode */}
+              <section id="solo-mode" className="mb-8 pl-4 border-l-2 border-yugi-border">
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">3.1 Solo Mode & AI Bots</h3>
+                <p className="text-gray-300 mb-4">
+                  Practice drafting anytime with AI opponents. Solo mode lets you hone your skills and test strategies without needing other players.
+                </p>
+
+                <p className="text-gray-400 font-medium mb-2">Features:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
+                  <li>Add <strong className="text-white">1-11 AI bots</strong> to fill seats.</li>
+                  <li>Bots use intelligent drafting based on card ratings and synergies.</li>
+                  <li>In Auction Grid, bots bid strategically based on card value and remaining points.</li>
+                  <li>Bot names are themed to your game (e.g., Kaiba Bot, Yugi Bot for Yu-Gi-Oh!).</li>
+                  <li>Solo drafts start automatically when you're ready.</li>
+                </ul>
+
+                <p className="text-gray-400 font-medium mb-2">Bot Intelligence:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2">
+                  <li>Bots prefer higher-rated cards but also consider synergies.</li>
+                  <li>In MTG drafts, bots track colors and stay focused on 1-2 colors.</li>
+                  <li>Bots may "hate draft" powerful cards to deny them to you.</li>
+                  <li>Bidding aggression varies based on card tier and remaining points.</li>
+                </ul>
+              </section>
+
+              {/* 3.2 Card Ratings */}
+              <section id="card-ratings" className="mb-8 pl-4 border-l-2 border-yugi-border">
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">3.2 Card Ratings & Tiers</h3>
+                <p className="text-gray-300 mb-4">
+                  Every card in a cube can have a power rating (0-100) that helps evaluate picks. Ratings are displayed as letter tiers.
+                </p>
+
+                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                  <p className="text-white font-semibold mb-3">Tier System:</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-amber-500 text-black font-bold rounded">S</span>
+                      <span className="text-gray-300">95-100</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-red-500 text-white font-bold rounded">A</span>
+                      <span className="text-gray-300">90-94</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-orange-500 text-white font-bold rounded">B</span>
+                      <span className="text-gray-300">80-89</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-yellow-500 text-black font-bold rounded">C</span>
+                      <span className="text-gray-300">70-79</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-lime-500 text-black font-bold rounded">D</span>
+                      <span className="text-gray-300">60-69</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-green-500 text-white font-bold rounded">E</span>
+                      <span className="text-gray-300">50-59</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-gray-500 text-white font-bold rounded">F</span>
+                      <span className="text-gray-300">&lt;50</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-gray-400 font-medium mb-2">Using Ratings:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2">
+                  <li>Tier badges appear on cards to help quick evaluation.</li>
+                  <li>Filter your drafted cards by tier to review your pool.</li>
+                  <li>Sort by score to find your best cards.</li>
+                  <li>Ratings are guides - context and synergy matter too!</li>
+                </ul>
+              </section>
+
+              {/* 3.3 Sessions */}
+              <section id="sessions" className="mb-8 pl-4 border-l-2 border-yugi-border">
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">3.3 Sessions & Reconnection</h3>
+                <p className="text-gray-300 mb-4">
+                  CubeCraft handles multiplayer sessions with room codes and supports reconnection if you get disconnected.
+                </p>
+
+                <p className="text-gray-400 font-medium mb-2">Room Codes:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
+                  <li>Each draft session has a unique 4-character room code.</li>
+                  <li>Share the code with friends to let them join your lobby.</li>
+                  <li>Room codes are case-insensitive.</li>
+                </ul>
+
+                <p className="text-gray-400 font-medium mb-2">Reconnection:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
+                  <li>If you disconnect, use the <strong className="text-white">Recent Drafts</strong> feature to rejoin.</li>
+                  <li>Your drafted cards and position are preserved.</li>
+                  <li>If the host disconnects, the draft automatically pauses.</li>
+                  <li>The host can pause/resume the draft at any time.</li>
+                </ul>
+
+                <p className="text-gray-400 font-medium mb-2">After the Draft:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2">
+                  <li>View your results and organize cards into deck zones.</li>
+                  <li>Export your deck list for use in other tools.</li>
+                  <li>Access draft history to review past sessions.</li>
+                </ul>
+              </section>
+            </section>
+
+            {/* 4. Deck Construction */}
             <section id="deck-construction" className="mb-12">
-              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">3. Deck Construction</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">4. Deck Construction</h2>
 
               <div className="bg-yugi-darker rounded-lg p-4 mb-4">
                 <ul className="space-y-3 text-gray-300">
-                  <li><strong className="text-white">Main Deck:</strong> Construct a deck meeting your game's minimum deck size from your drafted pool.</li>
-                  <li><strong className="text-white">Extra/Special Cards:</strong> Include any extra deck or special zone cards you have drafted (if applicable to your game).</li>
-                  <li><strong className="text-white">Side Deck:</strong> Use remaining drafted cards as your side deck (if applicable to your game's format).</li>
+                  <li><strong className="text-white">Main Deck:</strong> Build a deck meeting your game's minimum size from your drafted pool.</li>
+                  <li><strong className="text-white">Extra/Special Cards:</strong> Include any extra deck or special zone cards you drafted.</li>
+                  <li><strong className="text-white">Side Deck:</strong> Use remaining drafted cards as your side deck (if applicable).</li>
                 </ul>
               </div>
 
               <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Insufficient Cards</h3>
               <p className="text-gray-300 mb-4">
-                If a player does not have enough cards to meet the minimum deck size after drafting, they must add cards from the <strong className="text-gold-400">Graveyard</strong> to reach the minimum. The selection from the Graveyard should be <strong className="text-white">random</strong> and performed under the supervision of all players to ensure fairness.
+                If you don't have enough cards for a legal deck, you may add cards from the <strong className="text-gold-400">Graveyard</strong> to reach the minimum. Selection from the Graveyard should be <strong className="text-white">random</strong> to ensure fairness.
               </p>
 
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Notes on the Graveyard</h3>
-              <ul className="list-disc list-inside text-gray-300 space-y-2">
-                <li><strong className="text-white">Definition:</strong> The Graveyard is the collection of all scrapped cards set aside during the drafting process.</li>
-                <li>Players may only access the Graveyard for deck completion purposes as described above.</li>
-                <li>Cards added from the Graveyard are considered part of the player's drafted pool for the duration of the event.</li>
-              </ul>
+              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Digital Deck Building</h3>
+              <p className="text-gray-300">
+                The Results page lets you organize your cards into zones (Main Deck, Extra Deck, Side Deck). Drag and drop or use the move buttons to sort your pool. Export your final list when ready.
+              </p>
             </section>
 
-            {/* 4. Tournament Structure */}
+            {/* 5. Tournament Structure */}
             <section id="tournament" className="mb-12">
-              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">4. Tournament Structure</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">5. Tournament Structure</h2>
 
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">4.1 Match Format</h3>
+              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Match Format</h3>
               <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
-                <li><strong className="text-white">Games:</strong> Matches are conducted as <strong className="text-gold-400">best-of-three</strong> games.</li>
-                <li><strong className="text-white">No Time Limits:</strong> There are no time limits for matches, allowing players to enjoy playing at their own pace.</li>
+                <li>Matches are typically <strong className="text-gold-400">best-of-three</strong> games.</li>
+                <li>No strict time limits - play at a comfortable pace.</li>
+                <li>Side decking between games is allowed using your drafted pool.</li>
               </ul>
 
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">4.2 Gameplay Rules</h3>
-              <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
-                <li>Follow the standard rules of your chosen trading card game.</li>
-                <li>Any house rules or format-specific modifications should be agreed upon before the event begins.</li>
-                <li>Refer to your game's official rulebook for card interactions and timing.</li>
-              </ul>
-
-              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">4.3 Pairings</h3>
+              <h3 className="text-lg font-semibold text-gold-400 mt-6 mb-3">Pairings</h3>
               <ul className="list-disc list-inside text-gray-300 space-y-2">
-                <li><strong className="text-white">Initial Pairings:</strong> Randomly determine initial matchups.</li>
-                <li><strong className="text-white">Progression:</strong> Use a single-elimination or Swiss format, depending on the number of players.</li>
-              </ul>
-            </section>
-
-            {/* 5. Additional Guidelines */}
-            <section id="guidelines" className="mb-12">
-              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">5. Additional Guidelines</h2>
-              <ul className="list-disc list-inside text-gray-300 space-y-3">
-                <li><strong className="text-white">Sportsmanship:</strong> All players are expected to maintain good sportsmanship and adhere to fair play.</li>
-                <li><strong className="text-white">Dispute Resolution:</strong> Any disputes should be resolved by a designated judge or through group consensus.</li>
-                <li><strong className="text-white">Rule Clarifications:</strong> If any card interactions or rules are unclear, refer to your game's official rulebook or consult a judge.</li>
-                <li><strong className="text-white">Cube Maintenance:</strong> After the event, ensure all cards are collected and sorted properly to maintain the integrity of the Cube.</li>
+                <li><strong className="text-white">Initial Pairings:</strong> Randomly determine first-round matchups.</li>
+                <li><strong className="text-white">Progression:</strong> Use single-elimination or Swiss format based on player count.</li>
+                <li>For casual play, round-robin ensures everyone plays each other.</li>
               </ul>
             </section>
 
@@ -471,51 +608,77 @@ export function Rulebook() {
 
               {/* 6.1 Grid Calculations */}
               <section id="grid-calc" className="mb-8 pl-4 border-l-2 border-yugi-border">
-                <h3 className="text-lg font-semibold text-gold-400 mb-3">6.1 Grid Preparation Calculations</h3>
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">6.1 Grid Calculations</h3>
+                <p className="text-gray-300 mb-4">
+                  For Auction Grid and Open Draft modes, cards are organized into grids.
+                </p>
 
                 <div className="bg-yugi-darker rounded-lg p-4 mb-4">
-                  <p className="text-white font-semibold mb-2">Number of Grids Needed:</p>
-                  <p className="text-gray-300 mb-2">Number of Grids = 60 / 10 = <strong className="text-gold-400">6 grids</strong></p>
-                  <p className="text-gray-400 text-sm">(Each player needs 60 cards, selecting 10 per grid)</p>
+                  <p className="text-white font-semibold mb-2">Number of Grids:</p>
+                  <p className="text-gray-300 mb-1">
+                    Grids = Cards per Player ÷ Cards Acquired per Grid
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Example: {DEFAULTS.auction.cardsPerPlayer} ÷ {DEFAULTS.auction.cardsAcquiredPerGrid} = <strong className="text-gold-400">{DEFAULTS.auction.cardsPerPlayer / DEFAULTS.auction.cardsAcquiredPerGrid} grids</strong>
+                  </p>
                 </div>
 
                 <div className="bg-yugi-darker rounded-lg p-4 mb-4">
                   <p className="text-white font-semibold mb-2">Cards per Grid:</p>
-                  <p className="text-gray-300 mb-2">Total Cards per Grid = <strong className="text-gold-400">(n + 1) x 10</strong></p>
-                  <ul className="text-gray-400 text-sm space-y-1 mt-2">
-                    <li>4 players: (4 + 1) x 10 = 50 cards per grid</li>
-                    <li>5 players: (5 + 1) x 10 = 60 cards per grid</li>
-                  </ul>
+                  <p className="text-gray-300 mb-1">
+                    Cards per Grid = (Players × Cards Acquired) + Burned per Grid
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Example (4 players, auction): (4 × {DEFAULTS.auction.cardsAcquiredPerGrid}) + {DEFAULTS.auction.burnedPerGrid} = <strong className="text-gold-400">25 cards</strong>
+                  </p>
                 </div>
 
                 <div className="bg-yugi-darker rounded-lg p-4">
                   <p className="text-white font-semibold mb-2">Total Cards Needed:</p>
-                  <p className="text-gray-300 mb-2">Total = <strong className="text-gold-400">60 x (n + 1)</strong></p>
-                  <ul className="text-gray-400 text-sm space-y-1 mt-2">
-                    <li>4 players: 60 x 5 = 300 cards</li>
-                    <li>5 players: 60 x 6 = 360 cards</li>
-                  </ul>
+                  <p className="text-gray-300 mb-1">
+                    Total = Cards per Grid × Number of Grids
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Example (4 players, auction): 25 × 12 = <strong className="text-gold-400">300 cards</strong>
+                  </p>
                 </div>
               </section>
 
               {/* 6.2 Pack Calculations */}
               <section id="pack-calc" className="mb-8 pl-4 border-l-2 border-yugi-border">
-                <h3 className="text-lg font-semibold text-gold-400 mb-3">6.2 Pack Preparation Calculations</h3>
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">6.2 Pack Calculations</h3>
+                <p className="text-gray-300 mb-4">
+                  For Pack Draft mode, cards are divided into packs.
+                </p>
 
                 <div className="bg-yugi-darker rounded-lg p-4 mb-4">
-                  <p className="text-white font-semibold mb-2">Number of Packs:</p>
-                  <p className="text-gray-300 mb-2">Total Packs = 6 x n = <strong className="text-gold-400">6n packs</strong></p>
-                  <p className="text-gray-400 text-sm">(6 packs per player, each containing 15 cards)</p>
+                  <p className="text-white font-semibold mb-2">Packs per Player:</p>
+                  <p className="text-gray-300 mb-1">
+                    Packs = Cards per Player ÷ Picks per Pack
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Example: {DEFAULTS.pack.cardsPerPlayer} ÷ {DEFAULTS.pack.picksPerPack} = <strong className="text-gold-400">6 packs per player</strong>
+                  </p>
                 </div>
 
                 <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                  <p className="text-white font-semibold mb-2">Total Packs:</p>
+                  <p className="text-gray-300 mb-1">
+                    Total Packs = Packs per Player × Number of Players
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Example (4 players): 6 × 4 = <strong className="text-gold-400">24 packs</strong>
+                  </p>
+                </div>
+
+                <div className="bg-yugi-darker rounded-lg p-4">
                   <p className="text-white font-semibold mb-2">Total Cards Needed:</p>
-                  <p className="text-gray-300 mb-2">Total = <strong className="text-gold-400">90 x n</strong></p>
-                  <p className="text-gray-400 text-sm">(60n drafted + 30n graveyard)</p>
-                  <ul className="text-gray-400 text-sm space-y-1 mt-2">
-                    <li>4 players: 90 x 4 = 360 cards (24 packs)</li>
-                    <li>5 players: 90 x 5 = 450 cards (30 packs)</li>
-                  </ul>
+                  <p className="text-gray-300 mb-1">
+                    Total = Total Packs × Cards per Pack
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Example (4 players): 24 × {DEFAULTS.pack.packSize} = <strong className="text-gold-400">360 cards</strong>
+                  </p>
                 </div>
               </section>
 
@@ -523,47 +686,25 @@ export function Rulebook() {
               <section id="auction-tips" className="mb-8 pl-4 border-l-2 border-yugi-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">6.3 Tips for Auction Grid Drafting</h3>
                 <ul className="list-disc list-inside text-gray-300 space-y-2">
-                  <li><strong className="text-white">Budget Wisely:</strong> Manage your bidding points carefully to avoid running out before acquiring essential cards.</li>
-                  <li><strong className="text-white">Selection Strategy:</strong> As the selecting player, choose cards that benefit you but might also entice others to bid high.</li>
-                  <li><strong className="text-white">Observation:</strong> Pay attention to other players' bids and strategies to anticipate their needs.</li>
+                  <li><strong className="text-white">Budget Across All Grids:</strong> Your points must last the entire draft. Don't overspend early!</li>
+                  <li><strong className="text-white">Free Card Strategy:</strong> As selector, pick cards others might not want - you could get them free.</li>
+                  <li><strong className="text-white">Drive Up Prices:</strong> Bid on cards you don't need to drain opponents' points.</li>
+                  <li><strong className="text-white">Watch Point Totals:</strong> Track what others have left to know when they can't outbid you.</li>
+                  <li><strong className="text-white">Endgame Value:</strong> Having points when others are broke means free picks.</li>
+                  <li><strong className="text-white">Know When to Pass:</strong> Sometimes letting a card go preserves resources for better picks.</li>
                 </ul>
               </section>
 
-              {/* 6.4 Graveyard Strategies */}
-              <section id="graveyard-strat" className="mb-8 pl-4 border-l-2 border-yugi-border">
-                <h3 className="text-lg font-semibold text-gold-400 mb-3">6.4 Strategies for Using the Graveyard</h3>
+              {/* 6.4 Timing Etiquette */}
+              <section id="timing" className="pl-4 border-l-2 border-yugi-border">
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">6.4 Timing Etiquette</h3>
                 <ul className="list-disc list-inside text-gray-300 space-y-2">
-                  <li><strong className="text-white">Awareness:</strong> Keep track of the types of cards being scrapped to anticipate what might be added to your deck if needed.</li>
-                  <li><strong className="text-white">Random Selection:</strong> Ensure that any cards taken from the Graveyard are selected randomly to maintain fairness.</li>
-                  <li><strong className="text-white">Deck Balance:</strong> Be prepared to adjust your strategy based on the random cards added from the Graveyard.</li>
+                  <li><strong className="text-white">Respect Timers:</strong> Make decisions within the allotted time.</li>
+                  <li><strong className="text-white">Auto-Pick:</strong> If time expires, the system picks for you (highest-rated available card).</li>
+                  <li><strong className="text-white">Auto-Pass:</strong> In auctions, expired timer means automatic pass.</li>
+                  <li><strong className="text-white">Pause if Needed:</strong> The host can pause for breaks or technical issues.</li>
+                  <li><strong className="text-white">Be Ready:</strong> Pay attention when it's almost your turn.</li>
                 </ul>
-              </section>
-
-              {/* 6.5 Timing Etiquette */}
-              <section id="timing" className="mb-8 pl-4 border-l-2 border-yugi-border">
-                <h3 className="text-lg font-semibold text-gold-400 mb-3">6.5 Timing Etiquette and Enforcement</h3>
-                <ul className="list-disc list-inside text-gray-300 space-y-2">
-                  <li><strong className="text-white">Respect for Time Limits:</strong> Players should adhere strictly to agreed-upon time limits.</li>
-                  <li><strong className="text-white">Consequences:</strong> Exceeding time limit means selecting the nearest card (Grid/Pack) or passing (Auction).</li>
-                  <li><strong className="text-white">Technical Issues:</strong> Pause the session if timer app has difficulties.</li>
-                  <li><strong className="text-white">Flexibility:</strong> Players may agree to extend limits in exceptional situations.</li>
-                  <li><strong className="text-white">Enforcement:</strong> Use a designated timekeeper or timer app for impartiality.</li>
-                </ul>
-              </section>
-
-              {/* 6.6 Optional Rules */}
-              <section id="variants" className="pl-4 border-l-2 border-yugi-border">
-                <h3 className="text-lg font-semibold text-gold-400 mb-3">6.6 Optional Rules and Variants</h3>
-                <p className="text-gray-300 mb-4">
-                  Players may choose to exclude certain card types from the draft. Instead of removing these before shuffling, they are removed when they appear and replaced from a Reserve Pool.
-                </p>
-                <p className="text-gray-400 font-medium mb-2">Implementation:</p>
-                <ol className="list-decimal list-inside text-gray-300 space-y-2">
-                  <li>All players must agree on exclusions before drafting begins.</li>
-                  <li>Create a Reserve Pool from extra cards not in the initial setup.</li>
-                  <li>When an excluded card appears, replace it from the Reserve Pool.</li>
-                  <li>Discuss how exclusions may impact deck-building and gameplay.</li>
-                </ol>
               </section>
             </section>
 
@@ -571,10 +712,10 @@ export function Rulebook() {
             <section id="conclusion" className="mb-8">
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Conclusion</h2>
               <p className="text-gray-300 leading-relaxed mb-4">
-                Thank you for using CubeCraft! This format is designed to provide a fun and strategic drafting experience for any trading card game. By pre-setting the necessary grids or packs and allowing flexible time limits, we ensure a relaxed and enjoyable environment for all players.
+                CubeCraft offers multiple ways to enjoy cube drafting, whether you prefer the classic feel of Pack Draft, the strategic depth of Auction Grid, or the streamlined pace of Open Draft. All settings are customizable to match your group's preferences.
               </p>
               <p className="text-gray-300 leading-relaxed mb-4">
-                Whether you prefer the open strategy of Grid Drafting, the competitive edge of Auction Grid Drafting, or the suspense of Pack-Based Drafting, there's something for every player. Remember, if you find yourself short of cards to build your deck, the Graveyard is there to help you meet the requirements.
+                Practice solo with AI bots, draft with friends online, or use the digital tools to support in-person play. However you choose to draft, CubeCraft is here to make it easy and fun.
               </p>
               <p className="text-gold-400 font-semibold text-center text-lg mt-8">
                 May your drafts be exciting and your decks be powerful!
