@@ -8,7 +8,7 @@ const loadedImages = new Set<string>();
 
 export interface GameCardProps {
   card: Card;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
   onClick?: () => void;
   isSelected?: boolean;
   showDetails?: boolean;
@@ -41,7 +41,7 @@ export const GameCard = memo(function GameCard({
   const { gameConfig } = useGameConfig();
 
   // Get image URL from game config (map sizes for API requests)
-  const imageSizeForUrl = (size === 'xl' || size === '2xl' || size === 'full') ? 'lg' : (size === 'xs' ? 'sm' : size);
+  const imageSizeForUrl = (size === 'xl' || size === '2xl' || size === '3xl' || size === 'full') ? 'lg' : (size === 'xs' ? 'sm' : size);
   const imageUrl = gameConfig.getCardImageUrl(card, imageSizeForUrl);
 
   // Check if image was already loaded (cached globally)
@@ -56,6 +56,7 @@ export const GameCard = memo(function GameCard({
     lg: 'w-32 h-48',
     xl: 'w-40 h-60',
     '2xl': 'w-48 h-72',
+    '3xl': 'w-56 h-84',
     full: 'w-full aspect-[2/3]', // Fill container width, maintain card aspect ratio
   };
 
