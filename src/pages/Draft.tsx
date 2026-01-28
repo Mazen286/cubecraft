@@ -56,6 +56,8 @@ export function Draft() {
 
   // Check if cube has scores for conditional tier display
   const cubeHasScores = session?.cube_id ? cubeService.cubeHasScores(session.cube_id) : true;
+  // Show scores only if cube has them AND competitive mode is off
+  const showScores = cubeHasScores && !session?.hide_scores;
 
   // Auto-start solo drafts (only when cube is ready so cards load instantly)
   // Solo mode: 1 human player + any number of bots
@@ -1187,7 +1189,7 @@ export function Draft() {
                     className="bg-yugi-dark border border-yugi-border rounded-lg text-white text-sm px-2 py-1 focus:border-gold-500 focus:outline-none"
                   >
                     <option value="none">No Sort</option>
-                    {cubeHasScores && <option value="score">Score</option>}
+                    {showScores && <option value="score">Score</option>}
                     <option value="name">Name</option>
                     <option value="type">Type</option>
                     <option value="level">Level</option>
@@ -1224,7 +1226,7 @@ export function Draft() {
                       isSelected={selectedCard?.id === card.id}
                       isHighlighted={highlightedIndex === index}
                       onClick={() => handleCardClick(card, index)}
-                      showTier={cubeHasScores}
+                      showTier={showScores}
                       flush
                       draggable={!hasPicked}
                       onDragStart={(e) => handleDragStart(e, card)}
@@ -1264,7 +1266,7 @@ export function Draft() {
               {selectedCard ? (
                 <div className="space-y-3">
                   <div className="flex justify-center">
-                    <YuGiOhCard card={selectedCard} size="lg" showTier={cubeHasScores} />
+                    <YuGiOhCard card={selectedCard} size="lg" showTier={showScores} />
                   </div>
                   <div>
                     <h4 className="font-semibold" style={{ color: gameConfig.theme.primaryColor }}>
@@ -1361,7 +1363,7 @@ export function Draft() {
                         onClick={() => setMobileViewCard(card)}
                         className="cursor-pointer transition-transform hover:scale-105"
                       >
-                        <YuGiOhCard card={card} size="sm" showTier={cubeHasScores} />
+                        <YuGiOhCard card={card} size="sm" showTier={showScores} />
                       </div>
                     ))}
                   </div>
@@ -1592,7 +1594,7 @@ export function Draft() {
                     showSort
                     includePickSort
                     includeScoreSort
-                    hasScores={cubeHasScores}
+                    hasScores={showScores}
                     tierCounts={myCardsStats.tiers as Record<'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F', number>}
                     totalCount={draftedCards.length}
                     filteredCount={filteredDraftedCards.length}
@@ -1666,7 +1668,7 @@ export function Draft() {
                           onClick={() => setMobileViewCard(card)}
                           className="cursor-pointer active:scale-95 transition-transform"
                         >
-                          <YuGiOhCard card={card} size="full" showTier={cubeHasScores} flush />
+                          <YuGiOhCard card={card} size="full" showTier={showScores} flush />
                         </div>
                       ))}
                     </div>

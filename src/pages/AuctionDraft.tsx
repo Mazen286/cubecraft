@@ -488,6 +488,8 @@ export function AuctionDraft() {
 
   // Check if cube has scores for conditional tier display
   const cubeHasScores = session?.cube_id ? cubeService.cubeHasScores(session.cube_id) : true;
+  // Show scores only if cube has them AND competitive mode is off
+  const showScores = cubeHasScores && !session?.hide_scores;
 
   // Auto-start for solo mode with retry
   useEffect(() => {
@@ -978,7 +980,7 @@ export function AuctionDraft() {
                 showAdvancedFilters={false}
                 showSort
                 includeScoreSort
-                hasScores={cubeHasScores}
+                hasScores={showScores}
                 compact
                 className="flex-shrink-0"
               />
@@ -992,7 +994,7 @@ export function AuctionDraft() {
               selectionDisabled={isActionPending || auctionState?.phase !== 'selecting'}
               keyboardSelectedCardId={availableCards[selectedCardIndex]?.id ?? null}
               isOpenMode={isOpenMode}
-              showTier={cubeHasScores}
+              showTier={showScores}
             />
           </div>
 
@@ -1013,7 +1015,7 @@ export function AuctionDraft() {
                 bidTimeRemaining={bidTimeRemaining}
                 totalBidTime={totalBidTime}
                 onViewCard={() => setShowAuctionCardDetail(true)}
-                showTier={cubeHasScores}
+                showTier={showScores}
               />
             </div>
           )}
@@ -1244,7 +1246,7 @@ export function AuctionDraft() {
                     showAdvancedFilters
                     showSort
                     includeScoreSort
-                    hasScores={cubeHasScores}
+                    hasScores={showScores}
                     tierCounts={myCardsStats.tiers as Record<'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F', number>}
                     totalCount={draftedCards.length}
                     filteredCount={filteredDraftedCards.length}
@@ -1318,7 +1320,7 @@ export function AuctionDraft() {
                               : ''
                           }`}
                         >
-                          <YuGiOhCard card={card} size="full" showTier={cubeHasScores} flush />
+                          <YuGiOhCard card={card} size="full" showTier={showScores} flush />
                         </div>
                       ))}
                     </div>
