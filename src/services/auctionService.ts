@@ -16,8 +16,8 @@ import type {
 import type { DraftSettings, YuGiOhCard } from '../types';
 import { shuffleArray } from '../lib/utils';
 import { cubeService } from './cubeService';
-import { getActiveGameConfig } from '../context/GameContext';
 import { getPlayerName } from './draftService';
+import { getUserId } from './utils';
 
 // =============================================================================
 // Constants (defaults)
@@ -33,24 +33,6 @@ const DEFAULT_BURNED_PER_GRID = 5;
 // =============================================================================
 // Helper Functions
 // =============================================================================
-
-function getStoragePrefix(): string {
-  try {
-    return getActiveGameConfig().storageKeyPrefix;
-  } catch {
-    return 'yugioh-draft';
-  }
-}
-
-function getUserId(): string {
-  const key = `${getStoragePrefix()}-user-id`;
-  let userId = localStorage.getItem(key);
-  if (!userId) {
-    userId = crypto.randomUUID();
-    localStorage.setItem(key, userId);
-  }
-  return userId;
-}
 
 /**
  * Calculate the number of grids needed for auction drafting

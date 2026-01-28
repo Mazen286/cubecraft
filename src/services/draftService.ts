@@ -12,6 +12,7 @@ import type { DraftSettings, YuGiOhCard } from '../types';
 import { shuffleArray, createPacks } from '../lib/utils';
 import { cubeService } from './cubeService';
 import { getActiveGameConfig } from '../context/GameContext';
+import { getStoragePrefix, getUserId } from './utils';
 
 /**
  * Analyze a bot's drafted cards for intelligent picking
@@ -74,18 +75,6 @@ function analyzeBotCollection(draftedCards: YuGiOhCard[]): BotCollectionAnalysis
 }
 
 /**
- * Get the storage key prefix for the current game
- */
-function getStoragePrefix(): string {
-  try {
-    return getActiveGameConfig().storageKeyPrefix;
-  } catch {
-    // Fallback if context not available
-    return 'yugioh-draft';
-  }
-}
-
-/**
  * Get the default player name for the current game
  */
 function getDefaultPlayerName(): string {
@@ -94,17 +83,6 @@ function getDefaultPlayerName(): string {
   } catch {
     return 'Player';
   }
-}
-
-// Generate a unique user ID for this browser session
-function getUserId(): string {
-  const key = `${getStoragePrefix()}-user-id`;
-  let userId = localStorage.getItem(key);
-  if (!userId) {
-    userId = crypto.randomUUID();
-    localStorage.setItem(key, userId);
-  }
-  return userId;
 }
 
 // Get or set player name
