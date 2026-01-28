@@ -11,7 +11,6 @@ import { useGameConfig } from '../../context/GameContext';
 import { useCardFilters, type Tier } from '../../hooks/useCardFilters';
 import { useCardKeyboardNavigation } from '../../hooks/useCardKeyboardNavigation';
 import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../../types';
-import type { Card } from '../../types/card';
 import type { YuGiOhCardAttributes } from '../../types/card';
 import { cn, getTierFromScore } from '../../lib/utils';
 

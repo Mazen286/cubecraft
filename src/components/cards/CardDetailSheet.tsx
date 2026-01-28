@@ -6,7 +6,6 @@ import { useGameConfig } from '../../context/GameContext';
 import { hasErrata, getErrata } from '../../data/cardErrata';
 import { cn, getTierFromScore } from '../../lib/utils';
 import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../../types';
-import type { Card } from '../../types/card';
 import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
 import { ENERGY_COLORS } from '../../config/games/pokemon';
 

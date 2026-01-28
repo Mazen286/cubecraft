@@ -5,8 +5,26 @@ export { cardService } from './cardService';
 export { cubeService } from './cubeService';
 
 // Utility services
-export { cubeUploadService } from './cubeUploadService';
-export { exportService } from './exportService';
+export {
+  parseCsvCube,
+  parseJsonCube,
+  validateCube,
+  cubeToCardMap,
+  parseUploadedFile,
+  enrichYuGiOhCube,
+  enrichMTGCube,
+  cubeNeedsEnrichment,
+  enrichCube,
+  type ParsedCube,
+  type CsvParseOptions,
+} from './cubeUploadService';
+export {
+  exportDeck,
+  downloadFile,
+  exportAndDownload,
+  getExportFormats,
+  hasExportFormat,
+} from './exportService';
 export { scoreService } from './scoreService';
 export { statisticsService } from './statisticsService';
 export { generateDeckImage } from './deckImageService';

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Pause, Play, ChevronDown, ChevronUp, ArrowRight, X, SortAsc, SortDesc } from 'lucide-react';
+import { Layers, Pause, ChevronDown, ChevronUp, ArrowRight, X, SortAsc, SortDesc } from 'lucide-react';
 import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { CubeStats } from '../components/cube/CubeStats';
@@ -11,7 +11,6 @@ import { useToast } from '../components/ui/Toast';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
 import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../types';
-import type { Card } from '../types/card';
 import { formatTime, getTierFromScore } from '../lib/utils';
 import { useDraftSession } from '../hooks/useDraftSession';
 import { useCards } from '../hooks/useCards';
@@ -1325,7 +1324,7 @@ export function Draft() {
                     </div>
                   ) : (
                     <Button
-                      onClick={() => handlePickCard()}
+                      onClick={() => handlePickCard(selectedCard)}
                       className="w-full"
                       disabled={isPicking}
                     >

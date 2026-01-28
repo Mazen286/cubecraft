@@ -18,6 +18,7 @@ import { shuffleArray } from '../lib/utils';
 import { cubeService } from './cubeService';
 import { getPlayerName } from './draftService';
 import { getUserId } from './utils';
+import { getActiveGameConfig } from '../context/GameContext';
 
 // =============================================================================
 // Constants (defaults)

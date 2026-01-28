@@ -5,11 +5,17 @@ import { draftService } from '../services/draftService';
 // If last_seen_at is older than this, consider disconnected even if is_connected is true
 const STALENESS_THRESHOLD_MS = 45000; // 45 seconds
 
+// Support both snake_case (from DB) and camelCase (from app types)
 interface Player {
   is_host?: boolean;
   is_connected?: boolean;
   is_bot?: boolean;
   last_seen_at?: string;
+  // camelCase alternatives
+  isHost?: boolean;
+  isConnected?: boolean;
+  isBot?: boolean;
+  lastSeenAt?: string;
 }
 
 interface UseHostDisconnectPauseOptions {
@@ -48,23 +54,43 @@ interface UseHostDisconnectPauseResult {
  * (visibility change, online/offline, unmount). Staleness is only a fallback
  * for legacy data or when events completely failed.
  */
+// Helper to get property value supporting both naming conventions
+function getIsConnected(player: Player): boolean | undefined {
+  return player.is_connected ?? player.isConnected;
+}
+
+function getIsHost(player: Player): boolean | undefined {
+  return player.is_host ?? player.isHost;
+}
+
+function getIsBot(player: Player): boolean | undefined {
+  return player.is_bot ?? player.isBot;
+}
+
+function getLastSeenAt(player: Player): string | undefined {
+  return player.last_seen_at ?? player.lastSeenAt;
+}
+
 function isPlayerEffectivelyConnected(player: Player | undefined): boolean {
   if (!player) return false;
 
+  const isConnected = getIsConnected(player);
+
   // If explicitly marked as disconnected, they're disconnected
-  if (player.is_connected === false) {
+  if (isConnected === false) {
     return false;
   }
 
   // If explicitly marked as connected, trust it
-  if (player.is_connected === true) {
+  if (isConnected === true) {
     return true;
   }
 
   // is_connected is undefined/null - use staleness as fallback
   // This handles legacy data or cases where is_connected was never set
-  if (player.last_seen_at) {
-    const lastSeen = new Date(player.last_seen_at).getTime();
+  const lastSeenAt = getLastSeenAt(player);
+  if (lastSeenAt) {
+    const lastSeen = new Date(lastSeenAt).getTime();
     const now = Date.now();
     const isStale = (now - lastSeen) > STALENESS_THRESHOLD_MS;
 
@@ -101,14 +127,14 @@ export function useHostDisconnectPause({
   const autoPauseTriggeredRef = useRef(false);
   const checkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Find the host player
-  const hostPlayer = players.find(p => p.is_host);
+  // Find the host player (support both naming conventions)
+  const hostPlayer = players.find(p => getIsHost(p));
 
   // Check if host is connected using hybrid approach
   const isHostConnected = isPlayerEffectivelyConnected(hostPlayer);
 
-  // Count human players (non-bot)
-  const humanPlayerCount = players.filter(p => !p.is_bot).length;
+  // Count human players (non-bot, support both naming conventions)
+  const humanPlayerCount = players.filter(p => !getIsBot(p)).length;
 
   // Auto-pause callback
   const triggerAutoPause = useCallback(async () => {
@@ -193,7 +219,7 @@ export function useHostDisconnectPause({
       try {
         // Fetch fresh player data directly from DB (don't rely on realtime)
         const freshPlayers = await draftService.getPlayers(sessionId);
-        const host = freshPlayers.find((p: Player) => p.is_host);
+        const host = freshPlayers.find((p: Player) => getIsHost(p));
         const connected = isPlayerEffectivelyConnected(host);
 
         console.log('[HostDisconnectPause] Periodic check:', {

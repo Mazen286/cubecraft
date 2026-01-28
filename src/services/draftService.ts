@@ -1718,8 +1718,26 @@ export const draftService = {
       .eq('session_id', sessionId)
       .single();
 
-    if (playerError || !player) {
-      throw new Error('Player not found');
+    if (playerError) {
+      console.error('[removeBotFromSession] Player lookup failed:', {
+        botPlayerId,
+        sessionId,
+        errorCode: playerError.code,
+        errorMessage: playerError.message,
+        errorDetails: playerError.details,
+      });
+      // PGRST116 = no rows returned (bot may have been already deleted)
+      if (playerError.code === 'PGRST116') {
+        // Bot was already removed - this is fine, just return silently
+        console.log('[removeBotFromSession] Bot already removed or not found');
+        return;
+      }
+      throw new Error(`Player lookup failed: ${playerError.message}`);
+    }
+
+    if (!player) {
+      console.log('[removeBotFromSession] No player data returned');
+      return; // Bot was already removed
     }
 
     if (!player.is_bot) {
@@ -1733,8 +1751,15 @@ export const draftService = {
       .eq('id', botPlayerId);
 
     if (deleteError) {
-      throw new Error('Failed to remove bot');
+      console.error('[removeBotFromSession] Delete failed:', {
+        botPlayerId,
+        errorCode: deleteError.code,
+        errorMessage: deleteError.message,
+      });
+      throw new Error(`Failed to remove bot: ${deleteError.message}`);
     }
+
+    console.log('[removeBotFromSession] Bot removed successfully:', botPlayerId);
   },
 
   /**

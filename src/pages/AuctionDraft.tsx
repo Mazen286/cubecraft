@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer, Crown, Pause, Play, X } from 'lucide-react';
+import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer, Crown, Pause, X } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -20,7 +20,6 @@ import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { CubeStats } from '../components/cube/CubeStats';
 import { draftService, clearLastSession } from '../services/draftService';
-import { auctionService } from '../services/auctionService';
 import { cubeService } from '../services/cubeService';
 import { useGameConfig } from '../context/GameContext';
 import { useHostDisconnectPause } from '../hooks/useHostDisconnectPause';
@@ -90,7 +89,7 @@ export function AuctionDraft() {
   });
 
   // Host disconnect detection with auto-pause
-  const { hostPlayer, isHostConnected, isPausedDueToDisconnect } = useHostDisconnectPause({
+  const { isPausedDueToDisconnect } = useHostDisconnectPause({
     sessionId: session?.id,
     sessionStatus: session?.status,
     sessionPaused: session?.paused,
