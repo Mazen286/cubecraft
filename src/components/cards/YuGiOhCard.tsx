@@ -1,6 +1,5 @@
 import { memo } from 'react';
-import type { YuGiOhCard as YuGiOhCardType } from '../../types';
-import type { Card } from '../../types/card';
+import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../../types';
 import { GameCard, type GameCardProps } from './GameCard';
 
 /**
@@ -9,34 +8,6 @@ import { GameCard, type GameCardProps } from './GameCard';
  */
 interface YuGiOhCardProps extends Omit<GameCardProps, 'card'> {
   card: YuGiOhCardType;
-}
-
-/**
- * Convert legacy YuGiOhCard to generic Card format.
- * Preserves any game-specific attributes (MTG scryfallId, Pokemon setId, etc.)
- * while also including extracted Yu-Gi-Oh! attributes.
- */
-function toGenericCard(yugiohCard: YuGiOhCardType): Card {
-  return {
-    id: yugiohCard.id,
-    name: yugiohCard.name,
-    type: yugiohCard.type,
-    description: yugiohCard.desc,
-    score: yugiohCard.score,
-    imageUrl: yugiohCard.imageUrl, // Preserve image URL from API enrichment
-    attributes: {
-      // Spread original game-specific attributes first (MTG scryfallId, Pokemon setId, etc.)
-      ...(yugiohCard.attributes || {}),
-      // Then add extracted Yu-Gi-Oh! attributes (may override)
-      atk: yugiohCard.atk,
-      def: yugiohCard.def,
-      level: yugiohCard.level,
-      attribute: yugiohCard.attribute,
-      race: yugiohCard.race,
-      linkval: yugiohCard.linkval,
-      archetype: yugiohCard.archetype,
-    },
-  };
 }
 
 /**
@@ -52,7 +23,7 @@ export const YuGiOhCard = memo(function YuGiOhCard({
   ...props
 }: YuGiOhCardProps) {
   // Convert legacy format to generic format
-  const genericCard = toGenericCard(card);
+  const genericCard = toCardWithAttributes(card);
 
   return <GameCard card={genericCard} {...props} />;
 });

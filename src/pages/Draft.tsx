@@ -10,30 +10,9 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useToast } from '../components/ui/Toast';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
-import type { YuGiOhCard as YuGiOhCardType } from '../types';
+import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../types';
 import type { Card } from '../types/card';
 import { formatTime, getTierFromScore } from '../lib/utils';
-
-// Helper to convert YuGiOhCard to Card format expected by game config
-function toCardWithAttributes(card: YuGiOhCardType): Card {
-  return {
-    id: card.id,
-    name: card.name,
-    type: card.type,
-    description: card.desc,
-    score: card.score,
-    attributes: {
-      atk: card.atk,
-      def: card.def,
-      level: card.level,
-      attribute: card.attribute,
-      race: card.race,
-      linkval: card.linkval,
-      archetype: card.archetype,
-      ...(card.attributes || {}),
-    },
-  };
-}
 import { useDraftSession } from '../hooks/useDraftSession';
 import { useCards } from '../hooks/useCards';
 import { useImagePreloader } from '../hooks/useImagePreloader';

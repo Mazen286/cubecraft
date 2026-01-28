@@ -125,3 +125,42 @@ export function toLegacyYuGiOhCard(card: Card): LegacyYuGiOhCard {
     score: card.score,
   };
 }
+
+/**
+ * Extended legacy card type that includes imageUrl and generic attributes
+ * (used throughout the codebase as YuGiOhCard)
+ */
+export interface ExtendedLegacyCard extends LegacyYuGiOhCard {
+  imageUrl?: string;
+  attributes?: Record<string, unknown>;
+}
+
+/**
+ * Convert extended legacy card (YuGiOhCard from types/index.ts) to generic Card format.
+ * This handles cards from any game (Yu-Gi-Oh, MTG, Pokemon) that use the legacy format.
+ *
+ * Merges both flat Yu-Gi-Oh attributes and any game-specific attributes from the
+ * `attributes` object, with the latter taking precedence.
+ */
+export function toCardWithAttributes(card: ExtendedLegacyCard): Card {
+  return {
+    id: card.id,
+    name: card.name,
+    type: card.type,
+    description: card.desc,
+    score: card.score,
+    imageUrl: card.imageUrl,
+    attributes: {
+      // Yu-Gi-Oh flat attributes
+      atk: card.atk,
+      def: card.def,
+      level: card.level,
+      attribute: card.attribute,
+      race: card.race,
+      linkval: card.linkval,
+      archetype: card.archetype,
+      // Spread any game-specific attributes (MTG, Pokemon, etc.) - these take precedence
+      ...(card.attributes || {}),
+    },
+  };
+}

@@ -8,7 +8,7 @@ export type {
   LegacyYuGiOhCard,
 } from './card';
 
-export { fromLegacyYuGiOhCard, toLegacyYuGiOhCard } from './card';
+export { fromLegacyYuGiOhCard, toLegacyYuGiOhCard, toCardWithAttributes } from './card';
 
 // Yu-Gi-Oh! Card Types - essential fields for drafting
 // NOTE: This interface is kept for backward compatibility.

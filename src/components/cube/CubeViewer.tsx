@@ -10,7 +10,7 @@ import { cubeService } from '../../services/cubeService';
 import { useGameConfig } from '../../context/GameContext';
 import { useCardFilters, type Tier } from '../../hooks/useCardFilters';
 import { useCardKeyboardNavigation } from '../../hooks/useCardKeyboardNavigation';
-import type { YuGiOhCard as YuGiOhCardType } from '../../types';
+import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../../types';
 import type { Card } from '../../types/card';
 import type { YuGiOhCardAttributes } from '../../types/card';
 import { cn, getTierFromScore } from '../../lib/utils';
@@ -165,28 +165,8 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
     }
   }, [isOpen, previousGameId, setGame]);
 
-  // Helper to convert YuGiOhCard to Card format for filtering
-  const toCardWithAttributes = useCallback((card: YuGiOhCardType): Card => ({
-    id: card.id,
-    name: card.name,
-    type: card.type,
-    description: card.desc,
-    imageUrl: card.imageUrl,
-    score: card.score,
-    attributes: {
-      atk: card.atk,
-      def: card.def,
-      level: card.level,
-      attribute: card.attribute,
-      race: card.race,
-      linkval: card.linkval,
-      archetype: card.archetype,
-      ...(card.attributes || {}),
-    },
-  }), []);
-
   // Convert cards to generic Card type for filtering
-  const cardsAsGeneric = useMemo(() => cards.map(toCardWithAttributes), [cards, toCardWithAttributes]);
+  const cardsAsGeneric = useMemo(() => cards.map(toCardWithAttributes), [cards]);
 
   // Filter and sort cards using the reusable hook + stats filters
   const filteredCards = useMemo(() => {
@@ -280,7 +260,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   // Filtered cards as generic for CubeStats
   const filteredCardsAsGeneric = useMemo(() =>
     filteredCards.map(toCardWithAttributes),
-    [filteredCards, toCardWithAttributes]
+    [filteredCards]
   );
 
   // Group cards into rows for virtualization

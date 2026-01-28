@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
 import { CardFilterBar } from '../components/filters';
-import type { YuGiOhCard as YuGiOhCardType } from '../types';
+import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../types';
 import { cn, formatTime, isExtraDeckCard, isMonsterCard, isSpellCard, isTrapCard, getTierFromScore } from '../lib/utils';
 import { Download, BarChart3, Clock, Zap, ChevronDown, ChevronUp, Flame, Trophy, RotateCcw, Plus, Minus, Layers, Archive, Share2 } from 'lucide-react';
 import { useDraftSession } from '../hooks/useDraftSession';
@@ -20,28 +20,6 @@ import type { DraftPlayerRow } from '../lib/database.types';
 
 // Type alias for zone IDs
 type DeckZone = string;
-
-// Helper to convert YuGiOhCard to Card format with proper attributes
-function toCardWithAttributes(card: YuGiOhCardType): Card {
-  return {
-    id: card.id,
-    name: card.name,
-    type: card.type,
-    description: card.desc,
-    score: card.score,
-    imageUrl: card.imageUrl,
-    attributes: {
-      atk: card.atk,
-      def: card.def,
-      level: card.level,
-      attribute: card.attribute,
-      race: card.race,
-      linkval: card.linkval,
-      archetype: card.archetype,
-      ...(card.attributes || {}),
-    },
-  };
-}
 
 interface DeckCard {
   card: YuGiOhCardType;

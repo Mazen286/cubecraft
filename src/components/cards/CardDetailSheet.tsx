@@ -5,7 +5,7 @@ import { ManaCostWithFaces, OracleText } from './ManaSymbols';
 import { useGameConfig } from '../../context/GameContext';
 import { hasErrata, getErrata } from '../../data/cardErrata';
 import { cn, getTierFromScore } from '../../lib/utils';
-import type { YuGiOhCard as YuGiOhCardType } from '../../types';
+import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../../types';
 import type { Card } from '../../types/card';
 import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
 import { ENERGY_COLORS } from '../../config/games/pokemon';
@@ -20,26 +20,6 @@ interface CardDetailSheetProps {
   zoneLabel?: string;
   /** Optional zone color class */
   zoneColor?: string;
-}
-
-// Helper to convert YuGiOhCard to Card format for game config display functions
-function toCardWithAttributes(card: YuGiOhCardType): Card {
-  return {
-    id: card.id,
-    name: card.name,
-    type: card.type,
-    description: card.desc,
-    score: card.score,
-    imageUrl: card.imageUrl,
-    attributes: card.attributes || {
-      atk: card.atk,
-      def: card.def,
-      level: card.level,
-      attribute: card.attribute,
-      race: card.race,
-      linkval: card.linkval,
-    },
-  };
 }
 
 /**
