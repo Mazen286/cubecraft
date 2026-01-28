@@ -19,6 +19,8 @@ interface CardDetailSheetProps {
   zoneLabel?: string;
   /** Optional zone color class */
   zoneColor?: string;
+  /** Hide card scores (competitive mode) */
+  hideScores?: boolean;
 }
 
 /**
@@ -32,6 +34,7 @@ export function CardDetailSheet({
   footer,
   zoneLabel,
   zoneColor,
+  hideScores,
 }: CardDetailSheetProps) {
   const { gameConfig } = useGameConfig();
 
@@ -114,7 +117,7 @@ export function CardDetailSheet({
               </div>
 
               {/* Score */}
-              {card.score !== undefined && (
+              {card.score !== undefined && !hideScores && (
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs md:text-sm text-gray-400">Score:</span>
                   <span className={cn(

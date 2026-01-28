@@ -117,6 +117,8 @@ export interface DraftSettings {
   // Auction Grid specific settings
   auctionBiddingPoints?: number; // Starting bidding points (default 100)
   auctionBidTimerSeconds?: number; // Seconds per bid turn (default 15)
+  // Competitive mode - hides card scores/ratings during draft
+  hideScores?: boolean;
 }
 
 export interface DraftSession {

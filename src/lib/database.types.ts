@@ -87,6 +87,8 @@ export interface DraftSessionRow {
   grid_data: GridData[] | null; // All grids data
   auction_state: AuctionStateData | null; // Current auction state
   selection_started_at: string | null; // When selection phase started
+  // Competitive mode
+  hide_scores: boolean; // Hide card scores/ratings during draft
 }
 
 export interface DraftSessionInsert {
@@ -116,6 +118,8 @@ export interface DraftSessionInsert {
   grid_data?: GridData[] | null;
   auction_state?: AuctionStateData | null;
   selection_started_at?: string | null;
+  // Competitive mode
+  hide_scores?: boolean;
 }
 
 export interface DraftSessionUpdate {
@@ -137,6 +141,8 @@ export interface DraftSessionUpdate {
   grid_data?: GridData[] | null;
   auction_state?: AuctionStateData | null;
   selection_started_at?: string | null;
+  // Competitive mode
+  hide_scores?: boolean;
 }
 
 // Draft Players table

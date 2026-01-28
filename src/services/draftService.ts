@@ -187,6 +187,7 @@ export const draftService = {
       current_pick: 1,
       direction: 'left',
       pack_data: packData,
+      hide_scores: settings.hideScores ?? false,
     };
 
     const { data: session, error: sessionError } = await supabase

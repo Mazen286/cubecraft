@@ -1299,7 +1299,7 @@ export function Draft() {
                         })}
                       </div>
                     )}
-                    {selectedCard.score !== undefined && (
+                    {selectedCard.score !== undefined && !session?.hide_scores && (
                       <p className="text-xs text-gray-400 mt-1">
                         Score: {selectedCard.score}/100
                       </p>
@@ -1493,7 +1493,9 @@ export function Draft() {
                     <div className="flex items-center gap-3 text-xs text-gray-400">
                       <span>Main: <span className="text-white font-medium">{myCardsStats.mainDeck}</span></span>
                       <span>Extra: <span className="text-purple-400 font-medium">{myCardsStats.extraDeck}</span></span>
-                      <span>Avg: <span className="text-gold-400 font-medium">{myCardsStats.avgScore}</span></span>
+                      {!session?.hide_scores && (
+                        <span>Avg: <span className="text-gold-400 font-medium">{myCardsStats.avgScore}</span></span>
+                      )}
                     </div>
                   </div>
 
@@ -1688,6 +1690,7 @@ export function Draft() {
           card={selectedCard}
           isOpen={isSheetOpen}
           onClose={closeSheet}
+          hideScores={session?.hide_scores}
           footer={
             hasPicked ? (
               <div className="text-center text-gray-400 py-2">
@@ -1713,6 +1716,7 @@ export function Draft() {
           card={mobileViewCard}
           isOpen={!!mobileViewCard}
           onClose={() => setMobileViewCard(null)}
+          hideScores={session?.hide_scores}
         />
 
         {/* Leave Draft Confirmation Modal */}

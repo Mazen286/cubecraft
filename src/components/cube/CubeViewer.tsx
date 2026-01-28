@@ -22,7 +22,9 @@ interface CubeViewerProps {
 }
 
 // Card dimensions for grid calculation
-const CARD_WIDTH = 72; // w-16 + gap
+// Use smaller width on mobile to fit 5 columns
+const CARD_WIDTH_MOBILE = 64; // Tighter fit for mobile (w-16)
+const CARD_WIDTH_DESKTOP = 72; // w-16 + gap
 const CARD_HEIGHT = 104; // h-24 + gap
 
 export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProps) {
@@ -87,8 +89,10 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   const [containerWidth, setContainerWidth] = useState(800);
 
   // Calculate columns based on container width
+  // Use tighter spacing on mobile to fit more cards
   const columnsCount = useMemo(() => {
-    return Math.max(1, Math.floor(containerWidth / CARD_WIDTH));
+    const cardWidth = containerWidth < 640 ? CARD_WIDTH_MOBILE : CARD_WIDTH_DESKTOP;
+    return Math.max(1, Math.floor(containerWidth / cardWidth));
   }, [containerWidth]);
 
   // Update container width on resize

@@ -551,6 +551,7 @@ export const auctionService = {
       current_selector_seat: null, // Will be set when draft starts
       grid_data: gridData,
       auction_state: initialAuctionState,
+      hide_scores: settings.hideScores ?? false,
     };
 
     const { data: session, error: sessionError } = await supabase

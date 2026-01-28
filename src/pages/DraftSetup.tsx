@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS: DraftSettings = {
   packSize: 15,
   burnedPerPack: 5, // Cards discarded per pack (not selected)
   timerSeconds: 120, // 2 minute timer
+  hideScores: false, // Show scores by default
 };
 
 // Shared timer options for auction mode (both Bid Timer and Selection Timer)
@@ -512,6 +513,30 @@ export function DraftSetup() {
                 ))}
               </select>
             </SettingRow>
+
+            {/* Competitive Mode Toggle */}
+            <SettingRow label="Competitive Mode">
+              <button
+                type="button"
+                onClick={() => updateSetting('hideScores', !settings.hideScores)}
+                className={cn(
+                  'relative inline-flex h-8 w-14 items-center rounded-full transition-colors',
+                  settings.hideScores ? 'bg-gold-500' : 'bg-yugi-card border border-yugi-border'
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-block h-6 w-6 transform rounded-full bg-white transition-transform',
+                    settings.hideScores ? 'translate-x-7' : 'translate-x-1'
+                  )}
+                />
+              </button>
+            </SettingRow>
+            {settings.hideScores && (
+              <p className="text-xs text-gold-400 -mt-2 ml-1">
+                Card scores will be hidden during the draft for a skill-based experience.
+              </p>
+            )}
           </div>
 
           {/* Mode-specific rules summary */}
