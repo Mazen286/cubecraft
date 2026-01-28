@@ -726,14 +726,17 @@ export function Draft() {
   useEffect(() => {
     autoPickRef.current = () => {
       if (currentPackCards.length > 0 && !currentPlayer?.pick_made && !isPicking) {
-        const highestRated = [...currentPackCards].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
+        // In competitive mode, pick randomly instead of by score
+        const cardToPick = session?.hide_scores
+          ? currentPackCards[Math.floor(Math.random() * currentPackCards.length)]
+          : [...currentPackCards].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
         // Show notification for auto-pick
-        setAutoPickNotification(`Auto-picked: ${highestRated.name}`);
+        setAutoPickNotification(`Auto-picked: ${cardToPick.name}`);
         setTimeout(() => setAutoPickNotification(null), 3000);
-        handlePickCard(highestRated, true); // Mark as auto-pick
+        handlePickCard(cardToPick, true); // Mark as auto-pick
       }
     };
-  }, [currentPackCards, currentPlayer?.pick_made, isPicking, handlePickCard]);
+  }, [currentPackCards, currentPlayer?.pick_made, isPicking, handlePickCard, session?.hide_scores]);
 
   // Auto-select: automatically pick highest rated card when new pack arrives
   useEffect(() => {
@@ -745,10 +748,13 @@ export function Draft() {
       !currentPlayer?.pick_made &&
       !isPicking
     ) {
-      const highestRated = [...currentPackCards].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
-      handlePickCard(highestRated, true); // Mark as auto-pick
+      // In competitive mode, pick randomly instead of by score
+      const cardToPick = session?.hide_scores
+        ? currentPackCards[Math.floor(Math.random() * currentPackCards.length)]
+        : [...currentPackCards].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
+      handlePickCard(cardToPick, true); // Mark as auto-pick
     }
-  }, [autoSelect, session?.status, session?.paused, currentPackCards, currentPlayer?.pick_made, isPicking, handlePickCard]);
+  }, [autoSelect, session?.status, session?.paused, currentPackCards, currentPlayer?.pick_made, isPicking, handlePickCard, session?.hide_scores]);
 
   // Handle pause button click
   const handlePauseClick = useCallback(async () => {
