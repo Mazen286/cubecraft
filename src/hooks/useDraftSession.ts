@@ -196,6 +196,51 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     prevPackPickRef.current = packPickKey;
   }, [session?.current_pack, session?.current_pick, session?.id, session?.status, currentPlayer?.id]);
 
+  // Stuck state detection and recovery
+  // If player has empty hand, pick_made is false, and we're in_progress, attempt recovery
+  const recoveryAttemptedRef = useRef<string>('');
+  useEffect(() => {
+    if (!session || !currentPlayer || session.status !== 'in_progress') return;
+    if (session.paused) return;
+
+    // Only attempt recovery if hand is empty and pick not made
+    if (currentPlayer.current_hand.length > 0 || currentPlayer.pick_made) {
+      // Reset recovery key when state is good
+      recoveryAttemptedRef.current = '';
+      return;
+    }
+
+    // Create a unique key for this stuck state to avoid repeated recovery attempts
+    const recoveryKey = `${session.current_pack}-${session.current_pick}-${currentPlayer.id}`;
+    if (recoveryAttemptedRef.current === recoveryKey) {
+      return; // Already attempted recovery for this state
+    }
+
+    // Delay recovery attempt to allow normal updates to come through
+    const recoveryTimer = setTimeout(async () => {
+      // Double-check we're still in stuck state (hand might have updated via realtime)
+      const freshPlayer = await draftService.getCurrentPlayer(session.id);
+      if (!freshPlayer || freshPlayer.current_hand.length > 0 || freshPlayer.pick_made) {
+        console.log('[useDraftSession] Stuck state resolved before recovery');
+        return;
+      }
+
+      console.log('[useDraftSession] Detected stuck state, attempting recovery...');
+      recoveryAttemptedRef.current = recoveryKey;
+
+      const recovered = await draftService.recoverPlayerHand(session.id, currentPlayer.id);
+      if (recovered) {
+        console.log('[useDraftSession] Recovery successful, reloading session data');
+        // Reload session data to get updated hand
+        loadSessionData(session.id);
+      } else {
+        console.log('[useDraftSession] Recovery unsuccessful or not needed');
+      }
+    }, 3000); // Wait 3 seconds before attempting recovery
+
+    return () => clearTimeout(recoveryTimer);
+  }, [session?.id, session?.status, session?.paused, session?.current_pack, session?.current_pick, currentPlayer?.id, currentPlayer?.current_hand?.length, currentPlayer?.pick_made, loadSessionData]);
+
   // Helper to extract existing session from error
   const handleSessionError = (err: unknown) => {
     const typedErr = err as Error & { code?: string; existingSession?: ExistingSessionInfo };

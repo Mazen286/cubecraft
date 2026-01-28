@@ -297,7 +297,7 @@ const mtgExportFormats: ExportFormat[] = [
 
 /**
  * Basic lands - freely available after drafting
- * Using Scryfall IDs for stable image URLs
+ * Using direct Scryfall CDN image URLs (from M21) for reliability with image proxies
  */
 const mtgBasicLands: BasicResource[] = [
   {
@@ -305,14 +305,13 @@ const mtgBasicLands: BasicResource[] = [
     name: 'Plains',
     type: 'Basic Land — Plains',
     description: '({T}: Add {W}.)',
-    imageUrl: 'https://cards.scryfall.io/normal/front/f/c/fcabc17c-67ed-4865-befd-df53a9ca0a45.jpg',
+    imageUrl: 'https://cards.scryfall.io/normal/front/4/b/4be96696-aff8-4ef9-97dc-8221ef745de9.jpg',
     attributes: {
       manaCost: '',
       cmc: 0,
       colors: [],
       colorIdentity: ['W'],
       rarity: 'common',
-      scryfallId: 'fcabc17c-67ed-4865-befd-df53a9ca0a45',
     },
   },
   {
@@ -320,14 +319,13 @@ const mtgBasicLands: BasicResource[] = [
     name: 'Island',
     type: 'Basic Land — Island',
     description: '({T}: Add {U}.)',
-    imageUrl: 'https://cards.scryfall.io/normal/front/6/3/636c60e5-7a06-4cbc-bf51-0e4eb8d3c3c4.jpg',
+    imageUrl: 'https://cards.scryfall.io/normal/front/f/c/fc9a66a1-367c-4035-a22e-00fab55be5a0.jpg',
     attributes: {
       manaCost: '',
       cmc: 0,
       colors: [],
       colorIdentity: ['U'],
       rarity: 'common',
-      scryfallId: '636c60e5-7a06-4cbc-bf51-0e4eb8d3c3c4',
     },
   },
   {
@@ -335,14 +333,13 @@ const mtgBasicLands: BasicResource[] = [
     name: 'Swamp',
     type: 'Basic Land — Swamp',
     description: '({T}: Add {B}.)',
-    imageUrl: 'https://cards.scryfall.io/normal/front/8/7/87173c55-25a6-4a4e-9d6b-1c7e3bb9e59b.jpg',
+    imageUrl: 'https://cards.scryfall.io/normal/front/3/0/30b3d647-3546-4ade-b395-f2370750a7a6.jpg',
     attributes: {
       manaCost: '',
       cmc: 0,
       colors: [],
       colorIdentity: ['B'],
       rarity: 'common',
-      scryfallId: '87173c55-25a6-4a4e-9d6b-1c7e3bb9e59b',
     },
   },
   {
@@ -350,14 +347,13 @@ const mtgBasicLands: BasicResource[] = [
     name: 'Mountain',
     type: 'Basic Land — Mountain',
     description: '({T}: Add {R}.)',
-    imageUrl: 'https://cards.scryfall.io/normal/front/6/6/66fd2d3d-0ec3-4f96-b7ed-d880d24c3a0c.jpg',
+    imageUrl: 'https://cards.scryfall.io/normal/front/b/9/b92c8925-ecfc-4ece-b83a-f12e98a938ab.jpg',
     attributes: {
       manaCost: '',
       cmc: 0,
       colors: [],
       colorIdentity: ['R'],
       rarity: 'common',
-      scryfallId: '66fd2d3d-0ec3-4f96-b7ed-d880d24c3a0c',
     },
   },
   {
@@ -365,14 +361,13 @@ const mtgBasicLands: BasicResource[] = [
     name: 'Forest',
     type: 'Basic Land — Forest',
     description: '({T}: Add {G}.)',
-    imageUrl: 'https://cards.scryfall.io/normal/front/3/c/3cf23791-1b15-43ee-b81a-5fe068709bc1.jpg',
+    imageUrl: 'https://cards.scryfall.io/normal/front/3/2/3279314f-d639-4489-b2ab-3621bb3ca64b.jpg',
     attributes: {
       manaCost: '',
       cmc: 0,
       colors: [],
       colorIdentity: ['G'],
       rarity: 'common',
-      scryfallId: '3cf23791-1b15-43ee-b81a-5fe068709bc1',
     },
   },
 ];

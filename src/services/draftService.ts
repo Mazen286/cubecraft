@@ -881,17 +881,27 @@ export const draftService = {
   async passPacks(sessionId: string): Promise<void> {
     const supabase = getSupabase();
 
-    const { data: session } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('draft_sessions')
       .select()
       .eq('id', sessionId)
       .single();
 
-    const { data: players } = await supabase
+    if (sessionError) {
+      console.error('[passPacks] Failed to fetch session:', sessionError);
+      return;
+    }
+
+    const { data: players, error: playersError } = await supabase
       .from('draft_players')
       .select()
       .eq('session_id', sessionId)
       .order('seat_position');
+
+    if (playersError) {
+      console.error('[passPacks] Failed to fetch players:', playersError);
+      return;
+    }
 
     if (!session || !players) return;
 
@@ -985,16 +995,24 @@ export const draftService = {
       // Now safe to distribute next pack since we won the race
       const packData = session.pack_data as PackData[];
       const nextPackNumber = session.current_pack + 1;
+      console.log(`[passPacks] Distributing pack ${nextPackNumber}`);
 
       for (const player of players) {
         const playerPack = packData.find(
           (p) => p.player_seat === player.seat_position && p.pack_number === nextPackNumber
         );
         if (playerPack) {
-          await supabase
+          console.log(`[passPacks] Player ${player.name} (seat ${player.seat_position}) getting pack ${nextPackNumber}: ${playerPack.cards.length} cards`);
+          const { error: updateError } = await supabase
             .from('draft_players')
             .update({ current_hand: playerPack.cards, pick_made: false })
             .eq('id', player.id);
+
+          if (updateError) {
+            console.error(`[passPacks] Failed to distribute pack to player ${player.name}:`, updateError);
+          }
+        } else {
+          console.error(`[passPacks] No pack data found for player ${player.name} (seat ${player.seat_position}, pack ${nextPackNumber})`);
         }
       }
 
@@ -1027,15 +1045,23 @@ export const draftService = {
       }
 
       // Now safe to pass hands since we won the race
+      console.log(`[passPacks] Passing hands to next player (direction: ${isLeftDirection ? 'left' : 'right'})`);
       for (const player of players) {
         const sourceSeat = isLeftDirection
           ? (player.seat_position + 1) % playerCount
           : (player.seat_position - 1 + playerCount) % playerCount;
 
-        await supabase
+        const newHand = hands[sourceSeat] || [];
+        console.log(`[passPacks] Player ${player.name} (seat ${player.seat_position}) getting hand from seat ${sourceSeat}: ${newHand.length} cards`);
+
+        const { error: updateError } = await supabase
           .from('draft_players')
-          .update({ current_hand: hands[sourceSeat], pick_made: false })
+          .update({ current_hand: newHand, pick_made: false })
           .eq('id', player.id);
+
+        if (updateError) {
+          console.error(`[passPacks] Failed to update hand for player ${player.name}:`, updateError);
+        }
       }
 
       // Trigger immediate bot picks after hands are passed
@@ -1222,6 +1248,128 @@ export const draftService = {
       firstPickCount: picks.filter(p => p.pick_number === 1).length,
       wheeledCount: picks.filter(p => p.pick_number > halfPackSize).length,
     };
+  },
+
+  /**
+   * Recover a player's hand if it's empty but should have cards.
+   * This handles stuck states where hand updates failed during pack passing.
+   * Returns true if recovery was performed.
+   */
+  async recoverPlayerHand(sessionId: string, playerId: string): Promise<boolean> {
+    const supabase = getSupabase();
+
+    // Get session and player
+    const { data: session } = await supabase
+      .from('draft_sessions')
+      .select()
+      .eq('id', sessionId)
+      .single();
+
+    const { data: player } = await supabase
+      .from('draft_players')
+      .select()
+      .eq('id', playerId)
+      .single();
+
+    if (!session || !player) {
+      console.log('[recoverPlayerHand] Session or player not found');
+      return false;
+    }
+
+    // Only recover if status is in_progress, hand is empty, and pick_made is false
+    if (session.status !== 'in_progress' || player.current_hand.length > 0 || player.pick_made) {
+      console.log('[recoverPlayerHand] No recovery needed:', {
+        status: session.status,
+        handLength: player.current_hand.length,
+        pickMade: player.pick_made,
+      });
+      return false;
+    }
+
+    console.log(`[recoverPlayerHand] Attempting recovery for player ${player.name} (seat ${player.seat_position})`);
+
+    // Get all players to understand the current state
+    const { data: allPlayers } = await supabase
+      .from('draft_players')
+      .select()
+      .eq('session_id', sessionId)
+      .order('seat_position');
+
+    if (!allPlayers) {
+      console.log('[recoverPlayerHand] Could not fetch all players');
+      return false;
+    }
+
+    const packData = session.pack_data as PackData[];
+    const currentPack = session.current_pack;
+    const currentPick = session.current_pick;
+    const playerCount = allPlayers.length;
+    const direction = session.direction || 'left';
+    const isLeftDirection = direction === 'left';
+
+    // Calculate which player's original pack this player should have
+    // Pack started at seat X, and after (currentPick - 1) passes, it's at a different seat
+    // For left direction: pack moves to higher seat numbers
+    // For right direction: pack moves to lower seat numbers
+    const passCount = currentPick - 1;
+
+    // Find which seat's pack this player should have
+    let sourceSeat: number;
+    if (isLeftDirection) {
+      // Pack moves left (to higher seats), so original pack came from lower seat
+      sourceSeat = (player.seat_position - passCount + playerCount * passCount) % playerCount;
+    } else {
+      // Pack moves right (to lower seats), so original pack came from higher seat
+      sourceSeat = (player.seat_position + passCount) % playerCount;
+    }
+
+    // Get the original pack for this seat
+    const originalPack = packData.find(
+      (p) => p.player_seat === sourceSeat && p.pack_number === currentPack
+    );
+
+    if (!originalPack) {
+      console.error(`[recoverPlayerHand] No pack data found for seat ${sourceSeat}, pack ${currentPack}`);
+      return false;
+    }
+
+    // Get all picks made from this pack so far (by any player)
+    const { data: picks } = await supabase
+      .from('draft_picks')
+      .select('card_id')
+      .eq('session_id', sessionId)
+      .eq('pack_number', currentPack);
+
+    const pickedCardIds = new Set((picks || []).map(p => p.card_id));
+
+    // Calculate remaining cards in this pack
+    const remainingCards = originalPack.cards.filter(cardId => !pickedCardIds.has(cardId));
+
+    // Account for burned cards - don't include cards that should have been burned
+    // Burns happen at the end of a pack when burnedPerPack cards remain
+    // Since we're mid-pack, we should have (packSize - currentPick + 1 - burnedPerPack) cards
+    // But we're just recovering, so use all remaining cards
+
+    console.log(`[recoverPlayerHand] Original pack had ${originalPack.cards.length} cards, ${pickedCardIds.size} picked, ${remainingCards.length} remaining`);
+
+    if (remainingCards.length === 0) {
+      console.log('[recoverPlayerHand] No cards remaining - pack may be finished');
+      return false;
+    }
+
+    // Update the player's hand
+    const { error: updateError } = await supabase
+      .from('draft_players')
+      .update({ current_hand: remainingCards, pick_made: false })
+      .eq('id', playerId);
+
+    if (updateError) {
+      console.error('[recoverPlayerHand] Failed to update hand:', updateError);
+      return false;
+    }
+
+    console.log(`[recoverPlayerHand] Successfully recovered ${remainingCards.length} cards for player ${player.name}`);
+    return true;
   },
 
   /**

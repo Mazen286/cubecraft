@@ -99,24 +99,42 @@ export async function generateDeckImage(options: GenerateDeckImageOptions): Prom
   ctx.fillStyle = BACKGROUND_COLOR;
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-  // Load all card images in parallel
+  // Load all card images in parallel (deduplicated by URL to avoid loading same image multiple times)
   const allCards = [...mainDeckCards, ...extraDeckCards, ...sideDeckCards];
-  const imagePromises = allCards.map(async (card) => {
+
+  // Build URL to card ID mapping (multiple cards can share the same URL, e.g., basic lands)
+  const urlToCardIds = new Map<string, (string | number)[]>();
+
+  for (const card of allCards) {
     const imageUrl = getCardImageUrl(card);
     const proxiedUrl = getProxiedImageUrl(imageUrl);
+
+    if (!urlToCardIds.has(proxiedUrl)) {
+      urlToCardIds.set(proxiedUrl, []);
+    }
+    urlToCardIds.get(proxiedUrl)!.push(card.id);
+  }
+
+  // Load unique images only
+  const uniqueUrls = Array.from(urlToCardIds.keys());
+  const imagePromises = uniqueUrls.map(async (proxiedUrl) => {
     try {
       const img = await loadImage(proxiedUrl);
-      return { cardId: card.id, img };
+      return { url: proxiedUrl, img };
     } catch {
-      // Return null for failed images
-      return { cardId: card.id, img: null };
+      return { url: proxiedUrl, img: null };
     }
   });
 
   const loadedImages = await Promise.all(imagePromises);
+
+  // Build card ID to image map
   const imageMap = new Map<string | number, HTMLImageElement | null>();
-  for (const { cardId, img } of loadedImages) {
-    imageMap.set(cardId, img);
+  for (const { url, img } of loadedImages) {
+    const cardIds = urlToCardIds.get(url) || [];
+    for (const cardId of cardIds) {
+      imageMap.set(cardId, img);
+    }
   }
 
   // Draw sections

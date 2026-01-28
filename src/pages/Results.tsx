@@ -16,6 +16,7 @@ import { draftService } from '../services/draftService';
 import { generateDeckImage } from '../services/deckImageService';
 import { useGameConfig } from '../context/GameContext';
 import type { Card } from '../types/card';
+import type { BasicResource } from '../config/gameConfig';
 import type { DraftPlayerRow } from '../lib/database.types';
 
 // Type alias for zone IDs
@@ -121,8 +122,9 @@ export function Results() {
   const [showCardDetail, setShowCardDetail] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 
-  // State for viewing non-deck cards (burned/first picks)
+  // State for viewing non-deck cards (burned/first picks/basic resources)
   const [viewOnlyCard, setViewOnlyCard] = useState<YuGiOhCardType | null>(null);
+  const [selectedBasicResource, setSelectedBasicResource] = useState<BasicResource | null>(null);
 
   // Initialize deck assignments when cards load
   useEffect(() => {
@@ -248,10 +250,56 @@ export function Results() {
     }));
   }, [allDraftedCards, deckAssignments, filters]);
 
-  const mainDeckCards = useMemo(() => getCardsByZone('main'), [getCardsByZone]);
+  const mainDeckCardsWithoutBasics = useMemo(() => getCardsByZone('main'), [getCardsByZone]);
   const sideDeckCards = useMemo(() => getCardsByZone('side'), [getCardsByZone]);
   const extraDeckCards = useMemo(() => getCardsByZone('extra'), [getCardsByZone]);
   const poolCards = useMemo(() => getCardsByZone('pool'), [getCardsByZone]);
+
+  // Total count of basic resources added
+  const totalBasicResourceCount = useMemo(() => {
+    let total = 0;
+    basicResourceCounts.forEach(count => total += count);
+    return total;
+  }, [basicResourceCounts]);
+
+  // Convert basic resources to grouped cards for display (one card per type with count)
+  const basicResourceCards = useMemo(() => {
+    if (!gameConfig.basicResources) return [];
+
+    const cards: { card: YuGiOhCardType; resourceId: string | number; count: number }[] = [];
+
+    gameConfig.basicResources.forEach(resource => {
+      const count = basicResourceCounts.get(resource.id) || 0;
+      if (count > 0) {
+        cards.push({
+          card: {
+            id: typeof resource.id === 'number' ? resource.id : 0,
+            name: resource.name,
+            type: resource.type,
+            desc: resource.description,
+            imageUrl: resource.imageUrl,
+            attributes: resource.attributes || {},
+          } as YuGiOhCardType,
+          resourceId: resource.id,
+          count,
+        });
+      }
+    });
+
+    return cards;
+  }, [gameConfig.basicResources, basicResourceCounts]);
+
+  // Main deck including basic resources (basic resources get negative indices to distinguish them)
+  const mainDeckCards = useMemo(() => {
+    const basicCards = basicResourceCards.map((item, idx) => ({
+      card: item.card,
+      index: -(idx + 1), // Negative indices for basic resources
+      isBasicResource: true,
+      resourceId: item.resourceId,
+      count: item.count,
+    }));
+    return [...mainDeckCardsWithoutBasics.map(c => ({ ...c, isBasicResource: false, resourceId: undefined, count: 1 })), ...basicCards];
+  }, [mainDeckCardsWithoutBasics, basicResourceCards]);
 
   // Count stats from all drafted cards (not filtered)
   const monsterCount = allDraftedCards.filter(({ card }) => isMonsterCard(card.type)).length;
@@ -296,8 +344,31 @@ export function Results() {
     setSelectedCard(null);
   }, [extraDeckMax]);
 
+  // Handle clicking on basic resources
+  const handleBasicResourceClick = useCallback((resource: BasicResource) => {
+    if (selectedBasicResource?.id === resource.id && showCardDetail) {
+      setShowCardDetail(false);
+      setSelectedBasicResource(null);
+    } else {
+      setSelectedBasicResource(resource);
+      setSelectedCard(null);
+      setViewOnlyCard(null);
+      setShowCardDetail(true);
+    }
+  }, [selectedBasicResource, showCardDetail]);
+
   // Handle card click - show bottom sheet with details and move options
   const handleCardClick = useCallback((card: YuGiOhCardType, index: number) => {
+    // Handle basic resources (negative indices) - show as view only
+    if (index < 0) {
+      // Find the matching basic resource
+      const resource = gameConfig.basicResources?.find(r => r.name === card.name);
+      if (resource) {
+        handleBasicResourceClick(resource);
+      }
+      return;
+    }
+
     const currentZone = deckAssignments.get(index) || 'main';
     if (selectedCard?.index === index && showCardDetail) {
       setShowCardDetail(false);
@@ -306,13 +377,14 @@ export function Results() {
       setSelectedCard({ card, zone: currentZone, index });
       setShowCardDetail(true);
     }
-  }, [deckAssignments, selectedCard, showCardDetail]);
+  }, [deckAssignments, selectedCard, showCardDetail, gameConfig.basicResources, handleBasicResourceClick]);
 
   // Close card detail
   const handleCloseCardDetail = useCallback(() => {
     setShowCardDetail(false);
     setSelectedCard(null);
     setViewOnlyCard(null);
+    setSelectedBasicResource(null);
   }, []);
 
   // Handle clicking on view-only cards (burned cards, first picks)
@@ -349,8 +421,9 @@ export function Results() {
     setSelectedCard(null);
   }, [allDraftedCards, extraDeckMax]);
 
-  // Get unfiltered counts for each zone
-  const mainCount = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'main').length;
+  // Get unfiltered counts for each zone (main deck includes basic resources)
+  const mainCountWithoutBasics = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'main').length;
+  const mainCount = mainCountWithoutBasics + totalBasicResourceCount;
   const sideCount = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'side').length;
   const extraCount = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'extra').length;
   const poolCount = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'pool').length;
@@ -369,13 +442,6 @@ export function Results() {
       return newCounts;
     });
   }, []);
-
-  // Total count of basic resources added
-  const totalBasicResourceCount = useMemo(() => {
-    let total = 0;
-    basicResourceCounts.forEach(count => total += count);
-    return total;
-  }, [basicResourceCounts]);
 
   const handleExport = useCallback(() => {
     // Use game config export format if available, otherwise fallback to YDK
@@ -476,7 +542,24 @@ ${sideDeck}
       .filter(({ index }) => deckAssignments.get(index) === 'side')
       .map(({ card }) => card.name);
 
-    let text = `Main Deck (${mainCards.length}):\n${mainCards.join('\n')}\n\n`;
+    // Add basic resources with counts
+    const basicResourceLines: string[] = [];
+    if (gameConfig.basicResources) {
+      gameConfig.basicResources.forEach(resource => {
+        const count = basicResourceCounts.get(resource.id) || 0;
+        if (count > 0) {
+          basicResourceLines.push(`${resource.name} x${count}`);
+        }
+      });
+    }
+
+    const totalMainCount = mainCards.length + totalBasicResourceCount;
+    let text = `Main Deck (${totalMainCount}):\n${mainCards.join('\n')}`;
+    if (basicResourceLines.length > 0) {
+      text += `\n${basicResourceLines.join('\n')}`;
+    }
+    text += '\n\n';
+
     if (extraCards.length > 0) {
       text += `Extra Deck (${extraCards.length}):\n${extraCards.join('\n')}\n\n`;
     }
@@ -485,7 +568,7 @@ ${sideDeck}
     }
     text += `\nDrafted on CubeCraft`;
     return text;
-  }, [allDraftedCards, deckAssignments]);
+  }, [allDraftedCards, deckAssignments, gameConfig.basicResources, basicResourceCounts, totalBasicResourceCount]);
 
   // Share deck as image + text
   const handleShare = useCallback(async () => {
@@ -493,7 +576,18 @@ ${sideDeck}
     const deckText = generateDeckText();
 
     // Get cards for each zone (sorted according to current filter settings)
-    const mainCards = mainDeckCards.map(({ card }) => card);
+    // Expand basic resources from grouped format to individual cards
+    const mainCards: YuGiOhCardType[] = [];
+    for (const item of mainDeckCards) {
+      const count = item.count || 1;
+      for (let i = 0; i < count; i++) {
+        // Give each expanded basic resource a unique ID for image mapping
+        const cardCopy = item.isBasicResource
+          ? { ...item.card, id: `${item.resourceId}-${i}` as unknown as number }
+          : item.card;
+        mainCards.push(cardCopy);
+      }
+    }
     const extraCards = extraDeckCards.map(({ card }) => card);
     const sideCards = sideDeckCards.map(({ card }) => card);
 
@@ -505,7 +599,11 @@ ${sideDeck}
         sideDeckCards: sideCards,
         showTiers: hasScores,
         getCardImageUrl: (card) => {
-          // Use game config's image URL function
+          // Basic resources have imageUrl set directly
+          if (card.imageUrl) {
+            return card.imageUrl;
+          }
+          // Use game config's image URL function for other cards
           const genericCard = toCardWithAttributes(card);
           return gameConfig.getCardImageUrl(genericCard, 'sm');
         },
@@ -630,11 +728,26 @@ ${sideDeck}
         {/* Deck Zone Stats */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 mb-6">
           <StatCard label="Main Deck" value={mainCount} color="text-blue-400" />
-          <StatCard label="Extra Deck" value={extraCount} color="text-purple-400" />
-          <StatCard label="Side Deck" value={sideCount} color="text-orange-400" />
-          <StatCard label="Monsters" value={monsterCount} color="text-yellow-400" />
-          <StatCard label="Spells" value={spellCount} color="text-green-400" />
-          <StatCard label="Traps" value={trapCount} color="text-pink-400" />
+          {gameConfig.deckZones.some(z => z.id === 'extra') && (
+            <StatCard label="Extra Deck" value={extraCount} color="text-purple-400" />
+          )}
+          <StatCard label={gameConfig.id === 'mtg' ? 'Sideboard' : 'Side Deck'} value={sideCount} color="text-orange-400" />
+          {/* Yu-Gi-Oh specific stats */}
+          {gameConfig.id === 'yugioh' && (
+            <>
+              <StatCard label="Monsters" value={monsterCount} color="text-yellow-400" />
+              <StatCard label="Spells" value={spellCount} color="text-green-400" />
+              <StatCard label="Traps" value={trapCount} color="text-pink-400" />
+            </>
+          )}
+          {/* MTG specific stats */}
+          {gameConfig.id === 'mtg' && (
+            <>
+              <StatCard label="Creatures" value={allDraftedCards.filter(({ card }) => card.type.toLowerCase().includes('creature')).length} color="text-yellow-400" />
+              <StatCard label="Spells" value={allDraftedCards.filter(({ card }) => card.type.toLowerCase().includes('instant') || card.type.toLowerCase().includes('sorcery')).length} color="text-green-400" />
+              <StatCard label="Lands" value={allDraftedCards.filter(({ card }) => card.type.toLowerCase().includes('land')).length} color="text-pink-400" />
+            </>
+          )}
         </div>
 
 
@@ -930,18 +1043,26 @@ ${sideDeck}
                     const count = basicResourceCounts.get(resource.id) || 0;
                     return (
                       <div key={resource.id} className="flex flex-col items-center gap-2">
-                        {/* Resource image */}
-                        {resource.imageUrl ? (
-                          <img
-                            src={resource.imageUrl}
-                            alt={resource.name}
-                            className="w-20 h-28 object-cover rounded shadow-lg"
-                          />
-                        ) : (
-                          <div className="w-20 h-28 bg-yugi-dark rounded flex items-center justify-center text-xs text-gray-400 text-center p-2">
-                            {resource.name}
-                          </div>
-                        )}
+                        {/* Resource image - clickable */}
+                        <div
+                          onClick={() => handleBasicResourceClick(resource)}
+                          className={cn(
+                            'cursor-pointer transition-all hover:scale-105',
+                            selectedBasicResource?.id === resource.id && 'ring-2 ring-gold-400'
+                          )}
+                        >
+                          {resource.imageUrl ? (
+                            <img
+                              src={resource.imageUrl}
+                              alt={resource.name}
+                              className="w-20 h-28 object-cover rounded shadow-lg"
+                            />
+                          ) : (
+                            <div className="w-20 h-28 bg-yugi-dark rounded flex items-center justify-center text-xs text-gray-400 text-center p-2">
+                              {resource.name}
+                            </div>
+                          )}
+                        </div>
                         {/* Name and count controls */}
                         <div className="text-center">
                           <div className="text-sm text-white font-medium truncate max-w-[100px]">
@@ -949,7 +1070,7 @@ ${sideDeck}
                           </div>
                           <div className="flex items-center justify-center gap-1 mt-1">
                             <button
-                              onClick={() => updateBasicResourceCount(resource.id, -1)}
+                              onClick={(e) => { e.stopPropagation(); updateBasicResourceCount(resource.id, -1); }}
                               disabled={count === 0}
                               className="w-6 h-6 rounded bg-yugi-dark hover:bg-red-600/50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
                             >
@@ -957,7 +1078,7 @@ ${sideDeck}
                             </button>
                             <span className="w-8 text-center text-white font-bold">{count}</span>
                             <button
-                              onClick={() => updateBasicResourceCount(resource.id, 1)}
+                              onClick={(e) => { e.stopPropagation(); updateBasicResourceCount(resource.id, 1); }}
                               className="w-6 h-6 rounded bg-yugi-dark hover:bg-green-600/50 flex items-center justify-center"
                             >
                               <Plus className="w-3 h-3" />
@@ -1021,23 +1142,25 @@ ${sideDeck}
                 showTier={hasScores}
               />
 
-              {/* Extra Deck */}
-              <DeckZoneSection
-                title="Extra Deck"
-                count={extraCount}
-              filteredCount={extraDeckCards.length}
-              color="text-purple-400"
-              zone="extra"
-              cards={extraDeckCards}
-              selectedIndex={selectedCard?.index}
-              onCardClick={handleCardClick}
-              onCardDrop={moveCard}
-              showTier={hasScores}
-            />
+              {/* Extra Deck - only for games that have it */}
+              {gameConfig.deckZones.some(z => z.id === 'extra') && (
+                <DeckZoneSection
+                  title="Extra Deck"
+                  count={extraCount}
+                  filteredCount={extraDeckCards.length}
+                  color="text-purple-400"
+                  zone="extra"
+                  cards={extraDeckCards}
+                  selectedIndex={selectedCard?.index}
+                  onCardClick={handleCardClick}
+                  onCardDrop={moveCard}
+                  showTier={hasScores}
+                />
+              )}
 
-              {/* Side Deck */}
+              {/* Side Deck / Sideboard */}
               <DeckZoneSection
-                title="Side Deck"
+                title={gameConfig.id === 'mtg' ? 'Sideboard' : 'Side Deck'}
                 count={sideCount}
                 filteredCount={sideDeckCards.length}
                 color="text-orange-400"
@@ -1076,16 +1199,28 @@ ${sideDeck}
 
         {/* Card Detail Bottom Sheet */}
         <CardDetailSheet
-          card={selectedCard?.card || viewOnlyCard || null}
-          isOpen={showCardDetail && (selectedCard !== null || viewOnlyCard !== null)}
+          card={
+            selectedBasicResource ? {
+              id: typeof selectedBasicResource.id === 'number' ? selectedBasicResource.id : 0,
+              name: selectedBasicResource.name,
+              type: selectedBasicResource.type,
+              desc: selectedBasicResource.description,
+              imageUrl: selectedBasicResource.imageUrl,
+              attributes: selectedBasicResource.attributes || {},
+            } as YuGiOhCardType :
+            selectedCard?.card || viewOnlyCard || null
+          }
+          isOpen={showCardDetail && (selectedCard !== null || viewOnlyCard !== null || selectedBasicResource !== null)}
           onClose={handleCloseCardDetail}
           zoneLabel={
+            selectedBasicResource ? 'Basic Resource' :
             viewOnlyCard ? 'View Only' :
             selectedCard?.zone === 'main' ? 'Main Deck' :
             selectedCard?.zone === 'extra' ? 'Extra Deck' :
-            selectedCard?.zone === 'side' ? 'Side Deck' : 'Unused Pool'
+            selectedCard?.zone === 'side' ? (gameConfig.id === 'mtg' ? 'Sideboard' : 'Side Deck') : 'Unused Pool'
           }
           zoneColor={
+            selectedBasicResource ? 'text-green-400' :
             viewOnlyCard ? 'text-gray-400' :
             selectedCard?.zone === 'main' ? 'text-blue-400' :
             selectedCard?.zone === 'extra' ? 'text-purple-400' :
@@ -1095,16 +1230,28 @@ ${sideDeck}
             <div>
               <p className="text-xs text-gray-400 mb-2">Move to:</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {selectedCard.zone !== 'main' && !isExtraDeckCard(selectedCard.card.type) && (
-                  <Button
-                    onClick={() => moveCard(selectedCard.index, 'main')}
-                    variant="secondary"
-                    className="justify-center"
-                  >
-                    Main Deck
-                  </Button>
+                {selectedCard.zone !== 'main' && (
+                  gameConfig.id === 'yugioh' ? (
+                    !isExtraDeckCard(selectedCard.card.type) && (
+                      <Button
+                        onClick={() => moveCard(selectedCard.index, 'main')}
+                        variant="secondary"
+                        className="justify-center"
+                      >
+                        Main Deck
+                      </Button>
+                    )
+                  ) : (
+                    <Button
+                      onClick={() => moveCard(selectedCard.index, 'main')}
+                      variant="secondary"
+                      className="justify-center"
+                    >
+                      Main Deck
+                    </Button>
+                  )
                 )}
-                {selectedCard.zone !== 'extra' && isExtraDeckCard(selectedCard.card.type) && (
+                {gameConfig.deckZones.some(z => z.id === 'extra') && selectedCard.zone !== 'extra' && isExtraDeckCard(selectedCard.card.type) && (
                   <Button
                     onClick={() => moveCard(selectedCard.index, 'extra')}
                     variant="secondary"
@@ -1119,7 +1266,7 @@ ${sideDeck}
                     variant="secondary"
                     className="justify-center"
                   >
-                    Side Deck
+                    {gameConfig.id === 'mtg' ? 'Sideboard' : 'Side Deck'}
                   </Button>
                 )}
                 {selectedCard.zone !== 'pool' && (
@@ -1177,7 +1324,7 @@ function DeckZoneSection({
   filteredCount: number;
   color: string;
   zone: DeckZone;
-  cards: { card: YuGiOhCardType; index: number }[];
+  cards: { card: YuGiOhCardType; index: number; count?: number }[];
   selectedIndex?: number;
   onCardClick: (card: YuGiOhCardType, index: number) => void;
   onCardDrop: (cardIndex: number, toZone: DeckZone) => void;
@@ -1237,20 +1384,31 @@ function DeckZoneSection({
           "grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12",
           cards.length === 0 && "min-h-[120px] items-center justify-center"
         )}>
-          {cards.map(({ card, index }) => (
+          {cards.map(({ card, index, count: cardCount }) => {
+            // Basic resources (negative indices) are not draggable
+            const isBasicResource = index < 0;
+            return (
             <div
-              key={`deck-${index}`}
-              draggable
-              onDragStart={(e) => handleDragStart(e, index)}
+              key={`deck-${index}-${card.id}`}
+              draggable={!isBasicResource}
+              onDragStart={isBasicResource ? undefined : (e) => handleDragStart(e, index)}
               className={cn(
-                'cursor-grab active:cursor-grabbing transition-all',
+                'transition-all relative',
+                isBasicResource ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
                 selectedIndex === index && 'ring-2 ring-gold-400 z-10'
               )}
               onClick={() => onCardClick(card, index)}
             >
               <YuGiOhCard card={card} size="full" showTier={showTier} flush />
+              {/* Count badge for basic resources */}
+              {isBasicResource && cardCount && cardCount > 1 && (
+                <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                  x{cardCount}
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
           {cards.length === 0 && isDragOver && (
             <div className="col-span-full text-center text-gold-400 py-8">
               Drop card here

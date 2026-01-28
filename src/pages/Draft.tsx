@@ -859,7 +859,7 @@ export function Draft() {
   // Pack sort options for keyboard shortcuts
   const packSortOptions = useMemo(() => ['none', 'score', 'name', 'level', 'atk', 'def'], []);
 
-  // Keyboard navigation for card selection
+  // Keyboard navigation for card selection (Current Pack)
   const {
     highlightedIndex,
     sheetCard: selectedCard,
@@ -871,7 +871,7 @@ export function Draft() {
   } = useCardKeyboardNavigation({
     cards: sortedPackCards,
     columns: getColumnCount,
-    enabled: !isPicking && session?.status === 'in_progress',
+    enabled: !isPicking && session?.status === 'in_progress' && !showMobileCards,
     onSelect: (card) => handlePickCard(card),
     isActionPending: isPicking,
     hasSelected: hasPicked,
@@ -881,12 +881,86 @@ export function Draft() {
     onToggleSortDirection: () => setPackSortDirection(d => d === 'asc' ? 'desc' : 'asc'),
   });
 
+  // Get column count for My Cards drawer (responsive)
+  const getMyCardsColumnCount = useCallback(() => {
+    const width = window.innerWidth;
+    if (width >= 1280) return 12; // xl
+    if (width >= 1024) return 10; // lg
+    if (width >= 768) return 8;   // md
+    if (width >= 640) return 6;   // sm
+    return 5;                      // default
+  }, []);
+
+  // Callback to close My Cards drawer
+  const closeMyCardsDrawer = useCallback(() => {
+    setShowMobileCards(false);
+    setMobileViewCard(null);
+  }, []);
+
+  // Keyboard navigation for My Cards drawer
+  const {
+    highlightedIndex: myCardsHighlightedIndex,
+    sheetCard: myCardsSelectedCard,
+    isSheetOpen: isMyCardsSheetOpen,
+    closeSheet: closeMyCardsSheet,
+    handleCardClick: handleMyCardsCardClick,
+  } = useCardKeyboardNavigation({
+    cards: filteredDraftedCards,
+    columns: getMyCardsColumnCount,
+    enabled: showMobileCards,
+    // Space/Enter with sheet open closes the drawer
+    onSelect: () => {
+      closeMyCardsDrawer();
+    },
+    // Escape with no selection closes the drawer
+    onEscapeNoSelection: closeMyCardsDrawer,
+  });
+
+  // Arrow/Space keys close drawer when nothing is highlighted (My Cards)
+  // Use capture phase to intercept before the hook processes the keys
+  const myCardsHighlightedIndexRef = useRef(myCardsHighlightedIndex);
+  myCardsHighlightedIndexRef.current = myCardsHighlightedIndex;
+
+  useEffect(() => {
+    if (!showMobileCards) return;
+
+    const handleKeyClose = (e: KeyboardEvent) => {
+      // Only handle when drawer is open and nothing is highlighted
+      if (myCardsHighlightedIndexRef.current >= 0) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeMyCardsDrawer();
+      }
+    };
+
+    // Use capture to run before the hook's listener
+    window.addEventListener('keydown', handleKeyClose, true);
+    return () => window.removeEventListener('keydown', handleKeyClose, true);
+  }, [showMobileCards, closeMyCardsDrawer]);
+
+  // Sync My Cards keyboard navigation with mobileViewCard state
+  useEffect(() => {
+    if (myCardsSelectedCard) {
+      setMobileViewCard(myCardsSelectedCard);
+    }
+  }, [myCardsSelectedCard]);
+
+  // Close My Cards sheet when mobileViewCard is cleared externally
+  useEffect(() => {
+    if (!mobileViewCard && isMyCardsSheetOpen) {
+      closeMyCardsSheet();
+    }
+  }, [mobileViewCard, isMyCardsSheetOpen, closeMyCardsSheet]);
+
   // Reset description expansion when card changes (must be after useCardKeyboardNavigation)
   useEffect(() => {
     setShowFullDescription(false);
   }, [selectedCard?.id]);
 
-  // Auto-scroll to keep highlighted card visible
+  // Auto-scroll to keep highlighted card visible (Current Pack)
   useEffect(() => {
     if (highlightedIndex < 0) return;
 
@@ -895,6 +969,16 @@ export function Draft() {
       highlightedCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }, [highlightedIndex]);
+
+  // Auto-scroll to keep highlighted card visible (My Cards drawer)
+  useEffect(() => {
+    if (myCardsHighlightedIndex < 0 || !showMobileCards) return;
+
+    const highlightedCard = document.querySelector(`[data-my-card-index="${myCardsHighlightedIndex}"]`);
+    if (highlightedCard) {
+      highlightedCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [myCardsHighlightedIndex, showMobileCards]);
 
   // Calculate pack progress (account for burned cards)
   const picksPerPack = session
@@ -1668,13 +1752,20 @@ export function Draft() {
                   /* Cards grid - smaller cards for more visibility */
                   filteredDraftedCards.length > 0 ? (
                     <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
-                      {filteredDraftedCards.map((card) => (
+                      {filteredDraftedCards.map((card, index) => (
                         <div
                           key={card.id}
-                          onClick={() => setMobileViewCard(card)}
+                          data-my-card-index={index}
+                          onClick={() => handleMyCardsCardClick(card, index)}
                           className="cursor-pointer active:scale-95 transition-transform"
                         >
-                          <YuGiOhCard card={card} size="full" showTier={showScores} flush />
+                          <YuGiOhCard
+                            card={card}
+                            size="full"
+                            showTier={showScores}
+                            flush
+                            isHighlighted={myCardsHighlightedIndex === index}
+                          />
                         </div>
                       ))}
                     </div>

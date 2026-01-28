@@ -62,15 +62,15 @@ export function CardDetailSheet({
             <div className="flex-shrink-0">
               {/* Mobile */}
               <div className="md:hidden">
-                <YuGiOhCard card={card} size="xl" showTier />
+                <YuGiOhCard card={card} size="xl" showTier={!hideScores} />
               </div>
               {/* Tablet */}
               <div className="hidden md:block lg:hidden">
-                <YuGiOhCard card={card} size="2xl" showTier />
+                <YuGiOhCard card={card} size="2xl" showTier={!hideScores} />
               </div>
               {/* Desktop */}
               <div className="hidden lg:block">
-                <YuGiOhCard card={card} size="3xl" showTier />
+                <YuGiOhCard card={card} size="3xl" showTier={!hideScores} />
               </div>
             </div>
 
