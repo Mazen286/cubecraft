@@ -9,7 +9,7 @@ import { cn } from '../lib/utils';
 import { draftService, getPlayerName, setPlayerName, clearLastSession } from '../services/draftService';
 import { auctionService } from '../services/auctionService';
 import { cubeService, type CubeInfo } from '../services/cubeService';
-import { useGameConfig } from '../context/GameContext';
+import { useGameConfig, getGameConfig } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
 import { Eye, HelpCircle, ChevronRight, Lock, Globe } from 'lucide-react';
 
@@ -120,13 +120,26 @@ export function DraftSetup() {
     ? 1 + settings.botCount
     : settings.playerCount;
 
-  // Memoized cube selection handler - also updates the game context
+  // Memoized cube selection handler - also updates the game context and applies game-specific defaults
   const handleCubeSelect = useCallback((cubeId: string) => {
     setSelectedCube(cubeId);
     // Update game context based on cube's game
     const cube = allCubes.find(c => c.id === cubeId);
     if (cube?.gameId) {
       setGame(cube.gameId);
+      // Apply game-specific draft defaults
+      const gameConfig = getGameConfig(cube.gameId);
+      if (gameConfig?.draftDefaults) {
+        const defaults = gameConfig.draftDefaults;
+        setSettings(prev => ({
+          ...prev,
+          playerCount: defaults.playerCount ?? prev.playerCount,
+          cardsPerPlayer: defaults.cardsPerPlayer ?? prev.cardsPerPlayer,
+          packSize: defaults.packSize ?? prev.packSize,
+          burnedPerPack: defaults.burnedPerPack ?? prev.burnedPerPack,
+          timerSeconds: defaults.timerSeconds ?? prev.timerSeconds,
+        }));
+      }
     }
   }, [allCubes, setGame]);
 

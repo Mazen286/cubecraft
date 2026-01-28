@@ -159,3 +159,6 @@ export function getActiveGameConfig(): GameConfig {
   }
   return getGameConfig(DEFAULT_GAME_ID);
 }
+
+// Re-export getGameConfig for use in components that need to look up game config by ID
+export { getGameConfig };

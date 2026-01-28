@@ -524,6 +524,15 @@ export const mtgConfig: GameConfig = {
     },
   ],
 
+  // MTG traditional draft: 3 packs of 15 cards, 8 players, 45 cards total
+  draftDefaults: {
+    playerCount: 8,
+    cardsPerPlayer: 45, // 15 cards × 3 packs
+    packSize: 15,
+    burnedPerPack: 0,
+    timerSeconds: 60,
+  },
+
   api: {
     baseUrl: 'https://api.scryfall.com',
     searchEndpoint: '/cards/search',

@@ -232,6 +232,18 @@ export interface GameConfig {
    */
   basicResources?: BasicResource[];
 
+  /**
+   * Default draft settings for this game
+   * These override the global defaults when a cube of this game is selected
+   */
+  draftDefaults?: {
+    playerCount?: number;
+    cardsPerPlayer?: number;
+    packSize?: number;
+    burnedPerPack?: number;
+    timerSeconds?: number;
+  };
+
   /** API configuration (optional, for fetching card data) */
   api?: {
     baseUrl: string;

@@ -483,6 +483,15 @@ export const yugiohConfig: GameConfig = {
     },
   ],
 
+  // Yu-Gi-Oh draft defaults: larger deck size, burn extra cards
+  draftDefaults: {
+    playerCount: 2,
+    cardsPerPlayer: 60,
+    packSize: 15,
+    burnedPerPack: 5,
+    timerSeconds: 120,
+  },
+
   api: {
     baseUrl: 'https://db.ygoprodeck.com/api/v7',
     searchEndpoint: '/cardinfo.php',
