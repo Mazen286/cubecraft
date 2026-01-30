@@ -280,6 +280,50 @@
       "maxBonus": 10
     },
     {
+      "id": "sangan-targets",
+      "name": "Sangan Targets",
+      "category": "recruiter",
+      "description": "Sangan can search monsters with 1500 or less ATK",
+      "trigger": { "cardName": "Sangan" },
+      "boost": { "and": [{ "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Sangan"] }] },
+      "bonus": 4,
+      "bonusType": "flat"
+    },
+    {
+      "id": "sangan-enabler",
+      "name": "Sangan",
+      "category": "recruiter",
+      "description": "Monsters with 1500 ATK or less make Sangan valuable",
+      "trigger": { "and": [{ "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Sangan"] }] },
+      "boost": { "cardName": "Sangan" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "witch-of-the-black-forest-targets",
+      "name": "Witch of the Black Forest Targets",
+      "category": "recruiter",
+      "description": "Witch of the Black Forest can search monsters with 1500 or less DEF",
+      "trigger": { "cardName": "Witch of the Black Forest" },
+      "boost": { "and": [{ "maxDef": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Witch of the Black Forest"] }] },
+      "bonus": 4,
+      "bonusType": "flat"
+    },
+    {
+      "id": "witch-of-the-black-forest-enabler",
+      "name": "Witch of the Black Forest",
+      "category": "recruiter",
+      "description": "Monsters with 1500 DEF or less make Witch of the Black Forest valuable",
+      "trigger": { "and": [{ "maxDef": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Witch of the Black Forest"] }] },
+      "boost": { "cardName": "Witch of the Black Forest" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
       "id": "mezuki-zombie-world",
       "name": "Mezuki + Zombie World",
       "category": "type",
