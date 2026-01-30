@@ -258,6 +258,28 @@
       "maxBonus": 8
     },
     {
+      "id": "chocolate-magician-girl-spellcasters",
+      "name": "Chocolate Magician Girl Targets",
+      "category": "type",
+      "description": "Chocolate Magician Girl can discard Spellcasters to draw and revive them when attacked",
+      "trigger": { "cardName": "Chocolate Magician Girl" },
+      "boost": { "and": [{ "race": "Spellcaster" }, { "mainDeckOnly": true }, { "excludeCards": ["Chocolate Magician Girl"] }] },
+      "bonus": 4,
+      "bonusType": "flat"
+    },
+    {
+      "id": "chocolate-magician-girl-enabler",
+      "name": "Chocolate Magician Girl",
+      "category": "type",
+      "description": "Spellcasters make Chocolate Magician Girl valuable for draw power and revival",
+      "trigger": { "and": [{ "race": "Spellcaster" }, { "mainDeckOnly": true }, { "excludeCards": ["Chocolate Magician Girl"] }] },
+      "boost": { "cardName": "Chocolate Magician Girl" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
       "id": "mezuki-zombie-world",
       "name": "Mezuki + Zombie World",
       "category": "type",
