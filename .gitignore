@@ -36,3 +36,4 @@ coverage/
 
 # MCP config (local)
 .mcp.json
+supabase/.temp/
