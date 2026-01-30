@@ -1,0 +1,1701 @@
+{
+  "cubeId": "the-library",
+  "version": 1,
+  "rules": [
+    {
+      "id": "tour-guide-fiends",
+      "name": "Tour Guide Targets",
+      "description": "Level 3 Fiends can be summoned by Tour Guide",
+      "trigger": { "cardName": "Tour Guide From the Underworld" },
+      "boost": { "and": [{ "level": 3 }, { "race": "Fiend" }, { "mainDeckOnly": true }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "kashtira-archetype",
+      "name": "Kashtira Synergy",
+      "description": "Kashtira cards work best together",
+      "trigger": { "archetype": "Kashtira" },
+      "boost": { "archetype": "Kashtira" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "maliss-archetype",
+      "name": "Maliss Synergy",
+      "description": "Maliss cards combo together",
+      "trigger": { "archetype": "Maliss" },
+      "boost": { "archetype": "Maliss" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "maliss-links-need-monsters",
+      "name": "Maliss Link Synergy",
+      "description": "Maliss Links need main deck Maliss monsters to function",
+      "trigger": { "and": [{ "archetype": "Maliss" }, { "mainDeckOnly": true }] },
+      "boost": { "and": [{ "archetype": "Maliss" }, { "cardType": "link" }] },
+      "bonus": 5,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 15
+    },
+    {
+      "id": "maliss-monsters-want-links",
+      "name": "Maliss Monster Synergy",
+      "description": "Maliss main deck monsters want their Link monsters",
+      "trigger": { "and": [{ "archetype": "Maliss" }, { "cardType": "link" }] },
+      "boost": { "and": [{ "archetype": "Maliss" }, { "mainDeckOnly": true }] },
+      "bonus": 4,
+      "bonusType": "flat"
+    },
+    {
+      "id": "toy-box-toys",
+      "name": "Toy Box Synergy",
+      "description": "Toy Box makes all Toy cards valuable",
+      "trigger": { "cardName": "Toy Box" },
+      "boost": { "archetype": "Toy" },
+      "bonus": 8,
+      "bonusType": "flat"
+    },
+    {
+      "id": "machina-fortress-machines",
+      "name": "Machina Fortress Synergy",
+      "description": "Machine monsters fuel Machina Fortress",
+      "trigger": { "cardName": "Machina Fortress" },
+      "boost": { "race": "Machine" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "giant-rat-earth",
+      "name": "Giant Rat Targets",
+      "description": "Giant Rat can recruit Earth monsters with 1500 or less ATK",
+      "trigger": { "cardName": "Giant Rat" },
+      "boost": { "and": [{ "attribute": "EARTH" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "giant-rat-enabler",
+      "name": "Giant Rat",
+      "description": "EARTH monsters with 1500 ATK or less make Giant Rat valuable",
+      "trigger": { "and": [{ "attribute": "EARTH" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Giant Rat" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "shining-angel-light",
+      "name": "Shining Angel Targets",
+      "description": "Shining Angel can recruit Light monsters with 1500 or less ATK",
+      "trigger": { "cardName": "Shining Angel" },
+      "boost": { "and": [{ "attribute": "LIGHT" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Fortune Lady Every"] }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "shining-angel-enabler",
+      "name": "Shining Angel",
+      "description": "LIGHT monsters with 1500 ATK or less make Shining Angel valuable",
+      "trigger": { "and": [{ "attribute": "LIGHT" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Fortune Lady Every"] }] },
+      "boost": { "cardName": "Shining Angel" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "apprentice-illusion-dark-spellcasters",
+      "name": "Apprentice Illusion Magician Targets",
+      "description": "Apprentice Illusion Magician can boost DARK Spellcasters by 2000 ATK",
+      "trigger": { "cardName": "Apprentice Illusion Magician" },
+      "boost": { "and": [{ "attribute": "DARK" }, { "race": "Spellcaster" }] },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "apprentice-illusion-enabler",
+      "name": "Apprentice Illusion Magician",
+      "description": "DARK Spellcasters benefit from Apprentice Illusion Magician's ATK boost",
+      "trigger": { "and": [{ "attribute": "DARK" }, { "race": "Spellcaster" }] },
+      "boost": { "cardName": "Apprentice Illusion Magician" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "apprentice-illusion-dark-magician",
+      "name": "Apprentice Searches Dark Magician",
+      "description": "Apprentice Illusion Magician can search Dark Magician",
+      "trigger": { "cardName": "Apprentice Illusion Magician" },
+      "boost": { "cardName": "Dark Magician" },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "dark-magician-apprentice-illusion",
+      "name": "Dark Magician Searcher",
+      "description": "Dark Magician makes Apprentice Illusion Magician more valuable",
+      "trigger": { "cardName": "Dark Magician" },
+      "boost": { "cardName": "Apprentice Illusion Magician" },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "kinka-byo-targets",
+      "name": "Kinka-byo Targets",
+      "description": "Kinka-byo can revive Level 1 monsters from the GY",
+      "trigger": { "cardName": "Kinka-byo" },
+      "boost": { "and": [{ "level": 1 }, { "mainDeckOnly": true }, { "excludeCards": ["Kinka-byo"] }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "kinka-byo-enabler",
+      "name": "Kinka-byo",
+      "description": "Level 1 monsters make Kinka-byo valuable",
+      "trigger": { "and": [{ "level": 1 }, { "mainDeckOnly": true }, { "excludeCards": ["Kinka-byo"] }] },
+      "boost": { "cardName": "Kinka-byo" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "flying-kamakiri-wind",
+      "name": "Flying Kamakiri #1 Targets",
+      "description": "Flying Kamakiri #1 can recruit Wind monsters with 1500 or less ATK",
+      "trigger": { "cardName": "Flying Kamakiri #1" },
+      "boost": { "and": [{ "attribute": "WIND" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Fortune Lady Wind"] }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "flying-kamakiri-enabler",
+      "name": "Flying Kamakiri #1",
+      "description": "WIND monsters with 1500 ATK or less make Flying Kamakiri #1 valuable",
+      "trigger": { "and": [{ "attribute": "WIND" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Fortune Lady Wind"] }] },
+      "boost": { "cardName": "Flying Kamakiri #1" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "mystic-tomato-dark",
+      "name": "Mystic Tomato Targets",
+      "description": "Mystic Tomato can recruit Dark monsters with 1500 or less ATK",
+      "trigger": { "cardName": "Mystic Tomato" },
+      "boost": { "and": [{ "attribute": "DARK" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Kinka-byo", "Exodius the Ultimate Forbidden Lord", "Endless Decay", "Fortune Lady Dark", "Fortune Lady Past", "Eater of Millions", "The Unstoppable Exodia Incarnate", "Tragoedia"] }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "mystic-tomato-enabler",
+      "name": "Mystic Tomato",
+      "description": "DARK monsters with 1500 ATK or less make Mystic Tomato valuable",
+      "trigger": { "and": [{ "attribute": "DARK" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Kinka-byo", "Exodius the Ultimate Forbidden Lord", "Endless Decay", "Fortune Lady Dark", "Fortune Lady Past", "Eater of Millions", "The Unstoppable Exodia Incarnate", "Tragoedia"] }] },
+      "boost": { "cardName": "Mystic Tomato" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "mezuki-zombie-world",
+      "name": "Mezuki + Zombie World",
+      "description": "Mezuki becomes insanely powerful with Zombie World",
+      "trigger": { "cardName": "Mezuki" },
+      "boost": { "cardName": "Zombie World" },
+      "bonus": 8,
+      "bonusType": "flat"
+    },
+    {
+      "id": "zombie-world-mezuki",
+      "name": "Zombie World + Mezuki",
+      "description": "Zombie World becomes much better with Mezuki",
+      "trigger": { "cardName": "Zombie World" },
+      "boost": { "cardName": "Mezuki" },
+      "bonus": 8,
+      "bonusType": "flat"
+    },
+    {
+      "id": "zombie-world-zombie-master",
+      "name": "Zombie World + Zombie Master",
+      "description": "Zombie Master combos with Zombie World",
+      "trigger": { "cardName": "Zombie World" },
+      "boost": { "cardName": "Zombie Master" },
+      "bonus": 6,
+      "bonusType": "flat"
+    },
+    {
+      "id": "zombie-master-zombie-world",
+      "name": "Zombie Master + Zombie World",
+      "description": "Zombie World enables Zombie Master's full potential",
+      "trigger": { "cardName": "Zombie Master" },
+      "boost": { "cardName": "Zombie World" },
+      "bonus": 6,
+      "bonusType": "flat"
+    },
+    {
+      "id": "zombie-world-zombies",
+      "name": "Zombie World + Zombies",
+      "description": "All Zombies benefit from Zombie World",
+      "trigger": { "cardName": "Zombie World" },
+      "boost": { "race": "Zombie" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "zombies-zombie-world",
+      "name": "Zombies want Zombie World",
+      "description": "The more Zombies you have, the better Zombie World becomes",
+      "trigger": { "race": "Zombie" },
+      "boost": { "cardName": "Zombie World" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "runick-spells-fusions",
+      "name": "Runick Spell → Fusion",
+      "description": "Runick Spells make Runick Fusions valuable",
+      "trigger": { "archetype": "Runick", "cardType": "spell" },
+      "boost": { "and": [{ "archetype": "Runick" }, { "cardType": "fusion" }] },
+      "bonus": 5,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
+    },
+    {
+      "id": "crane-crane-level3",
+      "name": "Crane Crane Targets",
+      "description": "Level 3 monsters can be revived by Crane Crane",
+      "trigger": { "cardName": "Crane Crane" },
+      "boost": { "and": [{ "level": 3 }, { "mainDeckOnly": true }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "dark-end-evaporation-dragon",
+      "name": "Dark End Evaporation Dragon",
+      "description": "Level 8 Dragon Synchro/Fusion enables Dark End's summon",
+      "trigger": { "and": [{ "level": 8 }, { "race": "Dragon" }, { "or": [{ "cardType": "synchro" }, { "cardType": "fusion" }] }] },
+      "boost": { "cardName": "Dark End Evaporation Dragon" },
+      "bonus": 8,
+      "bonusType": "flat"
+    },
+    {
+      "id": "dark-end-evaporation-dragon-reverse",
+      "name": "Dark End Target",
+      "description": "Dark End Evaporation Dragon can summon Level 8 Dragon Synchro/Fusions",
+      "trigger": { "cardName": "Dark End Evaporation Dragon" },
+      "boost": { "and": [{ "level": 8 }, { "race": "Dragon" }, { "or": [{ "cardType": "synchro" }, { "cardType": "fusion" }] }] },
+      "bonus": 8,
+      "bonusType": "flat"
+    },
+    {
+      "id": "pyramid-turtle-targets",
+      "name": "Pyramid Turtle Targets",
+      "description": "Pyramid Turtle can recruit Zombies with 2000 or less DEF",
+      "trigger": { "cardName": "Pyramid Turtle" },
+      "boost": { "and": [{ "race": "Zombie" }, { "maxDef": 2000 }, { "mainDeckOnly": true }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "pyramid-turtle-enabler",
+      "name": "Pyramid Turtle",
+      "description": "Zombies with 2000 DEF or less make Pyramid Turtle valuable",
+      "trigger": { "and": [{ "race": "Zombie" }, { "maxDef": 2000 }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Pyramid Turtle" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "hiita-fire-charmer",
+      "name": "Hiita Synergy",
+      "description": "FIRE monsters synergize with Hiita the Fire Charmer",
+      "trigger": { "attribute": "FIRE" },
+      "boost": { "cardName": "Hiita the Fire Charmer, Ablaze" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "hiita-fire-charmer-reverse",
+      "name": "Hiita Targets",
+      "description": "Hiita boosts FIRE monsters",
+      "trigger": { "cardName": "Hiita the Fire Charmer, Ablaze" },
+      "boost": { "attribute": "FIRE" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "wynn-wind-charmer",
+      "name": "Wynn Synergy",
+      "description": "WIND monsters synergize with Wynn the Wind Charmer",
+      "trigger": { "attribute": "WIND" },
+      "boost": { "cardName": "Wynn the Wind Charmer, Verdant" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "wynn-wind-charmer-reverse",
+      "name": "Wynn Targets",
+      "description": "Wynn boosts WIND monsters",
+      "trigger": { "cardName": "Wynn the Wind Charmer, Verdant" },
+      "boost": { "attribute": "WIND" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "eria-water-charmer",
+      "name": "Eria Synergy",
+      "description": "WATER monsters synergize with Eria the Water Charmer",
+      "trigger": { "attribute": "WATER" },
+      "boost": { "cardName": "Eria the Water Charmer, Gentle" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "eria-water-charmer-reverse",
+      "name": "Eria Targets",
+      "description": "Eria boosts WATER monsters",
+      "trigger": { "cardName": "Eria the Water Charmer, Gentle" },
+      "boost": { "attribute": "WATER" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "aussa-earth-charmer",
+      "name": "Aussa Synergy",
+      "description": "EARTH monsters synergize with Aussa the Earth Charmer",
+      "trigger": { "attribute": "EARTH" },
+      "boost": { "cardName": "Aussa the Earth Charmer, Immovable" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "aussa-earth-charmer-reverse",
+      "name": "Aussa Targets",
+      "description": "Aussa boosts EARTH monsters",
+      "trigger": { "cardName": "Aussa the Earth Charmer, Immovable" },
+      "boost": { "attribute": "EARTH" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "lyna-light-charmer",
+      "name": "Lyna Synergy",
+      "description": "LIGHT monsters synergize with Lyna the Light Charmer",
+      "trigger": { "attribute": "LIGHT" },
+      "boost": { "cardName": "Lyna the Light Charmer, Lustrous" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "lyna-light-charmer-reverse",
+      "name": "Lyna Targets",
+      "description": "Lyna boosts LIGHT monsters",
+      "trigger": { "cardName": "Lyna the Light Charmer, Lustrous" },
+      "boost": { "attribute": "LIGHT" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "dharc-dark-charmer",
+      "name": "Dharc Synergy",
+      "description": "DARK monsters synergize with Dharc the Dark Charmer",
+      "trigger": { "attribute": "DARK" },
+      "boost": { "cardName": "Dharc the Dark Charmer, Gloomy" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "dharc-dark-charmer-reverse",
+      "name": "Dharc Targets",
+      "description": "Dharc boosts DARK monsters",
+      "trigger": { "cardName": "Dharc the Dark Charmer, Gloomy" },
+      "boost": { "attribute": "DARK" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "instant-fusion-targets",
+      "name": "Instant Fusion Targets",
+      "description": "Instant Fusion can cheat out Level 5 or lower Fusions",
+      "trigger": { "cardName": "Instant Fusion" },
+      "boost": { "and": [{ "cardType": "fusion" }, { "maxLevel": 5 }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "instant-fusion-enabler",
+      "name": "Instant Fusion",
+      "description": "Level 5 or lower Fusions make Instant Fusion valuable",
+      "trigger": { "and": [{ "cardType": "fusion" }, { "maxLevel": 5 }] },
+      "boost": { "cardName": "Instant Fusion" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "metamorphosis-lv1-fusions",
+      "name": "Metamorphosis Lv1",
+      "description": "Metamorphosis can summon Level 1 Fusions",
+      "trigger": { "cardName": "Metamorphosis" },
+      "boost": { "or": [{ "cardName": "Millennium-Eyes Restrict" }, { "cardName": "Thousand-Eyes Restrict" }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "metamorphosis-lv1-fusions-reverse",
+      "name": "Metamorphosis Target",
+      "description": "Level 1 Fusions make Metamorphosis valuable",
+      "trigger": { "or": [{ "cardName": "Millennium-Eyes Restrict" }, { "cardName": "Thousand-Eyes Restrict" }] },
+      "boost": { "cardName": "Metamorphosis" },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "metamorphosis-lv1-fodder",
+      "name": "Metamorphosis Fodder",
+      "description": "Level 1 monsters are tribute fodder for Metamorphosis",
+      "trigger": { "and": [{ "level": 1 }, { "cardType": "monster" }] },
+      "boost": { "cardName": "Metamorphosis" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "metamorphosis-lv4-fusions",
+      "name": "Metamorphosis Lv4",
+      "description": "Metamorphosis can summon Level 4 Fusions",
+      "trigger": { "cardName": "Metamorphosis" },
+      "boost": { "or": [{ "cardName": "Elder Entity Norden" }, { "cardName": "Geri the Runick Fangs" }, { "cardName": "Mudragon of the Swamp" }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "metamorphosis-lv4-fusions-reverse",
+      "name": "Metamorphosis Target",
+      "description": "Level 4 Fusions make Metamorphosis valuable",
+      "trigger": { "or": [{ "cardName": "Elder Entity Norden" }, { "cardName": "Geri the Runick Fangs" }, { "cardName": "Mudragon of the Swamp" }] },
+      "boost": { "cardName": "Metamorphosis" },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "metamorphosis-lv4-fodder",
+      "name": "Metamorphosis Fodder",
+      "description": "Level 4 monsters are tribute fodder for Metamorphosis",
+      "trigger": { "and": [{ "level": 4 }, { "cardType": "monster" }] },
+      "boost": { "cardName": "Metamorphosis" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "metamorphosis-lv5-fusions",
+      "name": "Metamorphosis Lv5",
+      "description": "Metamorphosis can summon Level 5 Fusions",
+      "trigger": { "cardName": "Metamorphosis" },
+      "boost": { "or": [{ "cardName": "Freki the Runick Fangs" }, { "cardName": "Panzer Dragon" }, { "cardName": "Reaper on the Nightmare" }, { "cardName": "Sea Monster of Theseus" }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "metamorphosis-lv5-fusions-reverse",
+      "name": "Metamorphosis Target",
+      "description": "Level 5 Fusions make Metamorphosis valuable",
+      "trigger": { "or": [{ "cardName": "Freki the Runick Fangs" }, { "cardName": "Panzer Dragon" }, { "cardName": "Reaper on the Nightmare" }, { "cardName": "Sea Monster of Theseus" }] },
+      "boost": { "cardName": "Metamorphosis" },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "metamorphosis-lv5-fodder",
+      "name": "Metamorphosis Fodder",
+      "description": "Level 5 monsters are tribute fodder for Metamorphosis",
+      "trigger": { "and": [{ "level": 5 }, { "cardType": "monster" }] },
+      "boost": { "cardName": "Metamorphosis" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "traptrix-archetype",
+      "name": "Traptrix Synergy",
+      "description": "Traptrix monsters support each other",
+      "trigger": { "archetype": "Traptrix" },
+      "boost": { "archetype": "Traptrix" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "traptrix-traphole-synergy",
+      "name": "Traptrix Trap Hole Synergy",
+      "description": "Traptrix monsters search and interact with Trap Hole cards",
+      "trigger": { "archetype": "Traptrix" },
+      "boost": { "or": [
+        { "cardName": "Trap Hole" },
+        { "cardName": "Bottomless Trap Hole" },
+        { "cardName": "Void Trap Hole" },
+        { "cardName": "Time-Space Trap Hole" },
+        { "cardName": "Deep Dark Trap Hole" },
+        { "cardName": "Traptrix Trap Hole Nightmare" },
+        { "cardName": "Gravedigger's Trap Hole" },
+        { "cardName": "Acid Trap Hole" },
+        { "cardName": "Floodgate Trap Hole" },
+        { "cardName": "Terrifying Trap Hole Nightmare" },
+        { "cardName": "Trap Hole of Spikes" },
+        { "cardName": "Banishing Trap Hole" }
+      ]},
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "traphole-traptrix-synergy",
+      "name": "Trap Hole Synergy",
+      "description": "Trap Hole cards are supported by Traptrix monsters",
+      "trigger": { "or": [
+        { "cardName": "Trap Hole" },
+        { "cardName": "Bottomless Trap Hole" },
+        { "cardName": "Void Trap Hole" },
+        { "cardName": "Time-Space Trap Hole" },
+        { "cardName": "Deep Dark Trap Hole" },
+        { "cardName": "Traptrix Trap Hole Nightmare" },
+        { "cardName": "Gravedigger's Trap Hole" },
+        { "cardName": "Acid Trap Hole" },
+        { "cardName": "Floodgate Trap Hole" },
+        { "cardName": "Terrifying Trap Hole Nightmare" },
+        { "cardName": "Trap Hole of Spikes" },
+        { "cardName": "Banishing Trap Hole" }
+      ]},
+      "boost": { "archetype": "Traptrix" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "magical-scientist-fusions",
+      "name": "Magical Scientist Targets",
+      "description": "Magical Scientist can summon Level 6 or lower Fusions",
+      "trigger": { "cardName": "Magical Scientist" },
+      "boost": { "and": [{ "cardType": "fusion" }, { "maxLevel": 6 }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "magical-scientist-enabler",
+      "name": "Magical Scientist",
+      "description": "Level 6 or lower Fusions make Magical Scientist valuable",
+      "trigger": { "and": [{ "cardType": "fusion" }, { "maxLevel": 6 }] },
+      "boost": { "cardName": "Magical Scientist" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "cyber-stein-fusions",
+      "name": "Cyber-Stein Targets",
+      "description": "Cyber-Stein can summon any Fusion Monster",
+      "trigger": { "cardName": "Cyber-Stein" },
+      "boost": { "cardType": "fusion" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "cyber-stein-enabler",
+      "name": "Cyber-Stein",
+      "description": "Fusion Monsters make Cyber-Stein valuable",
+      "trigger": { "cardType": "fusion" },
+      "boost": { "cardName": "Cyber-Stein" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "black-fang-dark-spellcasters",
+      "name": "Black Fang Targets",
+      "description": "Black Fang Magician can revive DARK Spellcasters when destroyed",
+      "trigger": { "cardName": "Black Fang Magician" },
+      "boost": { "and": [{ "attribute": "DARK" }, { "race": "Spellcaster" }] },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "black-fang-enabler",
+      "name": "Black Fang Magician",
+      "description": "DARK Spellcasters make Black Fang Magician valuable",
+      "trigger": { "and": [{ "attribute": "DARK" }, { "race": "Spellcaster" }] },
+      "boost": { "cardName": "Black Fang Magician" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "chaos-light-synergy",
+      "name": "Chaos Fodder (LIGHT)",
+      "description": "LIGHT monsters can be banished to summon Chaos monsters",
+      "trigger": { "attribute": "LIGHT" },
+      "boost": { "or": [
+        { "cardName": "Chaos Sorcerer" },
+        { "cardName": "Black Luster Soldier - Envoy of the Beginning" },
+        { "cardName": "Chaos Emperor Dragon - Envoy of the End" },
+        { "cardName": "Chaos Dragon Levianeer" },
+        { "cardName": "Lightpulsar Dragon" },
+        { "cardName": "Darkflare Dragon" },
+        { "cardName": "The Chaos Creator" },
+        { "cardName": "Chaos Valkyria" },
+        { "cardName": "Chaos Daedalus" },
+        { "cardName": "Chaos Witch" },
+        { "cardName": "Chaos Beast" }
+      ]},
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 6
+    },
+    {
+      "id": "chaos-dark-synergy",
+      "name": "Chaos Fodder (DARK)",
+      "description": "DARK monsters can be banished to summon Chaos monsters",
+      "trigger": { "attribute": "DARK" },
+      "boost": { "or": [
+        { "cardName": "Chaos Sorcerer" },
+        { "cardName": "Black Luster Soldier - Envoy of the Beginning" },
+        { "cardName": "Chaos Emperor Dragon - Envoy of the End" },
+        { "cardName": "Chaos Dragon Levianeer" },
+        { "cardName": "Lightpulsar Dragon" },
+        { "cardName": "Darkflare Dragon" },
+        { "cardName": "The Chaos Creator" },
+        { "cardName": "Chaos Valkyria" },
+        { "cardName": "Chaos Daedalus" },
+        { "cardName": "Chaos Witch" },
+        { "cardName": "Chaos Beast" }
+      ]},
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 6
+    },
+    {
+      "id": "chaos-boosts-light",
+      "name": "Chaos Synergy",
+      "description": "Chaos monsters make LIGHT monsters more valuable as banish fodder",
+      "trigger": { "or": [
+        { "cardName": "Chaos Sorcerer" },
+        { "cardName": "Black Luster Soldier - Envoy of the Beginning" },
+        { "cardName": "Chaos Emperor Dragon - Envoy of the End" },
+        { "cardName": "Chaos Dragon Levianeer" },
+        { "cardName": "Lightpulsar Dragon" },
+        { "cardName": "Darkflare Dragon" },
+        { "cardName": "The Chaos Creator" },
+        { "cardName": "Chaos Valkyria" },
+        { "cardName": "Chaos Daedalus" },
+        { "cardName": "Chaos Witch" },
+        { "cardName": "Chaos Beast" }
+      ]},
+      "boost": { "attribute": "LIGHT" },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "chaos-boosts-dark",
+      "name": "Chaos Synergy",
+      "description": "Chaos monsters make DARK monsters more valuable as banish fodder",
+      "trigger": { "or": [
+        { "cardName": "Chaos Sorcerer" },
+        { "cardName": "Black Luster Soldier - Envoy of the Beginning" },
+        { "cardName": "Chaos Emperor Dragon - Envoy of the End" },
+        { "cardName": "Chaos Dragon Levianeer" },
+        { "cardName": "Lightpulsar Dragon" },
+        { "cardName": "Darkflare Dragon" },
+        { "cardName": "The Chaos Creator" },
+        { "cardName": "Chaos Valkyria" },
+        { "cardName": "Chaos Daedalus" },
+        { "cardName": "Chaos Witch" },
+        { "cardName": "Chaos Beast" }
+      ]},
+      "boost": { "attribute": "DARK" },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "half-chaos-light",
+      "name": "LIGHT Banish Fodder",
+      "description": "LIGHT monsters can be banished to summon these cards",
+      "trigger": { "attribute": "LIGHT" },
+      "boost": { "or": [
+        { "cardName": "Black Dragon Collapserpent" },
+        { "cardName": "Ghost Ship" }
+      ]},
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 6
+    },
+    {
+      "id": "half-chaos-light-reverse",
+      "name": "LIGHT Banish Synergy",
+      "description": "These cards make LIGHT monsters more valuable",
+      "trigger": { "or": [
+        { "cardName": "Black Dragon Collapserpent" },
+        { "cardName": "Ghost Ship" }
+      ]},
+      "boost": { "attribute": "LIGHT" },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "half-chaos-dark",
+      "name": "DARK Banish Fodder",
+      "description": "DARK monsters can be banished to summon these cards",
+      "trigger": { "attribute": "DARK" },
+      "boost": { "or": [
+        { "cardName": "White Dragon Wyverburster" },
+        { "cardName": "Dark Armed Dragon" }
+      ]},
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 6
+    },
+    {
+      "id": "half-chaos-dark-reverse",
+      "name": "DARK Banish Synergy",
+      "description": "These cards make DARK monsters more valuable",
+      "trigger": { "or": [
+        { "cardName": "White Dragon Wyverburster" },
+        { "cardName": "Dark Armed Dragon" }
+      ]},
+      "boost": { "attribute": "DARK" },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "soul-release-targets",
+      "name": "Soul Release Targets",
+      "description": "Soul Release can banish these cards to trigger their effects",
+      "trigger": { "cardName": "Soul Release" },
+      "boost": { "or": [
+        { "archetype": "Maliss" },
+        { "cardName": "Dotscaper" },
+        { "cardName": "Necroface" }
+      ]},
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "soul-release-enablers",
+      "name": "Soul Release",
+      "description": "Cards that benefit from being banished make Soul Release valuable",
+      "trigger": { "or": [
+        { "archetype": "Maliss" },
+        { "cardName": "Dotscaper" },
+        { "cardName": "Necroface" }
+      ]},
+      "boost": { "cardName": "Soul Release" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "kashtira-birth-level7",
+      "name": "Kashtira Birth Targets",
+      "description": "Kashtira Birth lets you Normal Summon Level 7 monsters without tributing",
+      "trigger": { "cardName": "Kashtira Birth" },
+      "boost": { "and": [{ "level": 7 }, { "mainDeckOnly": true }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "kashtira-birth-enabler",
+      "name": "Kashtira Birth",
+      "description": "Level 7 monsters make Kashtira Birth valuable",
+      "trigger": { "and": [{ "level": 7 }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Kashtira Birth" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "synchro-needs-tuners",
+      "name": "Synchro Materials",
+      "description": "Tuners are required to summon Synchro monsters",
+      "trigger": { "cardType": "tuner" },
+      "boost": { "cardType": "synchro" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "tuners-want-synchros",
+      "name": "Tuner Synergy",
+      "description": "Tuners want Synchro monsters to summon",
+      "trigger": { "cardType": "synchro" },
+      "boost": { "cardType": "tuner" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "xyz-rank2-level2",
+      "name": "Rank 2 XYZ Materials",
+      "description": "Level 2 monsters can be used to summon Rank 2 XYZ",
+      "trigger": { "and": [{ "level": 2 }, { "mainDeckOnly": true }] },
+      "boost": { "and": [{ "level": 2 }, { "cardType": "xyz" }] },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "xyz-rank2-wants-level2",
+      "name": "Rank 2 XYZ Synergy",
+      "description": "Rank 2 XYZ monsters want Level 2 materials",
+      "trigger": { "and": [{ "level": 2 }, { "cardType": "xyz" }] },
+      "boost": { "and": [{ "level": 2 }, { "mainDeckOnly": true }] },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "xyz-rank3-level3",
+      "name": "Rank 3 XYZ Materials",
+      "description": "Level 3 monsters can be used to summon Rank 3 XYZ",
+      "trigger": { "and": [{ "level": 3 }, { "mainDeckOnly": true }] },
+      "boost": { "and": [{ "level": 3 }, { "cardType": "xyz" }] },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "xyz-rank3-wants-level3",
+      "name": "Rank 3 XYZ Synergy",
+      "description": "Rank 3 XYZ monsters want Level 3 materials",
+      "trigger": { "and": [{ "level": 3 }, { "cardType": "xyz" }] },
+      "boost": { "and": [{ "level": 3 }, { "mainDeckOnly": true }] },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "xyz-rank4-level4",
+      "name": "Rank 4 XYZ Materials",
+      "description": "Level 4 monsters can be used to summon Rank 4 XYZ",
+      "trigger": { "and": [{ "level": 4 }, { "mainDeckOnly": true }] },
+      "boost": { "and": [{ "level": 4 }, { "cardType": "xyz" }] },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "xyz-rank4-wants-level4",
+      "name": "Rank 4 XYZ Synergy",
+      "description": "Rank 4 XYZ monsters want Level 4 materials",
+      "trigger": { "and": [{ "level": 4 }, { "cardType": "xyz" }] },
+      "boost": { "and": [{ "level": 4 }, { "mainDeckOnly": true }] },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "xyz-rank5-level5",
+      "name": "Rank 5 XYZ Materials",
+      "description": "Level 5 monsters can be used to summon Rank 5 XYZ",
+      "trigger": { "and": [{ "level": 5 }, { "mainDeckOnly": true }] },
+      "boost": { "and": [{ "level": 5 }, { "cardType": "xyz" }] },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "xyz-rank5-wants-level5",
+      "name": "Rank 5 XYZ Synergy",
+      "description": "Rank 5 XYZ monsters want Level 5 materials",
+      "trigger": { "and": [{ "level": 5 }, { "cardType": "xyz" }] },
+      "boost": { "and": [{ "level": 5 }, { "mainDeckOnly": true }] },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "xyz-rank7-level7",
+      "name": "Rank 7 XYZ Materials",
+      "description": "Level 7 monsters can be used to summon Rank 7 XYZ",
+      "trigger": { "and": [{ "level": 7 }, { "mainDeckOnly": true }] },
+      "boost": { "and": [{ "level": 7 }, { "cardType": "xyz" }] },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "xyz-rank7-wants-level7",
+      "name": "Rank 7 XYZ Synergy",
+      "description": "Rank 7 XYZ monsters want Level 7 materials",
+      "trigger": { "and": [{ "level": 7 }, { "cardType": "xyz" }] },
+      "boost": { "and": [{ "level": 7 }, { "mainDeckOnly": true }] },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "dark-simorgh-materials",
+      "name": "Dark Simorgh Materials",
+      "description": "Dark Simorgh needs both DARK and WIND monsters to summon",
+      "requiresAll": [
+        { "and": [{ "attribute": "DARK" }, { "mainDeckOnly": true }] },
+        { "and": [{ "attribute": "WIND" }, { "mainDeckOnly": true }] }
+      ],
+      "trigger": { "or": [
+        { "and": [{ "attribute": "DARK" }, { "mainDeckOnly": true }] },
+        { "and": [{ "attribute": "WIND" }, { "mainDeckOnly": true }] }
+      ]},
+      "boost": { "cardName": "Dark Simorgh" },
+      "bonus": 6,
+      "bonusType": "flat"
+    },
+    {
+      "id": "dark-simorgh-boosts-fodder",
+      "name": "Dark Simorgh Fodder",
+      "description": "Dark Simorgh makes DARK and WIND monsters more valuable",
+      "trigger": { "cardName": "Dark Simorgh" },
+      "boost": { "or": [
+        { "and": [{ "attribute": "DARK" }, { "mainDeckOnly": true }] },
+        { "and": [{ "attribute": "WIND" }, { "mainDeckOnly": true }] }
+      ]},
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "duality-light",
+      "name": "Duality Targets",
+      "description": "Duality can tribute/summon LIGHT monsters",
+      "trigger": { "cardName": "Duality" },
+      "boost": { "and": [{ "attribute": "LIGHT" }, { "mainDeckOnly": true }] },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "duality-dark",
+      "name": "Duality Targets",
+      "description": "Duality can tribute/summon DARK monsters",
+      "trigger": { "cardName": "Duality" },
+      "boost": { "and": [{ "attribute": "DARK" }, { "mainDeckOnly": true }] },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "duality-enabler-light",
+      "name": "Duality",
+      "description": "LIGHT monsters enable Duality",
+      "trigger": { "and": [{ "attribute": "LIGHT" }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Duality" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 6
+    },
+    {
+      "id": "duality-enabler-dark",
+      "name": "Duality",
+      "description": "DARK monsters enable Duality",
+      "trigger": { "and": [{ "attribute": "DARK" }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Duality" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 6
+    },
+    {
+      "id": "sky-striker-archetype",
+      "name": "Sky Striker Synergy",
+      "description": "Sky Striker cards work best together",
+      "trigger": { "archetype": "Sky Striker" },
+      "boost": { "archetype": "Sky Striker" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "lightsworn-archetype",
+      "name": "Lightsworn Synergy",
+      "description": "Lightsworn cards mill and support each other",
+      "trigger": { "archetype": "Lightsworn" },
+      "boost": { "archetype": "Lightsworn" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "blackwing-archetype",
+      "name": "Blackwing Synergy",
+      "description": "Blackwing cards swarm and support each other",
+      "trigger": { "archetype": "Blackwing" },
+      "boost": { "archetype": "Blackwing" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "blackwing-synchros-need-tuners",
+      "name": "Blackwing Synchro Synergy",
+      "description": "Blackwing Synchros need Blackwing Tuners",
+      "trigger": { "and": [{ "archetype": "Blackwing" }, { "cardType": "tuner" }] },
+      "boost": { "and": [{ "archetype": "Blackwing" }, { "cardType": "synchro" }] },
+      "bonus": 8,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 15
+    },
+    {
+      "id": "blackwing-tuners-want-synchros",
+      "name": "Blackwing Tuner Synergy",
+      "description": "Blackwing Tuners want their Synchro payoffs",
+      "trigger": { "and": [{ "archetype": "Blackwing" }, { "cardType": "synchro" }] },
+      "boost": { "and": [{ "archetype": "Blackwing" }, { "cardType": "tuner" }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "archfiend-archetype",
+      "name": "Archfiend Synergy",
+      "description": "Archfiend cards work best together",
+      "trigger": { "archetype": "Archfiend" },
+      "boost": { "archetype": "Archfiend" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "monarch-archetype",
+      "name": "Monarch Synergy",
+      "description": "Monarch cards support tribute summoning",
+      "trigger": { "archetype": "Monarch" },
+      "boost": { "archetype": "Monarch" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "danger-archetype",
+      "name": "Danger! Synergy",
+      "description": "Danger! cards discard and special summon each other",
+      "trigger": { "archetype": "Danger!" },
+      "boost": { "archetype": "Danger!" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "vampire-archetype",
+      "name": "Vampire Synergy",
+      "description": "Vampire cards support each other",
+      "trigger": { "archetype": "Vampire" },
+      "boost": { "archetype": "Vampire" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "mekk-knight-archetype",
+      "name": "Mekk-Knight Synergy",
+      "description": "Mekk-Knight cards work in columns together",
+      "trigger": { "archetype": "Mekk-Knight" },
+      "boost": { "archetype": "Mekk-Knight" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "endymion-archetype",
+      "name": "Endymion Synergy",
+      "description": "Endymion cards generate and use Spell Counters",
+      "trigger": { "archetype": "Endymion" },
+      "boost": { "archetype": "Endymion" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "dogmatika-archetype",
+      "name": "Dogmatika Synergy",
+      "description": "Dogmatika cards punish Extra Deck usage",
+      "trigger": { "archetype": "Dogmatika" },
+      "boost": { "archetype": "Dogmatika" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "paleozoic-archetype",
+      "name": "Paleozoic Synergy",
+      "description": "Paleozoic traps revive each other",
+      "trigger": { "archetype": "Paleozoic" },
+      "boost": { "archetype": "Paleozoic" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "mythical-beast-archetype",
+      "name": "Mythical Beast Synergy",
+      "description": "Mythical Beast cards use Spell Counters",
+      "trigger": { "archetype": "Mythical Beast" },
+      "boost": { "archetype": "Mythical Beast" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "labrynth-archetype",
+      "name": "Labrynth Synergy",
+      "description": "Labrynth cards trigger off Normal Traps",
+      "trigger": { "archetype": "Labrynth" },
+      "boost": { "archetype": "Labrynth" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "destiny-hero-archetype",
+      "name": "Destiny HERO Synergy",
+      "description": "Destiny HERO cards support each other",
+      "trigger": { "archetype": "Destiny HERO" },
+      "boost": { "archetype": "Destiny HERO" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "bystial-archetype",
+      "name": "Bystial Synergy",
+      "description": "Bystial dragons banish LIGHT/DARK monsters",
+      "trigger": { "archetype": "Bystial" },
+      "boost": { "archetype": "Bystial" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "burning-abyss-archetype",
+      "name": "Burning Abyss Synergy",
+      "description": "Burning Abyss cards work exclusively together",
+      "trigger": { "archetype": "Burning Abyss" },
+      "boost": { "archetype": "Burning Abyss" },
+      "bonus": 4,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
+    },
+    {
+      "id": "performapal-archetype",
+      "name": "Performapal Synergy",
+      "description": "Performapal cards pendulum together",
+      "trigger": { "archetype": "Performapal" },
+      "boost": { "archetype": "Performapal" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "performage-archetype",
+      "name": "Performage Synergy",
+      "description": "Performage cards combo together",
+      "trigger": { "archetype": "Performage" },
+      "boost": { "archetype": "Performage" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "dark-magician-archetype",
+      "name": "Dark Magician Synergy",
+      "description": "Dark Magician support cards work together",
+      "trigger": { "archetype": "Dark Magician" },
+      "boost": { "archetype": "Dark Magician" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "witchcrafter-archetype",
+      "name": "Witchcrafter Synergy",
+      "description": "Witchcrafter cards recycle spells",
+      "trigger": { "archetype": "Witchcrafter" },
+      "boost": { "archetype": "Witchcrafter" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "shaddoll-archetype",
+      "name": "Shaddoll Synergy",
+      "description": "Shaddoll cards flip and fuse together",
+      "trigger": { "archetype": "Shaddoll" },
+      "boost": { "archetype": "Shaddoll" },
+      "bonus": 4,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "phantom-knights-archetype",
+      "name": "Phantom Knights Synergy",
+      "description": "Phantom Knights cards support each other from GY",
+      "trigger": { "archetype": "Phantom Knights" },
+      "boost": { "archetype": "Phantom Knights" },
+      "bonus": 4,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "d-d-archetype",
+      "name": "D.D. Synergy",
+      "description": "D.D. cards banish and return",
+      "trigger": { "archetype": "D.D." },
+      "boost": { "archetype": "D.D." },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "kuriboh-archetype",
+      "name": "Kuriboh Synergy",
+      "description": "Kuriboh cards protect and multiply",
+      "trigger": { "archetype": "Kuriboh" },
+      "boost": { "archetype": "Kuriboh" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "noble-knight-archetype",
+      "name": "Noble Knight Synergy",
+      "description": "Noble Knight cards equip and support each other",
+      "trigger": { "archetype": "Noble Knight" },
+      "boost": { "archetype": "Noble Knight" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "fortune-lady-archetype",
+      "name": "Fortune Lady Synergy",
+      "description": "Fortune Lady cards level up together",
+      "trigger": { "archetype": "Fortune Lady" },
+      "boost": { "archetype": "Fortune Lady" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "synchron-archetype",
+      "name": "Synchron Synergy",
+      "description": "Synchron tuners combo together",
+      "trigger": { "archetype": "Synchron" },
+      "boost": { "archetype": "Synchron" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "stardust-archetype",
+      "name": "Stardust Synergy",
+      "description": "Stardust cards protect and revive each other",
+      "trigger": { "archetype": "Stardust" },
+      "boost": { "archetype": "Stardust" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "ice-barrier-archetype",
+      "name": "Ice Barrier Synergy",
+      "description": "Ice Barrier cards work together",
+      "trigger": { "archetype": "Ice Barrier" },
+      "boost": { "archetype": "Ice Barrier" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "red-eyes-archetype",
+      "name": "Red-Eyes Synergy",
+      "description": "Red-Eyes cards support each other",
+      "trigger": { "archetype": "Red-Eyes" },
+      "boost": { "archetype": "Red-Eyes" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "nemleria-archetype",
+      "name": "Nemleria Synergy",
+      "description": "Nemleria cards search and combo together",
+      "trigger": { "archetype": "Nemleria" },
+      "boost": { "archetype": "Nemleria" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "white-forest-archetype",
+      "name": "White Forest Synergy",
+      "description": "White Forest cards support each other",
+      "trigger": { "archetype": "White Forest" },
+      "boost": { "archetype": "White Forest" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "gaia-archetype",
+      "name": "Gaia Synergy",
+      "description": "Gaia The Fierce Knight cards fusion together",
+      "trigger": { "archetype": "Gaia The Fierce Knight" },
+      "boost": { "archetype": "Gaia The Fierce Knight" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "rose-dragon-archetype",
+      "name": "Rose Dragon Synergy",
+      "description": "Rose Dragon cards synchro together",
+      "trigger": { "archetype": "Rose Dragon" },
+      "boost": { "archetype": "Rose Dragon" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "borrel-archetype",
+      "name": "Borrel Synergy",
+      "description": "Borrel cards link together",
+      "trigger": { "archetype": "Borrel" },
+      "boost": { "archetype": "Borrel" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "knightmare-archetype",
+      "name": "Knightmare Synergy",
+      "description": "Knightmare links co-link and draw",
+      "trigger": { "archetype": "Knightmare" },
+      "boost": { "archetype": "Knightmare" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "endymion-mythical-beast",
+      "name": "Spell Counter Synergy",
+      "description": "Endymion and Mythical Beast share Spell Counters",
+      "trigger": { "archetype": "Endymion" },
+      "boost": { "archetype": "Mythical Beast" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "mythical-beast-endymion",
+      "name": "Spell Counter Synergy",
+      "description": "Mythical Beast and Endymion share Spell Counters",
+      "trigger": { "archetype": "Mythical Beast" },
+      "boost": { "archetype": "Endymion" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "performapal-performage",
+      "name": "PePe Synergy",
+      "description": "Performapal and Performage work together",
+      "trigger": { "archetype": "Performapal" },
+      "boost": { "archetype": "Performage" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "performage-performapal",
+      "name": "PePe Synergy",
+      "description": "Performage and Performapal work together",
+      "trigger": { "archetype": "Performage" },
+      "boost": { "archetype": "Performapal" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "synchron-stardust",
+      "name": "Synchron Stardust Synergy",
+      "description": "Synchron tuners make Stardust synchros",
+      "trigger": { "archetype": "Synchron" },
+      "boost": { "archetype": "Stardust" },
+      "bonus": 4,
+      "bonusType": "flat"
+    },
+    {
+      "id": "stardust-synchron",
+      "name": "Stardust Synchron Synergy",
+      "description": "Stardust synchros want Synchron tuners",
+      "trigger": { "archetype": "Stardust" },
+      "boost": { "archetype": "Synchron" },
+      "bonus": 4,
+      "bonusType": "flat"
+    },
+    {
+      "id": "vampire-zombie-world",
+      "name": "Vampire Zombie World Synergy",
+      "description": "Vampires benefit from Zombie World",
+      "trigger": { "archetype": "Vampire" },
+      "boost": { "cardName": "Zombie World" },
+      "bonus": 4,
+      "bonusType": "flat"
+    },
+    {
+      "id": "zombie-world-vampire",
+      "name": "Zombie World Vampire Synergy",
+      "description": "Zombie World helps Vampires steal monsters",
+      "trigger": { "cardName": "Zombie World" },
+      "boost": { "archetype": "Vampire" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "bystial-light-fodder",
+      "name": "Bystial LIGHT Fodder",
+      "description": "LIGHT monsters in GY enable Bystial summons",
+      "trigger": { "attribute": "LIGHT" },
+      "boost": { "archetype": "Bystial" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 6
+    },
+    {
+      "id": "bystial-dark-fodder",
+      "name": "Bystial DARK Fodder",
+      "description": "DARK monsters in GY enable Bystial summons",
+      "trigger": { "attribute": "DARK" },
+      "boost": { "archetype": "Bystial" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 6
+    },
+    {
+      "id": "bystial-maliss-synergy",
+      "name": "Bystial Maliss Synergy",
+      "description": "Bystials can banish Maliss cards to trigger their effects",
+      "trigger": { "archetype": "Bystial" },
+      "boost": { "archetype": "Maliss" },
+      "bonus": 4,
+      "bonusType": "flat"
+    },
+    {
+      "id": "maliss-bystial-synergy",
+      "name": "Maliss Bystial Synergy",
+      "description": "Maliss cards want to be banished by Bystials",
+      "trigger": { "archetype": "Maliss" },
+      "boost": { "archetype": "Bystial" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "dd-maliss-synergy",
+      "name": "D.D. Maliss Synergy",
+      "description": "D.D. cards can banish Maliss to trigger effects",
+      "trigger": { "archetype": "D.D." },
+      "boost": { "archetype": "Maliss" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "maliss-dd-synergy",
+      "name": "Maliss D.D. Synergy",
+      "description": "Maliss cards benefit from D.D. banishing",
+      "trigger": { "archetype": "Maliss" },
+      "boost": { "archetype": "D.D." },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "crush-card-virus-targets",
+      "name": "Crush Card Virus Targets",
+      "description": "DARK monsters with 1000 ATK or less can be tributed for Crush Card Virus",
+      "trigger": { "cardName": "Crush Card Virus" },
+      "boost": { "and": [{ "attribute": "DARK" }, { "maxAtk": 1000 }, { "mainDeckOnly": true }, { "excludeCards": ["Endless Decay", "Exodius the Ultimate Forbidden Lord", "Fortune Lady Dark", "Fortune Lady Past", "Eater of Millions", "The Unstoppable Exodia Incarnate", "Tragoedia"] }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "crush-card-virus-enablers",
+      "name": "Crush Card Enablers",
+      "description": "DARK monsters with 1000 ATK or less make Crush Card Virus valuable",
+      "trigger": { "and": [{ "attribute": "DARK" }, { "maxAtk": 1000 }, { "mainDeckOnly": true }, { "excludeCards": ["Endless Decay", "Exodius the Ultimate Forbidden Lord", "Fortune Lady Dark", "Fortune Lady Past", "Eater of Millions", "The Unstoppable Exodia Incarnate", "Tragoedia"] }] },
+      "boost": { "cardName": "Crush Card Virus" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
+    },
+    {
+      "id": "deck-devastation-virus-targets",
+      "name": "Deck Devastation Virus Targets",
+      "description": "DARK monsters with 2000+ ATK can be tributed for Deck Devastation Virus",
+      "trigger": { "cardName": "Deck Devastation Virus" },
+      "boost": { "and": [{ "attribute": "DARK" }, { "minAtk": 2000 }, { "mainDeckOnly": true }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "deck-devastation-virus-enablers",
+      "name": "Deck Devastation Virus Enablers",
+      "description": "DARK monsters with 2000+ ATK make Deck Devastation Virus valuable",
+      "trigger": { "and": [{ "attribute": "DARK" }, { "minAtk": 2000 }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Deck Devastation Virus" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
+    },
+    {
+      "id": "eradicator-epidemic-virus-targets",
+      "name": "Eradicator Epidemic Virus Targets",
+      "description": "DARK monsters with 2500+ ATK can be tributed for Eradicator Epidemic Virus",
+      "trigger": { "cardName": "Eradicator Epidemic Virus" },
+      "boost": { "and": [{ "attribute": "DARK" }, { "minAtk": 2500 }, { "mainDeckOnly": true }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "eradicator-epidemic-virus-enablers",
+      "name": "Eradicator Epidemic Virus Enablers",
+      "description": "DARK monsters with 2500+ ATK make Eradicator Epidemic Virus valuable",
+      "trigger": { "and": [{ "attribute": "DARK" }, { "minAtk": 2500 }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Eradicator Epidemic Virus" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
+    },
+    {
+      "id": "arnis-spellcaster-targets",
+      "name": "Arnis Recruiter Targets",
+      "description": "Spellcasters with 1500 ATK or less can be recruited by Arnis",
+      "trigger": { "cardName": "Arnis, the Empowered Warrior" },
+      "boost": { "and": [{ "race": "Spellcaster" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Exodius the Ultimate Forbidden Lord", "Fortune Lady Dark", "Fortune Lady Past", "Fortune Lady Every", "Fortune Lady Wind", "The Unstoppable Exodia Incarnate"] }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "arnis-spellcaster-enablers",
+      "name": "Arnis Recruiter Enablers",
+      "description": "Spellcasters with 1500 ATK or less make Arnis valuable",
+      "trigger": { "and": [{ "race": "Spellcaster" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Exodius the Ultimate Forbidden Lord", "Fortune Lady Dark", "Fortune Lady Past", "Fortune Lady Every", "Fortune Lady Wind", "The Unstoppable Exodia Incarnate"] }] },
+      "boost": { "cardName": "Arnis, the Empowered Warrior" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
+    },
+    {
+      "id": "magical-scientist-fusions",
+      "name": "Magical Scientist Targets",
+      "description": "Magical Scientist can summon Level 6 or lower Fusion monsters",
+      "trigger": { "cardName": "Magical Scientist" },
+      "boost": { "and": [{ "cardType": "fusion" }, { "maxLevel": 6 }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "magical-scientist-enablers",
+      "name": "Magical Scientist Enablers",
+      "description": "Level 6 or lower Fusion monsters make Magical Scientist valuable",
+      "trigger": { "and": [{ "cardType": "fusion" }, { "maxLevel": 6 }] },
+      "boost": { "cardName": "Magical Scientist" },
+      "bonus": 4,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 15
+    }
+  ]
+}
