@@ -482,8 +482,8 @@ export function Results() {
   // Get available sort options for keyboard shortcuts
   const availableSortOptions = useMemo(() => {
     const options = gameConfig.sortOptions?.map(s => s.id) || ['name'];
-    // Add 'score' if scores are available
-    if (hasScores) {
+    // Add 'score' if scores are available and not already in options
+    if (hasScores && !options.includes('score')) {
       return [...options, 'score'];
     }
     return options;
