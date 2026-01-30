@@ -324,48 +324,70 @@
       "maxBonus": 10
     },
     {
-      "id": "armageddon-knight-targets",
-      "name": "Armageddon Knight Targets",
-      "category": "combo",
-      "description": "Armageddon Knight can send DARK monsters to the GY",
-      "trigger": { "cardName": "Armageddon Knight" },
-      "boost": { "and": [{ "attribute": "DARK" }, { "mainDeckOnly": true }, { "excludeCards": ["Armageddon Knight"] }] },
-      "bonus": 3,
-      "bonusType": "flat"
-    },
-    {
       "id": "armageddon-knight-enabler",
-      "name": "Armageddon Knight",
+      "name": "Armageddon Knight GY Targets",
       "category": "combo",
-      "description": "DARK monsters make Armageddon Knight valuable",
-      "trigger": { "and": [{ "attribute": "DARK" }, { "mainDeckOnly": true }, { "excludeCards": ["Armageddon Knight"] }] },
+      "description": "DARK monsters that want to be in GY make Armageddon Knight valuable",
+      "trigger": { "or": [
+        { "and": [{ "archetype": "Maliss" }, { "mainDeckOnly": true }] },
+        { "cardName": "Plaguespreader Zombie" },
+        { "cardName": "Mad Mauler" },
+        { "cardName": "Glow-Up Bloom" },
+        { "cardName": "Necro Gardna" },
+        { "cardName": "Bacon Saver" },
+        { "cardName": "Destiny HERO - Disk Commander" },
+        { "cardName": "Medius the Pure" },
+        { "cardName": "Gizmek Orochi, the Serpentron Sky Slasher" }
+      ]},
       "boost": { "cardName": "Armageddon Knight" },
-      "bonus": 2,
+      "bonus": 4,
       "bonusType": "flat",
       "scaling": true,
-      "maxBonus": 8
-    },
-    {
-      "id": "dark-grepher-targets",
-      "name": "Dark Grepher Targets",
-      "category": "combo",
-      "description": "Dark Grepher can send DARK monsters to the GY",
-      "trigger": { "cardName": "Dark Grepher" },
-      "boost": { "and": [{ "attribute": "DARK" }, { "mainDeckOnly": true }, { "excludeCards": ["Dark Grepher"] }] },
-      "bonus": 3,
-      "bonusType": "flat"
+      "maxBonus": 12
     },
     {
       "id": "dark-grepher-enabler",
-      "name": "Dark Grepher",
+      "name": "Dark Grepher GY Targets",
       "category": "combo",
-      "description": "DARK monsters make Dark Grepher valuable",
-      "trigger": { "and": [{ "attribute": "DARK" }, { "mainDeckOnly": true }, { "excludeCards": ["Dark Grepher"] }] },
+      "description": "DARK monsters that want to be in GY make Dark Grepher valuable",
+      "trigger": { "or": [
+        { "and": [{ "archetype": "Maliss" }, { "mainDeckOnly": true }] },
+        { "cardName": "Plaguespreader Zombie" },
+        { "cardName": "Mad Mauler" },
+        { "cardName": "Glow-Up Bloom" },
+        { "cardName": "Necro Gardna" },
+        { "cardName": "Bacon Saver" },
+        { "cardName": "Destiny HERO - Disk Commander" },
+        { "cardName": "Medius the Pure" },
+        { "cardName": "Gizmek Orochi, the Serpentron Sky Slasher" }
+      ]},
       "boost": { "cardName": "Dark Grepher" },
-      "bonus": 2,
+      "bonus": 4,
       "bonusType": "flat",
       "scaling": true,
-      "maxBonus": 8
+      "maxBonus": 12
+    },
+    {
+      "id": "phantom-of-chaos-maliss",
+      "name": "Phantom of Chaos Maliss Targets",
+      "category": "combo",
+      "description": "Phantom of Chaos can copy Maliss monsters from the GY",
+      "trigger": { "cardName": "Phantom of Chaos" },
+      "boost": { "archetype": "Maliss" },
+      "bonus": 4,
+      "bonusType": "flat"
+    },
+    {
+      "id": "phantom-of-chaos-maliss-enabler",
+      "name": "Maliss Phantom of Chaos Synergy",
+      "category": "combo",
+      "description": "Maliss monsters give Phantom of Chaos good copy targets",
+      "trigger": { "archetype": "Maliss" },
+      "boost": { "cardName": "Phantom of Chaos" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
     },
     {
       "id": "mathematician-targets",
@@ -2015,6 +2037,28 @@
       "description": "DARK monsters with 2500+ ATK make Eradicator Epidemic Virus valuable",
       "trigger": { "and": [{ "attribute": "DARK" }, { "minAtk": 2500 }, { "mainDeckOnly": true }] },
       "boost": { "cardName": "Eradicator Epidemic Virus" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
+    },
+    {
+      "id": "full-force-virus-targets",
+      "name": "Full Force Virus Targets",
+      "category": "virus",
+      "description": "DARK monsters with 2000+ DEF can be tributed for Full Force Virus",
+      "trigger": { "cardName": "Full Force Virus" },
+      "boost": { "and": [{ "attribute": "DARK" }, { "minDef": 2000 }, { "mainDeckOnly": true }] },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "full-force-virus-enablers",
+      "name": "Full Force Virus Enablers",
+      "category": "virus",
+      "description": "DARK monsters with 2000+ DEF make Full Force Virus valuable",
+      "trigger": { "and": [{ "attribute": "DARK" }, { "minDef": 2000 }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Full Force Virus" },
       "bonus": 3,
       "bonusType": "flat",
       "scaling": true,

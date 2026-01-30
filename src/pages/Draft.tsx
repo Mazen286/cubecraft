@@ -1925,10 +1925,10 @@ export function Draft() {
               <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
                 {draftedCards.length > 0 ? (
                   <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
-                    {draftedCards.map((card) => (
+                    {draftedCards.map((card, index) => (
                       <div
                         key={card.id}
-                        onClick={() => setMobileViewCard(card)}
+                        onClick={() => handleMyCardsCardClick(card, index)}
                         className="cursor-pointer transition-transform hover:scale-105"
                       >
                         <YuGiOhCard card={card} size="sm" showTier={showScores} />
@@ -2019,7 +2019,10 @@ export function Draft() {
                         onMoveCardToStack={moveCardToStack}
                         onMergeStacks={mergeStacks}
                         onCreateStackAtPosition={createStackAtPosition}
-                        onCardClick={(_card, index) => handleMyCardsCardClick(draftedCards[index], index)}
+                        onCardClick={(_card, index) => {
+                          if (myCardsInline) setFocusedSection('myCards');
+                          handleMyCardsCardClick(draftedCards[index], index);
+                        }}
                         selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
                         highlightedIndex={myCardsHighlightedIndex}
                         showTier={showScores}
@@ -2034,7 +2037,10 @@ export function Draft() {
                           <div
                             key={card.id}
                             data-my-card-index={index}
-                            onClick={() => handleMyCardsCardClick(card, index)}
+                            onClick={() => {
+                              if (myCardsInline) setFocusedSection('myCards');
+                              handleMyCardsCardClick(card, index);
+                            }}
                             className="cursor-pointer hover:scale-105 transition-transform"
                           >
                             <YuGiOhCard

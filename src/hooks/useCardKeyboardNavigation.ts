@@ -177,6 +177,7 @@ export function useCardKeyboardNavigation<T>({
           e.preventDefault();
           if (isSheetOpen) {
             closeSheet();
+            return; // Just close sheet, don't navigate
           }
 
           if (pileNavigation && pileNavigation.piles.length > 0) {
@@ -189,12 +190,13 @@ export function useCardKeyboardNavigation<T>({
               // Go to same position or last card in pile
               const nextPos = Math.min(posInPile, nextPile.length - 1);
               setHighlightedIndex(nextPile[nextPos]);
-            } else {
+            } else if (highlightedIndex < 0) {
               // No highlight yet, go to first card in first pile
               if (pileNavigation.piles[0]?.length > 0) {
                 setHighlightedIndex(pileNavigation.piles[0][0]);
               }
             }
+            // If highlighted but not in a pile, don't jump randomly - stay put
           } else {
             // Grid navigation
             const nextIndex = highlightedIndex < 0 ? 0 : (highlightedIndex + 1) % cardCount;
@@ -206,6 +208,7 @@ export function useCardKeyboardNavigation<T>({
           e.preventDefault();
           if (isSheetOpen) {
             closeSheet();
+            return; // Just close sheet, don't navigate
           }
 
           if (pileNavigation && pileNavigation.piles.length > 0) {
@@ -218,13 +221,14 @@ export function useCardKeyboardNavigation<T>({
               // Go to same position or last card in pile
               const prevPos = Math.min(posInPile, prevPile.length - 1);
               setHighlightedIndex(prevPile[prevPos]);
-            } else {
+            } else if (highlightedIndex < 0) {
               // No highlight yet, go to first card in last pile
               const lastPile = pileNavigation.piles[pileNavigation.piles.length - 1];
               if (lastPile?.length > 0) {
                 setHighlightedIndex(lastPile[0]);
               }
             }
+            // If highlighted but not in a pile, don't jump randomly - stay put
           } else {
             // Grid navigation
             const prevIndex = highlightedIndex < 0 ? cardCount - 1 : (highlightedIndex - 1 + cardCount) % cardCount;
@@ -236,7 +240,7 @@ export function useCardKeyboardNavigation<T>({
           e.preventDefault();
           if (isSheetOpen) {
             closeSheet();
-            return;
+            return; // Just close sheet, don't navigate
           }
 
           if (pileNavigation && pileNavigation.piles.length > 0) {
@@ -251,12 +255,13 @@ export function useCardKeyboardNavigation<T>({
                 // At bottom of pile, navigate out
                 onNavigateOutBottom();
               }
-            } else {
+            } else if (highlightedIndex < 0) {
               // No highlight yet, go to first card in first pile
               if (pileNavigation.piles[0]?.length > 0) {
                 setHighlightedIndex(pileNavigation.piles[0][0]);
               }
             }
+            // If highlighted but not in a pile, don't jump randomly - stay put
           } else {
             // Grid navigation
             if (highlightedIndex < 0) {
@@ -277,7 +282,7 @@ export function useCardKeyboardNavigation<T>({
           e.preventDefault();
           if (isSheetOpen) {
             closeSheet();
-            return;
+            return; // Just close sheet, don't navigate
           }
 
           if (pileNavigation && pileNavigation.piles.length > 0) {
@@ -292,13 +297,14 @@ export function useCardKeyboardNavigation<T>({
                 // At top of pile, navigate out
                 onNavigateOutTop();
               }
-            } else {
+            } else if (highlightedIndex < 0) {
               // No highlight yet, go to last card in last pile
               const lastPile = pileNavigation.piles[pileNavigation.piles.length - 1];
               if (lastPile?.length > 0) {
                 setHighlightedIndex(lastPile[lastPile.length - 1]);
               }
             }
+            // If highlighted but not in a pile, don't jump randomly - stay put
           } else {
             // Grid navigation
             if (highlightedIndex < 0) {

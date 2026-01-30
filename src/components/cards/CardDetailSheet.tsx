@@ -45,6 +45,8 @@ export function CardDetailSheet({
   if (!card) return null;
 
   const genericCard = toCardWithAttributes(card);
+  // Handle both desc (YuGiOhCard) and description (Card) for robustness
+  const cardDescription = card.desc ?? (card as unknown as { description?: string }).description;
 
   return (
     <BottomSheet
@@ -253,7 +255,7 @@ export function CardDetailSheet({
               attrs?.stage !== undefined;
             const hasStats = isPokemonCard && (attrs?.weakness || attrs?.resistance || attrs?.retreatCost !== undefined);
 
-            if (!hasAbilitiesOrAttacks && !card.desc && !hasStats) return null;
+            if (!hasAbilitiesOrAttacks && !cardDescription && !hasStats) return null;
 
             return (
               <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border space-y-4">
@@ -309,9 +311,9 @@ export function CardDetailSheet({
                 )}
 
                 {/* Trainer/Energy card effect (when no abilities or attacks) */}
-                {!hasAbilitiesOrAttacks && card.desc && (
+                {!hasAbilitiesOrAttacks && cardDescription && (
                   <div className="p-2 md:p-3 bg-yugi-card rounded">
-                    <p className="text-xs md:text-sm text-gray-300 leading-relaxed">{card.desc}</p>
+                    <p className="text-xs md:text-sm text-gray-300 leading-relaxed">{cardDescription}</p>
                   </div>
                 )}
 
@@ -359,20 +361,20 @@ export function CardDetailSheet({
                           <p className="text-[10px] md:text-xs text-purple-300 mt-1 italic">Note: {errata.notes}</p>
                         )}
                       </div>
-                      {card.desc && (
+                      {cardDescription && (
                         <div>
                           <p className="text-[10px] md:text-xs text-gray-500 mb-1">Current Errata'd Text:</p>
-                          <p className="text-xs md:text-sm text-gray-400 leading-relaxed line-through opacity-60">{card.desc}</p>
+                          <p className="text-xs md:text-sm text-gray-400 leading-relaxed line-through opacity-60">{cardDescription}</p>
                         </div>
                       )}
                     </div>
                   );
                 }
                 // Use OracleText for MTG to render tap symbols, mana symbols, etc.
-                if (gameConfig.id === 'mtg' && card.desc) {
+                if (gameConfig.id === 'mtg' && cardDescription) {
                   return (
                     <OracleText
-                      text={card.desc}
+                      text={cardDescription}
                       className="text-xs md:text-sm text-gray-300 leading-relaxed"
                     />
                   );
@@ -380,7 +382,7 @@ export function CardDetailSheet({
 
                 return (
                   <p className="text-xs md:text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-                    {card.desc || 'No description available.'}
+                    {cardDescription || 'No description available.'}
                   </p>
                 );
               })()}
