@@ -1194,17 +1194,6 @@
       "maxBonus": 10
     },
     {
-      "id": "monarch-archetype",
-      "name": "Monarch Synergy",
-      "description": "Monarch cards support tribute summoning",
-      "trigger": { "archetype": "Monarch" },
-      "boost": { "archetype": "Monarch" },
-      "bonus": 3,
-      "bonusType": "flat",
-      "scaling": true,
-      "maxBonus": 10
-    },
-    {
       "id": "danger-archetype",
       "name": "Danger! Synergy",
       "description": "Danger! cards discard and special summon each other",
