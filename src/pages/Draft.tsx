@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Pause, ChevronDown, ChevronUp, ArrowRight, X, SortAsc, SortDesc } from 'lucide-react';
+import { Layers, Pause, ChevronDown, ChevronUp, ArrowRight, X, SortAsc, SortDesc, PanelBottomOpen, PanelBottomClose, Lightbulb, PlusCircle, Sparkles } from 'lucide-react';
 import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { CubeStats } from '../components/cube/CubeStats';
@@ -10,17 +10,20 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useToast } from '../components/ui/Toast';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
-import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../types';
-import { formatTime, getTierFromScore } from '../lib/utils';
+import { CardPileView } from '../components/cards/CardPileView';
+import { StackablePileView } from '../components/cards/StackablePileView';
+import { type YuGiOhCard as YuGiOhCardType, type CubeSynergies, type SynergyResult, toCardWithAttributes } from '../types';
+import { formatTime, getTierFromScore, cn } from '../lib/utils';
 import { useDraftSession } from '../hooks/useDraftSession';
 import { useCards } from '../hooks/useCards';
 import { useImagePreloader } from '../hooks/useImagePreloader';
 import { statisticsService } from '../services/statisticsService';
 import { draftService, clearLastSession } from '../services/draftService';
 import { cubeService } from '../services/cubeService';
+import { synergyService } from '../services/synergyService';
 import { useGameConfig } from '../context/GameContext';
 import { useHostDisconnectPause } from '../hooks/useHostDisconnectPause';
-import { useCardKeyboardNavigation } from '../hooks/useCardKeyboardNavigation';
+import { useCardKeyboardNavigation, type PileNavigationMap } from '../hooks/useCardKeyboardNavigation';
 import { useConnectionPresence } from '../hooks/useConnectionPresence';
 import { PauseOverlay } from '../components/draft';
 
@@ -59,6 +62,19 @@ export function Draft() {
   // Show scores only if cube has them AND competitive mode is off
   const showScores = cubeHasScores && !session?.hide_scores;
 
+  // Synergy system - load synergies for the cube
+  const [cubeSynergies, setCubeSynergies] = useState<CubeSynergies | null>(null);
+  const [synergiesLoaded, setSynergiesLoaded] = useState(false);
+
+  useEffect(() => {
+    if (session?.cube_id && isCubeReady && !synergiesLoaded) {
+      synergyService.loadCubeSynergies(session.cube_id).then((synergies) => {
+        setCubeSynergies(synergies);
+        setSynergiesLoaded(true);
+      });
+    }
+  }, [session?.cube_id, isCubeReady, synergiesLoaded]);
+
   // Auto-start solo drafts (only when cube is ready so cards load instantly)
   // Solo mode: 1 human player + any number of bots
   const humanPlayers = players.filter((p) => !p.is_bot);
@@ -94,6 +110,32 @@ export function Draft() {
   // Preload small images for drafted cards (for the sidebar)
   useImagePreloader(draftedCardIds, 'sm');
 
+  // Calculate synergy-adjusted scores for pack cards
+  // Only calculate if not in competitive mode and synergies are loaded
+  const packSynergies = useMemo(() => {
+    if (!showScores || !cubeSynergies) {
+      return new Map<number, SynergyResult>();
+    }
+    return synergyService.calculatePackSynergies(currentPackCards, draftedCards, cubeSynergies);
+  }, [currentPackCards, draftedCards, cubeSynergies, showScores]);
+
+  // Create pack cards with adjusted scores for display
+  const packCardsWithSynergies = useMemo(() => {
+    if (!showScores || packSynergies.size === 0) {
+      return currentPackCards;
+    }
+    return currentPackCards.map(card => {
+      const synergy = packSynergies.get(card.id);
+      if (synergy && synergy.synergyBonus > 0) {
+        return { ...card, score: synergy.adjustedScore, _synergy: synergy };
+      }
+      return card;
+    });
+  }, [currentPackCards, packSynergies, showScores]);
+
+  // State for showing synergy breakdown tooltip
+  const [showingSynergyFor, setShowingSynergyFor] = useState<number | null>(null);
+
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [isPicking, setIsPicking] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -111,10 +153,31 @@ export function Draft() {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showMyCardsStats, setShowMyCardsStats] = useState(false);
+  const [myCardsInline, setMyCardsInline] = useState(false); // Toggle between drawer and inline view
+  const [focusedSection, setFocusedSection] = useState<'pack' | 'myCards'>('pack'); // Which section has keyboard focus when inline
+
+  // Refs for cross-section highlight management (to avoid closure issues)
+  const clearPackHighlightRef = useRef<() => void>(() => {});
+  const clearMyCardsHighlightRef = useRef<() => void>(() => {});
+  const setPackHighlightToBottomRef = useRef<() => void>(() => {});
+  const setMyCardsHighlightToTopRef = useRef<() => void>(() => {});
 
   // Pack sort state
   const [packSortBy, setPackSortBy] = useState<string>('none');
   const [packSortDirection, setPackSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Recommendation state
+  const [showRecommendation, setShowRecommendation] = useState(false);
+
+  // Calculate synergy for drafted card being viewed (My Cards sheet)
+  const draftedCardSynergy = useMemo(() => {
+    if (!mobileViewCard || !showScores || !cubeSynergies) {
+      return null;
+    }
+    // Calculate synergy based on other drafted cards (excluding the viewed card)
+    const otherCards = draftedCards.filter(c => c.id !== mobileViewCard.id);
+    return synergyService.calculateCardSynergy(mobileViewCard, otherCards, cubeSynergies);
+  }, [mobileViewCard, draftedCards, cubeSynergies, showScores]);
 
   // Toast notifications
   const { showToast, ToastContainer } = useToast();
@@ -131,6 +194,173 @@ export function Draft() {
   // Stats-based filters for My Cards (cross-filtering from CubeStats)
   const [myCardsStatsFilters, setMyCardsStatsFilters] = useState<Record<string, Set<string>>>({});
 
+  // Pile navigation structure for My Cards drawer (when in pile view mode)
+  const [myCardsPileNavigation, setMyCardsPileNavigation] = useState<PileNavigationMap | null>(null);
+
+  // Custom stacks for My Cards organization (persists to Results page)
+  interface CustomStack {
+    id: string;
+    name: string;
+    cardIndices: number[];
+  }
+  const [customStacks, setCustomStacks] = useState<CustomStack[]>([]);
+  const [useCustomStacks, setUseCustomStacks] = useState(false);
+
+  // Load custom stacks from localStorage on mount
+  useEffect(() => {
+    if (sessionId) {
+      const saved = localStorage.getItem(`draft-stacks-${sessionId}`);
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          setCustomStacks(data.stacks || []);
+          setUseCustomStacks(data.enabled || false);
+        } catch (e) {
+          console.error('Failed to load custom stacks:', e);
+        }
+      }
+    }
+  }, [sessionId]);
+
+  // Save custom stacks to localStorage when they change
+  useEffect(() => {
+    if (sessionId && (customStacks.length > 0 || useCustomStacks)) {
+      localStorage.setItem(`draft-stacks-${sessionId}`, JSON.stringify({
+        stacks: customStacks,
+        enabled: useCustomStacks,
+      }));
+    }
+  }, [sessionId, customStacks, useCustomStacks]);
+
+  // Custom stack management functions
+  const createCustomStack = useCallback((name: string) => {
+    const id = `stack-${Date.now()}`;
+    setCustomStacks(prev => [...prev, { id, name, cardIndices: [] }]);
+    return id;
+  }, []);
+
+  const deleteCustomStack = useCallback((stackId: string) => {
+    setCustomStacks(prev => prev.filter(s => s.id !== stackId));
+  }, []);
+
+  const renameCustomStack = useCallback((stackId: string, newName: string) => {
+    setCustomStacks(prev => prev.map(s => s.id === stackId ? { ...s, name: newName } : s));
+  }, []);
+
+  const moveCardToStack = useCallback((cardIndex: number, stackId: string) => {
+    setCustomStacks(prev => prev.map(s => ({
+      ...s,
+      cardIndices: s.id === stackId
+        ? [...s.cardIndices.filter(i => i !== cardIndex), cardIndex]
+        : s.cardIndices.filter(i => i !== cardIndex),
+    })));
+  }, []);
+
+  const mergeStacks = useCallback((sourceStackId: string, targetStackId: string) => {
+    setCustomStacks(prev => {
+      const sourceStack = prev.find(s => s.id === sourceStackId);
+      if (!sourceStack) return prev;
+      return prev
+        .map(s => s.id === targetStackId
+          ? { ...s, cardIndices: [...s.cardIndices, ...sourceStack.cardIndices] }
+          : s
+        )
+        .filter(s => s.id !== sourceStackId);
+    });
+  }, []);
+
+  // Custom stacks UI state
+  const [newStackDragOver, setNewStackDragOver] = useState(false);
+
+  // Convert drafted cards to the format expected by StackablePileView
+  const stackableCards = useMemo(() => {
+    return draftedCards.map((card, index) => ({
+      card: toCardWithAttributes(card),
+      index,
+    }));
+  }, [draftedCards]);
+
+  // Get cards not in any stack
+  const getUnstackedCards = useCallback(() => {
+    const stackedIndices = new Set(customStacks.flatMap(s => s.cardIndices));
+    return draftedCards
+      .map((card, index) => ({ card, index }))
+      .filter(c => !stackedIndices.has(c.index));
+  }, [customStacks, draftedCards]);
+
+  // Handle card drag for custom stacks (used by Unstacked cards section)
+  const handleMyCardDragStart = useCallback((e: React.DragEvent, cardIndex: number) => {
+    e.dataTransfer.setData('dragType', 'card');
+    e.dataTransfer.setData('cardIndex', cardIndex.toString());
+  }, []);
+
+  // Initialize custom stacks from default pile groups
+  const initializeCustomStacksFromDefaults = useCallback((cards: { card: YuGiOhCardType; index: number }[]) => {
+    const groups = gameConfig.pileViewConfig?.groups || [];
+    const newStacks: CustomStack[] = [];
+
+    groups.forEach(group => {
+      const matchingCards = cards.filter(c => group.matches(toCardWithAttributes(c.card)));
+      if (matchingCards.length > 0) {
+        newStacks.push({
+          id: `stack-${group.id}-${Date.now()}-${Math.random()}`,
+          name: group.label,
+          cardIndices: matchingCards.map(c => c.index),
+        });
+      }
+    });
+
+    return newStacks;
+  }, [gameConfig]);
+
+  // Track previous drafted cards count to detect new cards
+  const prevDraftedCountRef = useRef(draftedCards.length);
+
+  // Auto-assign newly drafted cards to their matching default stack
+  useEffect(() => {
+    if (!useCustomStacks || customStacks.length === 0) {
+      prevDraftedCountRef.current = draftedCards.length;
+      return;
+    }
+
+    // Check if a new card was added
+    if (draftedCards.length > prevDraftedCountRef.current) {
+      const newCardIndex = draftedCards.length - 1;
+      const newCard = draftedCards[newCardIndex];
+
+      if (newCard) {
+        const groups = gameConfig.pileViewConfig?.groups || [];
+
+        // Find which group this card matches
+        for (const group of groups) {
+          if (group.matches(toCardWithAttributes(newCard))) {
+            // Find the stack with this group's label
+            const matchingStack = customStacks.find(s => s.name === group.label);
+
+            if (matchingStack) {
+              // Add card to existing stack
+              setCustomStacks(prev => prev.map(s =>
+                s.id === matchingStack.id
+                  ? { ...s, cardIndices: [...s.cardIndices, newCardIndex] }
+                  : s
+              ));
+            } else {
+              // Create a new stack for this group
+              setCustomStacks(prev => [...prev, {
+                id: `stack-${group.id}-${Date.now()}-${Math.random()}`,
+                name: group.label,
+                cardIndices: [newCardIndex],
+              }]);
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    prevDraftedCountRef.current = draftedCards.length;
+  }, [draftedCards, useCustomStacks, customStacks, gameConfig]);
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -143,13 +373,13 @@ export function Draft() {
   // Pack is ready when we have cards loaded (or player already picked, waiting for next pack)
   const packReady = (currentPackCards.length > 0 && !cardsLoading) || currentPlayer?.pick_made;
 
-  // Sort pack cards based on user selection
+  // Sort pack cards based on user selection (uses synergy-adjusted scores when available)
   const sortedPackCards = useMemo(() => {
-    if (packSortBy === 'none' || !currentPackCards.length) {
-      return currentPackCards;
+    if (packSortBy === 'none' || !packCardsWithSynergies.length) {
+      return packCardsWithSynergies;
     }
 
-    const sorted = [...currentPackCards].sort((a, b) => {
+    const sorted = [...packCardsWithSynergies].sort((a, b) => {
       let aVal: number | string | undefined;
       let bVal: number | string | undefined;
 
@@ -190,7 +420,29 @@ export function Draft() {
     });
 
     return sorted;
-  }, [currentPackCards, packSortBy, packSortDirection]);
+  }, [packCardsWithSynergies, packSortBy, packSortDirection]);
+
+  // Calculate recommended card (best synergy-adjusted score)
+  const recommendedCard = useMemo(() => {
+    if (!packCardsWithSynergies.length) return null;
+
+    // Find the card with the highest adjusted score
+    let best = packCardsWithSynergies[0];
+    let bestScore = best.score ?? 0;
+
+    for (const card of packCardsWithSynergies.slice(1)) {
+      const score = card.score ?? 0;
+      if (score > bestScore) {
+        best = card;
+        bestScore = score;
+      }
+    }
+
+    // Get synergy info if available
+    const synergy = (best as YuGiOhCardType & { _synergy?: SynergyResult })._synergy;
+
+    return { card: best, synergy };
+  }, [packCardsWithSynergies]);
 
   // Derived state - must be defined before any hooks that use it
   const hasPicked = currentPlayer?.pick_made || false;
@@ -351,6 +603,14 @@ export function Draft() {
   // Filtered cards as generic format for CubeStats
   const filteredDraftedCardsAsGeneric = useMemo(() => {
     return filteredDraftedCards.map(card => toCardWithAttributes(card));
+  }, [filteredDraftedCards]);
+
+  // Filtered cards as CardWithIndex format for pile view
+  const filteredDraftedCardsWithIndex = useMemo(() => {
+    return filteredDraftedCards.map((card, index) => ({
+      card: toCardWithAttributes(card),
+      index,
+    }));
   }, [filteredDraftedCards]);
 
   // Handle stats filter click (from CubeStats)
@@ -862,6 +1122,7 @@ export function Draft() {
   // Keyboard navigation for card selection (Current Pack)
   const {
     highlightedIndex,
+    setHighlightedIndex: setPackHighlightedIndex,
     sheetCard: selectedCard,
     isSheetOpen,
     closeSheet,
@@ -871,7 +1132,7 @@ export function Draft() {
   } = useCardKeyboardNavigation({
     cards: sortedPackCards,
     columns: getColumnCount,
-    enabled: !isPicking && session?.status === 'in_progress' && !showMobileCards,
+    enabled: !isPicking && session?.status === 'in_progress' && !showMobileCards && (!myCardsInline || focusedSection === 'pack'),
     onSelect: (card) => handlePickCard(card),
     isActionPending: isPicking,
     hasSelected: hasPicked,
@@ -879,7 +1140,21 @@ export function Draft() {
     currentSortBy: packSortBy,
     onSortChange: setPackSortBy,
     onToggleSortDirection: () => setPackSortDirection(d => d === 'asc' ? 'desc' : 'asc'),
+    onNavigateOutBottom: myCardsInline ? () => {
+      clearPackHighlightRef.current(); // Clear pack highlight via ref
+      setFocusedSection('myCards');
+      setMyCardsHighlightToTopRef.current(); // Set my cards highlight to first card
+    } : undefined,
   });
+
+  // Update refs after hook returns
+  clearPackHighlightRef.current = () => setPackHighlightedIndex(-1);
+  setPackHighlightToBottomRef.current = () => {
+    // Set pack highlight to last row (approximately last card in the grid)
+    const cols = getColumnCount();
+    const lastRowStart = Math.floor((sortedPackCards.length - 1) / cols) * cols;
+    setPackHighlightedIndex(Math.min(lastRowStart, sortedPackCards.length - 1));
+  };
 
   // Get column count for My Cards drawer (responsive)
   const getMyCardsColumnCount = useCallback(() => {
@@ -897,9 +1172,10 @@ export function Draft() {
     setMobileViewCard(null);
   }, []);
 
-  // Keyboard navigation for My Cards drawer
+  // Keyboard navigation for My Cards (drawer or inline)
   const {
     highlightedIndex: myCardsHighlightedIndex,
+    setHighlightedIndex: setMyCardsHighlightedIndex,
     sheetCard: myCardsSelectedCard,
     isSheetOpen: isMyCardsSheetOpen,
     closeSheet: closeMyCardsSheet,
@@ -907,39 +1183,36 @@ export function Draft() {
   } = useCardKeyboardNavigation({
     cards: filteredDraftedCards,
     columns: getMyCardsColumnCount,
-    enabled: showMobileCards,
-    // Space/Enter with sheet open closes the drawer
+    enabled: showMobileCards || (myCardsInline && focusedSection === 'myCards'),
+    // Space/Enter with sheet open closes the drawer (only if drawer mode)
     onSelect: () => {
-      closeMyCardsDrawer();
-    },
-    // Escape with no selection closes the drawer
-    onEscapeNoSelection: closeMyCardsDrawer,
-  });
-
-  // Arrow/Space keys close drawer when nothing is highlighted (My Cards)
-  // Use capture phase to intercept before the hook processes the keys
-  const myCardsHighlightedIndexRef = useRef(myCardsHighlightedIndex);
-  myCardsHighlightedIndexRef.current = myCardsHighlightedIndex;
-
-  useEffect(() => {
-    if (!showMobileCards) return;
-
-    const handleKeyClose = (e: KeyboardEvent) => {
-      // Only handle when drawer is open and nothing is highlighted
-      if (myCardsHighlightedIndexRef.current >= 0) return;
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
-        e.preventDefault();
-        e.stopPropagation();
+      if (showMobileCards) {
         closeMyCardsDrawer();
       }
-    };
+    },
+    // Escape with no selection closes the drawer (only if drawer mode)
+    onEscapeNoSelection: showMobileCards ? closeMyCardsDrawer : undefined,
+    // Use pile navigation when in pile mode
+    pileNavigation: myCardsFilters.viewMode === 'pile' ? myCardsPileNavigation : null,
+    // Navigate back to pack when pressing up at top of My Cards
+    onNavigateOutTop: myCardsInline ? () => {
+      clearMyCardsHighlightRef.current(); // Clear my cards highlight via ref
+      setFocusedSection('pack');
+      setPackHighlightToBottomRef.current(); // Set pack highlight to bottom row
+    } : undefined,
+  });
 
-    // Use capture to run before the hook's listener
-    window.addEventListener('keydown', handleKeyClose, true);
-    return () => window.removeEventListener('keydown', handleKeyClose, true);
-  }, [showMobileCards, closeMyCardsDrawer]);
+  // Update refs after hook returns
+  clearMyCardsHighlightRef.current = () => setMyCardsHighlightedIndex(-1);
+  setMyCardsHighlightToTopRef.current = () => {
+    // Set my cards highlight to first card
+    if (filteredDraftedCards.length > 0) {
+      setMyCardsHighlightedIndex(0);
+    }
+  };
+
+  // Note: Arrows navigate cards in My Cards drawer via useCardKeyboardNavigation hook
+  // Escape closes the drawer (handled by onEscapeNoSelection callback)
 
   // Sync My Cards keyboard navigation with mobileViewCard state
   useEffect(() => {
@@ -1052,7 +1325,7 @@ export function Draft() {
       {/* Toast notifications */}
       <ToastContainer />
 
-      <div className="flex flex-col min-h-[calc(100vh-200px)] lg:h-[calc(100vh-200px)] lg:max-h-[calc(100vh-200px)]">
+      <div className={`flex flex-col min-h-[calc(100vh-200px)] ${myCardsInline ? '' : 'lg:h-[calc(100vh-200px)] lg:max-h-[calc(100vh-200px)]'}`}>
         {/* Header with timer and stats */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -1263,9 +1536,9 @@ export function Draft() {
         )}
 
         {/* Main content */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className={`flex-1 min-h-0 ${myCardsInline ? 'overflow-auto' : 'overflow-hidden'}`}>
           {/* Current Pack */}
-          <div className="glass-card p-4 lg:p-6 overflow-auto h-full">
+          <div className={`glass-card p-4 lg:p-6 overflow-auto ${myCardsInline ? '' : 'h-full'}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">
                 Current Pack {hasPicked && <span className="text-green-400 text-sm font-normal ml-2">Waiting for other players...</span>}
@@ -1299,6 +1572,22 @@ export function Draft() {
                       )}
                     </button>
                   )}
+                  {/* Recommendation button */}
+                  {showScores && recommendedCard && (
+                    <button
+                      onClick={() => setShowRecommendation(prev => !prev)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-sm font-medium",
+                        showRecommendation
+                          ? "bg-gold-500 text-yugi-darker"
+                          : "bg-yugi-dark border border-yugi-border hover:border-gold-500 text-gray-300 hover:text-white"
+                      )}
+                      title="Show recommended pick"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span className="hidden sm:inline">Recommend</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1307,25 +1596,140 @@ export function Draft() {
                 <div className="w-8 h-8 border-2 border-gold-400 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : sortedPackCards.length > 0 ? (
-              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
-                {sortedPackCards.map((card, index) => (
-                  <div key={card.id} className="relative" data-card-index={index}>
-                    <YuGiOhCard
-                      card={card}
-                      size="full"
-                      isSelected={selectedCard?.id === card.id}
-                      isHighlighted={highlightedIndex === index}
-                      onClick={() => handleCardClick(card, index)}
-                      showTier={showScores}
-                      flush
-                      draggable={!hasPicked}
-                      onDragStart={(e) => handleDragStart(e, card)}
-                      onDragEnd={handleDragEnd}
-                      className={hasPicked ? 'opacity-60' : ''}
-                    />
+              <>
+                {/* Recommendation Panel */}
+                {showRecommendation && recommendedCard && (
+                  <div className="mb-4 p-4 bg-gold-500/10 border border-gold-500/30 rounded-lg">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-16 h-24 rounded overflow-hidden shadow-lg">
+                        <YuGiOhCard card={recommendedCard.card} size="full" showTier={false} flush />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Sparkles className="w-4 h-4 text-gold-400" />
+                          <span className="font-semibold text-gold-400">Recommended Pick</span>
+                        </div>
+                        <h4 className="text-white font-medium truncate">{recommendedCard.card.name}</h4>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {recommendedCard.synergy && recommendedCard.synergy.synergyBonus > 0 ? (
+                            <>
+                              Score: {recommendedCard.synergy.baseScore} (+{recommendedCard.synergy.synergyBonus} synergy) = <span className="text-green-400 font-medium">{recommendedCard.synergy.adjustedScore}</span>
+                            </>
+                          ) : (
+                            <>
+                              Score: <span className="text-gold-400 font-medium">{recommendedCard.card.score ?? 50}</span>
+                              {' '}- Highest rated card in the pack
+                            </>
+                          )}
+                        </p>
+                        {recommendedCard.synergy && recommendedCard.synergy.breakdown.length > 0 && (
+                          <div className="mt-2 text-xs text-gray-500">
+                            <span className="text-green-400">Synergizes with:</span>{' '}
+                            {[...new Set(recommendedCard.synergy.breakdown.flatMap(b => b.triggerCards))].slice(0, 3).join(', ')}
+                            {[...new Set(recommendedCard.synergy.breakdown.flatMap(b => b.triggerCards))].length > 3 && '...'}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setShowRecommendation(false)}
+                        className="text-gray-400 hover:text-white p-1"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                ))}
+                )}
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
+                {sortedPackCards.map((card, index) => {
+                  // Check for synergy bonus (attached as _synergy property)
+                  const synergy = (card as YuGiOhCardType & { _synergy?: SynergyResult })._synergy;
+                  const hasSynergyBonus = synergy && synergy.synergyBonus > 0;
+                  const isRecommended = showRecommendation && recommendedCard?.card.id === card.id;
+
+                  return (
+                    <div
+                      key={card.id}
+                      className={cn("relative", isRecommended && "ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-dark rounded-lg")}
+                      data-card-index={index}
+                    >
+                      <YuGiOhCard
+                        card={card}
+                        size="full"
+                        isSelected={selectedCard?.id === card.id}
+                        isHighlighted={highlightedIndex === index}
+                        onClick={() => handleCardClick(card, index)}
+                        showTier={showScores}
+                        flush
+                        draggable={!hasPicked}
+                        onDragStart={(e) => handleDragStart(e, card)}
+                        onDragEnd={handleDragEnd}
+                        className={hasPicked ? 'opacity-60' : ''}
+                      />
+                      {/* Recommended badge */}
+                      {isRecommended && (
+                        <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gold-500 text-yugi-darker flex items-center justify-center shadow-lg z-20">
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </div>
+                      )}
+                      {/* Synergy bonus indicator */}
+                      {hasSynergyBonus && showScores && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowingSynergyFor(showingSynergyFor === card.id ? null : card.id);
+                          }}
+                          className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center shadow-lg hover:bg-green-400 transition-colors z-20"
+                          title={`+${synergy.synergyBonus} synergy bonus - click for details`}
+                        >
+                          <Lightbulb className="w-3 h-3" />
+                        </button>
+                      )}
+                      {/* Synergy breakdown tooltip */}
+                      {showingSynergyFor === card.id && synergy && (
+                        <div
+                          className="absolute bottom-8 right-0 z-50 bg-yugi-darker border border-yugi-border rounded-lg shadow-xl p-3 min-w-[200px] text-left"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-white">Synergy Breakdown</span>
+                            <button
+                              onClick={() => setShowingSynergyFor(null)}
+                              className="text-gray-400 hover:text-white"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between text-gray-400">
+                              <span>Base Score:</span>
+                              <span>{synergy.baseScore}</span>
+                            </div>
+                            {synergy.breakdown.map((b, i) => (
+                              <div key={i} className="flex justify-between text-green-400">
+                                <span className="truncate pr-2" title={b.description}>
+                                  +{b.bonus} {b.name}
+                                </span>
+                              </div>
+                            ))}
+                            <div className="border-t border-yugi-border pt-1 mt-1 flex justify-between font-semibold text-white">
+                              <span>Adjusted:</span>
+                              <span>{synergy.adjustedScore}</span>
+                            </div>
+                          </div>
+                          {synergy.breakdown.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-yugi-border text-xs text-gray-500">
+                              <span>From: </span>
+                              {synergy.breakdown[0].triggerCards.slice(0, 2).join(', ')}
+                              {synergy.breakdown[0].triggerCards.length > 2 && '...'}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+              </>
             ) : (
               <div className="flex items-center justify-center h-64 text-gray-300">
                 <div className="text-center">
@@ -1465,6 +1869,227 @@ export function Draft() {
               </div>
             </div>
           </div>
+
+          {/* Inline My Cards Section (when toggled) */}
+          {myCardsInline && (
+            <div
+              className={`glass-card mt-4 overflow-hidden transition-all duration-200 ${
+                isDragOver ? 'ring-2 ring-gold-400 bg-gold-500/10' : ''
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-gold-400" />
+                  My Drafted Cards ({draftedCards.length})
+                  {isDragOver && <span className="text-gold-400 text-sm ml-2">Drop to pick!</span>}
+                </h3>
+                <div className="flex items-center gap-4">
+                  {/* Custom Stacks Toggle */}
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useCustomStacks}
+                      onChange={(e) => {
+                        const enabling = e.target.checked;
+                        setUseCustomStacks(enabling);
+                        if (enabling && customStacks.length === 0) {
+                          const indexedCards = draftedCards.map((card, index) => ({ card, index }));
+                          setCustomStacks(initializeCustomStacksFromDefaults(indexedCards));
+                        }
+                      }}
+                      className="w-3.5 h-3.5 rounded border-gray-600 text-gold-500 focus:ring-gold-500 focus:ring-offset-0 bg-yugi-dark"
+                    />
+                    <span className="text-gray-400">Custom Stacks</span>
+                  </label>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <span>Main: <span className="text-white font-medium">{myCardsStats.mainDeck}</span></span>
+                    <span>Extra: <span className="text-purple-400 font-medium">{myCardsStats.extraDeck}</span></span>
+                    {!session?.hide_scores && (
+                      <span>Avg: <span className="text-gold-400 font-medium">{myCardsStats.avgScore}</span></span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters */}
+              {draftedCards.length > 0 && (
+                <div className="px-4 py-3 border-b border-yugi-border">
+                  <CardFilterBar
+                    filters={myCardsFilters}
+                    showSearch
+                    showTypeFilter
+                    showTierFilter
+                    showAdvancedFilters
+                    showSort
+                    includePickSort
+                    includeScoreSort
+                    hasScores={showScores}
+                    tierCounts={myCardsStats.tiers as Record<'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F', number>}
+                    totalCount={draftedCards.length}
+                    filteredCount={filteredDraftedCards.length}
+                    compact
+                    cards={draftedCardsAsGeneric}
+                    selectedArchetypes={myCardsStatsFilters['archetype']}
+                    onToggleArchetype={(archetype) => handleMyCardsStatsFilterClick('archetype', archetype, true)}
+                    onClearArchetypes={() => {
+                      setMyCardsStatsFilters(prev => {
+                        const { archetype: _, ...rest } = prev;
+                        return rest;
+                      });
+                    }}
+                    showViewToggle
+                    viewMode={myCardsFilters.viewMode}
+                    onViewModeChange={myCardsFilters.setViewMode}
+                  />
+                </div>
+              )}
+
+              {/* Cards Grid/Pile/Custom Stacks */}
+              <div className="p-4 max-h-[40vh] overflow-y-auto custom-scrollbar">
+                {draftedCards.length > 0 ? (
+                  useCustomStacks && myCardsFilters.viewMode === 'pile' ? (
+                    /* Custom Stacks Mode - uses shared StackablePileView component */
+                    <div className="flex flex-wrap gap-4 items-start">
+                      <StackablePileView
+                        stacks={customStacks}
+                        cards={stackableCards}
+                        onDeleteStack={deleteCustomStack}
+                        onRenameStack={renameCustomStack}
+                        onMoveCardToStack={moveCardToStack}
+                        onMergeStacks={mergeStacks}
+                        onCardClick={(card, index) => handleMyCardsCardClick(card as unknown as YuGiOhCardType, index)}
+                        selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
+                        showTier={showScores}
+                        showInsertionIndicators={false}
+                        onDragStartCard={() => {}}
+                        zoneId="my-cards"
+                        className="contents"
+                      />
+
+                      {/* Unstacked cards */}
+                      {getUnstackedCards().length > 0 && (
+                        <div className="flex flex-col items-center">
+                          <div className="mb-2 text-center px-2 py-1">
+                            <span className="text-sm font-semibold text-gray-500">Unsorted</span>
+                            <span className="text-xs text-gray-600 ml-1">({getUnstackedCards().length})</span>
+                          </div>
+                          <div
+                            className="relative w-[80px] sm:w-[100px] bg-yugi-card/30 rounded-lg border border-dashed border-gray-600"
+                            style={{
+                              height: `${140 + (getUnstackedCards().length - 1) * 28}px`,
+                              minHeight: '60px'
+                            }}
+                          >
+                            {getUnstackedCards().map(({ card, index }, stackIndex) => (
+                              <div
+                                key={`unstacked-${index}-${card.id}`}
+                                draggable
+                                onDragStart={(e) => handleMyCardDragStart(e, index)}
+                                className={cn(
+                                  'absolute left-0 right-0 transition-all duration-200',
+                                  'cursor-grab active:cursor-grabbing',
+                                  'hover:-translate-y-2 hover:z-50',
+                                  mobileViewCard?.id === card.id && 'ring-2 ring-gold-400'
+                                )}
+                                style={{
+                                  top: `${stackIndex * 28}px`,
+                                  zIndex: mobileViewCard?.id === card.id ? 50 : stackIndex + 1,
+                                }}
+                                onClick={() => handleMyCardsCardClick(card, index)}
+                              >
+                                <YuGiOhCard card={card} size="full" showTier={showScores} flush />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Drop zone to create new stack */}
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setNewStackDragOver(true);
+                        }}
+                        onDragLeave={() => setNewStackDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setNewStackDragOver(false);
+                          const dragType = e.dataTransfer.getData('dragType');
+                          if (dragType !== 'stack') {
+                            const cardIndexStr = e.dataTransfer.getData('cardIndex');
+                            if (cardIndexStr) {
+                              const cardIndex = parseInt(cardIndexStr, 10);
+                              const card = draftedCards[cardIndex];
+                              if (card) {
+                                const newStackId = createCustomStack(card.name);
+                                moveCardToStack(cardIndex, newStackId);
+                              }
+                            }
+                          }
+                        }}
+                        className={cn(
+                          'flex flex-col items-center justify-center w-[80px] sm:w-[100px] h-[140px]',
+                          'border-2 border-dashed rounded-lg transition-colors',
+                          newStackDragOver ? 'border-gold-400 bg-gold-400/10' : 'border-yugi-border'
+                        )}
+                      >
+                        <PlusCircle className="w-6 h-6 text-gray-500 mb-1" />
+                        <span className="text-xs text-gray-500 text-center">New Stack</span>
+                      </div>
+                    </div>
+                  ) : filteredDraftedCards.length > 0 ? (
+                    myCardsFilters.viewMode === 'pile' ? (
+                      <CardPileView
+                        cards={filteredDraftedCardsWithIndex}
+                        selectedIndex={mobileViewCard ? filteredDraftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
+                        highlightedIndex={myCardsHighlightedIndex}
+                        onCardClick={(_card, index) => {
+                          const originalCard = filteredDraftedCards[index];
+                          if (originalCard) {
+                            handleMyCardsCardClick(originalCard, index);
+                          }
+                        }}
+                        showTier={showScores}
+                        onPileStructureChange={setMyCardsPileNavigation}
+                      />
+                    ) : (
+                      <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16">
+                        {filteredDraftedCards.map((card, index) => (
+                          <div
+                            key={card.id}
+                            data-my-card-index={index}
+                            onClick={() => handleMyCardsCardClick(card, index)}
+                            className="cursor-pointer hover:scale-105 transition-transform"
+                          >
+                            <YuGiOhCard
+                              card={card}
+                              size="full"
+                              showTier={showScores}
+                              flush
+                              isHighlighted={myCardsHighlightedIndex === index}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ) : (
+                    <div className="h-24 flex items-center justify-center text-gray-500">
+                      No cards match your filter
+                    </div>
+                  )
+                ) : (
+                  <div className={`h-24 flex items-center justify-center text-sm ${isDragOver ? 'text-gold-400' : 'text-gray-500'}`}>
+                    {isDragOver ? 'Drop card here to pick!' : 'Drag cards here or click to pick'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer actions */}
@@ -1518,21 +2143,47 @@ export function Draft() {
         )}
 
         {/* Floating button to view drafted cards (also a drop zone) */}
+        {!myCardsInline && (
+          <button
+            onClick={() => setShowMobileCards(true)}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`fixed bottom-20 right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
+              isDragOver
+                ? 'bg-green-500 text-white scale-110 shadow-green-500/50 shadow-2xl ring-4 ring-green-400/50 ring-offset-2 ring-offset-yugi-darker'
+                : isDragging
+                  ? 'bg-gold-400 text-black scale-105 shadow-gold-400/50 shadow-xl ring-2 ring-gold-300/50 animate-pulse'
+                  : 'bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30'
+            }`}
+          >
+            <Layers className={`w-5 h-5 ${isDragOver ? 'animate-bounce' : ''}`} />
+            <span>{isDragOver ? 'Drop to Pick!' : isDragging ? 'Drag Here!' : `My Cards (${draftedCards.length})`}</span>
+          </button>
+        )}
+
+        {/* Toggle button for inline/drawer mode - positioned next to My Cards button */}
         <button
-          onClick={() => setShowMobileCards(true)}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`fixed bottom-20 right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
-            isDragOver
-              ? 'bg-green-500 text-white scale-110 shadow-green-500/50 shadow-2xl ring-4 ring-green-400/50 ring-offset-2 ring-offset-yugi-darker'
-              : isDragging
-                ? 'bg-gold-400 text-black scale-105 shadow-gold-400/50 shadow-xl ring-2 ring-gold-300/50 animate-pulse'
-                : 'bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30'
-          }`}
+          onClick={() => {
+            setMyCardsInline(!myCardsInline);
+            if (!myCardsInline) {
+              setShowMobileCards(false); // Close drawer when switching to inline
+            }
+          }}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-full shadow-lg transition-all bg-yugi-card hover:bg-yugi-dark border border-yugi-border text-gray-300 hover:text-white"
+          title={myCardsInline ? 'Show My Cards in drawer' : 'Show My Cards below pack'}
         >
-          <Layers className={`w-5 h-5 ${isDragOver ? 'animate-bounce' : ''}`} />
-          <span>{isDragOver ? 'Drop to Pick!' : isDragging ? 'Drag Here!' : `My Cards (${draftedCards.length})`}</span>
+          {myCardsInline ? (
+            <>
+              <PanelBottomClose className="w-4 h-4" />
+              <span className="hidden sm:inline">Drawer</span>
+            </>
+          ) : (
+            <>
+              <PanelBottomOpen className="w-4 h-4" />
+              <span className="hidden sm:inline">Below</span>
+            </>
+          )}
         </button>
 
         {/* Drawer for viewing drafted cards */}
@@ -1575,13 +2226,32 @@ export function Draft() {
                 <div className="px-4 py-3 border-b border-yugi-border flex-shrink-0 space-y-3">
                   {/* Stats Toggle & Summary */}
                   <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => setShowMyCardsStats(!showMyCardsStats)}
-                      className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-                    >
-                      {showMyCardsStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      <span>Build Stats</span>
-                    </button>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setShowMyCardsStats(!showMyCardsStats)}
+                        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                      >
+                        {showMyCardsStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        <span>Build Stats</span>
+                      </button>
+                      {/* Custom Stacks Toggle */}
+                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={useCustomStacks}
+                          onChange={(e) => {
+                            const enabling = e.target.checked;
+                            setUseCustomStacks(enabling);
+                            if (enabling && customStacks.length === 0) {
+                              const indexedCards = draftedCards.map((card, index) => ({ card, index }));
+                              setCustomStacks(initializeCustomStacksFromDefaults(indexedCards));
+                            }
+                          }}
+                          className="w-3.5 h-3.5 rounded border-gray-600 text-gold-500 focus:ring-gold-500 focus:ring-offset-0 bg-yugi-dark"
+                        />
+                        <span className="text-gray-400">Custom Stacks</span>
+                      </label>
+                    </div>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
                       <span>Main: <span className="text-white font-medium">{myCardsStats.mainDeck}</span></span>
                       <span>Extra: <span className="text-purple-400 font-medium">{myCardsStats.extraDeck}</span></span>
@@ -1698,6 +2368,9 @@ export function Draft() {
                         return rest;
                       });
                     }}
+                    showViewToggle
+                    viewMode={myCardsFilters.viewMode}
+                    onViewModeChange={myCardsFilters.setViewMode}
                   />
 
                   {/* Stats filters row - active filter chips (excluding archetype) */}
@@ -1749,26 +2422,134 @@ export function Draft() {
               {/* Content - with proper touch scrolling */}
               <div className="flex-1 overflow-y-auto overscroll-contain p-2 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {draftedCards.length > 0 ? (
-                  /* Cards grid - smaller cards for more visibility */
-                  filteredDraftedCards.length > 0 ? (
-                    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
-                      {filteredDraftedCards.map((card, index) => (
-                        <div
-                          key={card.id}
-                          data-my-card-index={index}
-                          onClick={() => handleMyCardsCardClick(card, index)}
-                          className="cursor-pointer active:scale-95 transition-transform"
-                        >
-                          <YuGiOhCard
-                            card={card}
-                            size="full"
-                            showTier={showScores}
-                            flush
-                            isHighlighted={myCardsHighlightedIndex === index}
-                          />
+                  useCustomStacks && myCardsFilters.viewMode === 'pile' ? (
+                    /* Custom Stacks Mode in Drawer - uses shared StackablePileView component */
+                    <div className="flex flex-wrap gap-4 items-start">
+                      <StackablePileView
+                        stacks={customStacks}
+                        cards={stackableCards}
+                        onDeleteStack={deleteCustomStack}
+                        onRenameStack={renameCustomStack}
+                        onMoveCardToStack={moveCardToStack}
+                        onMergeStacks={mergeStacks}
+                        onCardClick={(card, index) => handleMyCardsCardClick(card as unknown as YuGiOhCardType, index)}
+                        selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
+                        showTier={showScores}
+                        showInsertionIndicators={false}
+                        onDragStartCard={() => {}}
+                        zoneId="my-cards-drawer"
+                        className="contents"
+                      />
+
+                      {/* Unstacked cards */}
+                      {getUnstackedCards().length > 0 && (
+                        <div className="flex flex-col items-center">
+                          <div className="mb-2 text-center px-2 py-1">
+                            <span className="text-sm font-semibold text-gray-500">Unsorted</span>
+                            <span className="text-xs text-gray-600 ml-1">({getUnstackedCards().length})</span>
+                          </div>
+                          <div
+                            className="relative w-[80px] sm:w-[100px] bg-yugi-card/30 rounded-lg border border-dashed border-gray-600"
+                            style={{
+                              height: `${140 + (getUnstackedCards().length - 1) * 28}px`,
+                              minHeight: '60px'
+                            }}
+                          >
+                            {getUnstackedCards().map(({ card, index }, stackIndex) => (
+                              <div
+                                key={`drawer-unstacked-${index}-${card.id}`}
+                                draggable
+                                onDragStart={(e) => handleMyCardDragStart(e, index)}
+                                className={cn(
+                                  'absolute left-0 right-0 transition-all duration-200',
+                                  'cursor-grab active:cursor-grabbing',
+                                  'hover:-translate-y-2 hover:z-50',
+                                  mobileViewCard?.id === card.id && 'ring-2 ring-gold-400'
+                                )}
+                                style={{
+                                  top: `${stackIndex * 28}px`,
+                                  zIndex: mobileViewCard?.id === card.id ? 50 : stackIndex + 1,
+                                }}
+                                onClick={() => handleMyCardsCardClick(card, index)}
+                              >
+                                <YuGiOhCard card={card} size="full" showTier={showScores} flush />
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ))}
+                      )}
+
+                      {/* Drop zone to create new stack */}
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setNewStackDragOver(true);
+                        }}
+                        onDragLeave={() => setNewStackDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setNewStackDragOver(false);
+                          const dragType = e.dataTransfer.getData('dragType');
+                          if (dragType !== 'stack') {
+                            const cardIndexStr = e.dataTransfer.getData('cardIndex');
+                            if (cardIndexStr) {
+                              const cardIndex = parseInt(cardIndexStr, 10);
+                              const card = draftedCards[cardIndex];
+                              if (card) {
+                                const newStackId = createCustomStack(card.name);
+                                moveCardToStack(cardIndex, newStackId);
+                              }
+                            }
+                          }
+                        }}
+                        className={cn(
+                          'flex flex-col items-center justify-center w-[80px] sm:w-[100px] h-[140px]',
+                          'border-2 border-dashed rounded-lg transition-colors',
+                          newStackDragOver ? 'border-gold-400 bg-gold-400/10' : 'border-yugi-border'
+                        )}
+                      >
+                        <PlusCircle className="w-6 h-6 text-gray-500 mb-1" />
+                        <span className="text-xs text-gray-500 text-center">New Stack</span>
+                      </div>
                     </div>
+                  ) : filteredDraftedCards.length > 0 ? (
+                    myCardsFilters.viewMode === 'pile' ? (
+                      /* Pile view */
+                      <CardPileView
+                        cards={filteredDraftedCardsWithIndex}
+                        selectedIndex={mobileViewCard ? filteredDraftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
+                        highlightedIndex={myCardsHighlightedIndex}
+                        onCardClick={(_card, index) => {
+                          const originalCard = filteredDraftedCards[index];
+                          if (originalCard) {
+                            handleMyCardsCardClick(originalCard, index);
+                          }
+                        }}
+                        showTier={showScores}
+                        onPileStructureChange={setMyCardsPileNavigation}
+                      />
+                    ) : (
+                      /* Grid view - smaller cards for more visibility */
+                      <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
+                        {filteredDraftedCards.map((card, index) => (
+                          <div
+                            key={card.id}
+                            data-my-card-index={index}
+                            onClick={() => handleMyCardsCardClick(card, index)}
+                            className="cursor-pointer active:scale-95 transition-transform"
+                          >
+                            <YuGiOhCard
+                              card={card}
+                              size="full"
+                              showTier={showScores}
+                              flush
+                              isHighlighted={myCardsHighlightedIndex === index}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )
                   ) : (
                     <div className="h-40 flex items-center justify-center text-gray-500">
                       No cards match your filter
@@ -1790,6 +2571,7 @@ export function Draft() {
           isOpen={isSheetOpen}
           onClose={closeSheet}
           hideScores={session?.hide_scores}
+          synergy={selectedCard ? packSynergies.get(selectedCard.id) : null}
           footer={
             hasPicked ? (
               <div className="text-center text-gray-400 py-2">
@@ -1816,6 +2598,7 @@ export function Draft() {
           isOpen={!!mobileViewCard}
           onClose={() => setMobileViewCard(null)}
           hideScores={session?.hide_scores}
+          synergy={draftedCardSynergy}
         />
 
         {/* Leave Draft Confirmation Modal */}

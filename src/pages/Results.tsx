@@ -4,20 +4,22 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
+import { StackablePileView } from '../components/cards/StackablePileView';
 import { CardFilterBar } from '../components/filters';
-import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../types';
+import { type YuGiOhCard as YuGiOhCardType, type CubeSynergies, type SynergyResult, toCardWithAttributes } from '../types';
 import { cn, formatTime, isExtraDeckCard, isMonsterCard, isSpellCard, isTrapCard, getTierFromScore } from '../lib/utils';
-import { Download, BarChart3, Clock, Zap, ChevronDown, ChevronUp, Flame, Trophy, RotateCcw, Plus, Minus, Layers, Archive, Share2 } from 'lucide-react';
+import { Download, BarChart3, Clock, Zap, ChevronDown, ChevronUp, Flame, Trophy, RotateCcw, Plus, Minus, Layers, Archive, Share2, Hand, Shuffle, X, Save, FolderOpen, PlusCircle, Trash2 } from 'lucide-react';
 import { useDraftSession } from '../hooks/useDraftSession';
 import { useCards } from '../hooks/useCards';
-import { useCardFilters, type Tier } from '../hooks/useCardFilters';
+import { useCardFilters, type Tier, type ViewMode } from '../hooks/useCardFilters';
 import { statisticsService } from '../services/statisticsService';
 import { draftService } from '../services/draftService';
+import { synergyService } from '../services/synergyService';
 import { generateDeckImage } from '../services/deckImageService';
 import { useGameConfig } from '../context/GameContext';
 import type { Card } from '../types/card';
 import type { BasicResource } from '../config/gameConfig';
-import type { DraftPlayerRow } from '../lib/database.types';
+import type { DraftPlayerRow, SavedDeckRow, SavedDeckData } from '../lib/database.types';
 
 // Type alias for zone IDs
 type DeckZone = string;
@@ -38,7 +40,7 @@ export function Results() {
   const viewPlayerId = searchParams.get('player');
 
   // Fetch session data and drafted card IDs (for current user)
-  const { draftedCardIds: currentUserCardIds, currentPlayer: currentUserPlayer, isLoading: sessionLoading, error: sessionError, players } = useDraftSession(sessionId);
+  const { session, draftedCardIds: currentUserCardIds, currentPlayer: currentUserPlayer, isLoading: sessionLoading, error: sessionError, players } = useDraftSession(sessionId);
 
   // State for viewing another player's results
   const [viewedPlayer, setViewedPlayer] = useState<DraftPlayerRow | null>(null);
@@ -114,6 +116,19 @@ export function Results() {
     return allDraftedCards.some(({ card }) => card.score !== undefined);
   }, [allDraftedCards]);
 
+  // Synergy system - load synergies for the cube
+  const [cubeSynergies, setCubeSynergies] = useState<CubeSynergies | null>(null);
+  const [synergiesLoaded, setSynergiesLoaded] = useState(false);
+
+  useEffect(() => {
+    if (session?.cube_id && !synergiesLoaded) {
+      synergyService.loadCubeSynergies(session.cube_id).then((synergies) => {
+        setCubeSynergies(synergies);
+        setSynergiesLoaded(true);
+      });
+    }
+  }, [session?.cube_id, synergiesLoaded]);
+
   const isLoading = sessionLoading || cardsLoading || isLoadingViewedPlayer;
 
   // Deck builder state - track which zone each card is in
@@ -173,6 +188,66 @@ export function Results() {
   const [showBurnedCards, setShowBurnedCards] = useState(false);
   const [showFirstPicks, setShowFirstPicks] = useState(false);
   const [showBasicResources, setShowBasicResources] = useState(false);
+
+  // Hand simulator state
+  const [showHandSimulator, setShowHandSimulator] = useState(false);
+  const [simulatedHand, setSimulatedHand] = useState<YuGiOhCardType[]>([]);
+  const [remainingDeck, setRemainingDeck] = useState<YuGiOhCardType[]>([]);
+
+  // Custom stacks state for manual card grouping
+  const [customStacks, setCustomStacks] = useState<Record<DeckZone, { id: string; name: string; cardIndices: number[] }[]>>({
+    main: [],
+    extra: [],
+    side: [],
+    pool: [],
+  });
+  const [useCustomStacks, setUseCustomStacks] = useState(false);
+
+  // Saved deck configurations
+  const [savedDecks, setSavedDecks] = useState<SavedDeckRow[]>([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [saveDeckName, setSaveDeckName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load saved decks from database on mount
+  useEffect(() => {
+    if (!sessionId || !currentPlayer?.id) return;
+
+    const loadSavedDecks = async () => {
+      const decks = await draftService.getSavedDecks(sessionId, currentPlayer.id);
+      setSavedDecks(decks);
+    };
+
+    loadSavedDecks();
+  }, [sessionId, currentPlayer?.id]);
+
+  // Load custom stacks from Draft page (localStorage) on mount
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const saved = localStorage.getItem(`draft-stacks-${sessionId}`);
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        const draftStacks = data.stacks || [];
+        const draftEnabled = data.enabled || false;
+
+        // Only load if we have stacks and custom stacks not already set
+        if (draftStacks.length > 0 && customStacks.pool.length === 0) {
+          // Convert Draft's flat stacks to Results' pool stacks
+          setCustomStacks(prev => ({
+            ...prev,
+            pool: draftStacks,
+          }));
+          setUseCustomStacks(draftEnabled);
+        }
+      } catch (e) {
+        console.error('Failed to load draft stacks:', e);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]); // Only run on mount
 
   // Track counts of basic resources added to deck (e.g., basic lands in MTG, basic energy in Pokemon)
   const [basicResourceCounts, setBasicResourceCounts] = useState<Map<string | number, number>>(new Map());
@@ -236,24 +311,75 @@ export function Results() {
     };
   }, [sessionId]);
 
-  // Get cards by zone with filters applied
+  // Calculate synergies for ALL cards based on main deck (used for filtering and display)
+  // This must be defined before getCardsByZone so tier filtering works with adjusted scores
+  const allCardSynergiesForFilter = useMemo(() => {
+    if (!cubeSynergies || !hasScores) return new Map<number, SynergyResult>();
+
+    const results = new Map<number, SynergyResult>();
+
+    // Get main deck cards for synergy calculation
+    const mainDeckForSynergy = allDraftedCards
+      .filter(({ index }) => deckAssignments.get(index) === 'main')
+      .map(({ card }) => card);
+
+    // Calculate synergy for each card
+    allDraftedCards.forEach(({ card, index }) => {
+      // For main deck cards, exclude themselves from calculation
+      const isMainDeck = deckAssignments.get(index) === 'main';
+      const cardsForCalc = isMainDeck
+        ? mainDeckForSynergy.filter(c => c !== card)
+        : mainDeckForSynergy;
+
+      const synergy = synergyService.calculateCardSynergy(card, cardsForCalc, cubeSynergies);
+      results.set(index, synergy);
+    });
+
+    return results;
+  }, [cubeSynergies, hasScores, allDraftedCards, deckAssignments]);
+
+  // Get cards by zone with filters applied (using adjusted scores for tier filtering AND display)
   const getCardsByZone = useCallback((zone: DeckZone) => {
     // Convert YuGiOhCard to Card format with proper attributes for filtering
+    // Apply adjusted scores so tier filtering uses synergy-adjusted values
     const zoneCards = allDraftedCards
       .filter(({ index }) => deckAssignments.get(index) === zone)
-      .map(({ card, index }) => ({ card: toCardWithAttributes(card), index }));
+      .map(({ card, index }) => {
+        const synergy = allCardSynergiesForFilter.get(index);
+        const adjustedScore = synergy ? synergy.adjustedScore : card.score;
+        const cardWithAttrs = toCardWithAttributes(card);
+        // Override the score with adjusted score for filtering
+        return { card: { ...cardWithAttrs, score: adjustedScore }, index };
+      });
 
-    // Apply filters and map back to YuGiOhCard type (original cards from allDraftedCards)
-    return filters.applyFiltersWithIndex(zoneCards).map(({ index }) => ({
-      card: allDraftedCards.find(c => c.index === index)!.card,
-      index,
-    }));
-  }, [allDraftedCards, deckAssignments, filters]);
+    // Apply filters and return cards WITH adjusted scores (for display)
+    return filters.applyFiltersWithIndex(zoneCards).map(({ index }) => {
+      // Get the original card and apply adjusted score
+      const originalCard = allDraftedCards.find(c => c.index === index)!.card;
+      const synergy = allCardSynergiesForFilter.get(index);
+      const adjustedScore = synergy ? synergy.adjustedScore : originalCard.score;
+      return {
+        card: { ...originalCard, score: adjustedScore },
+        index,
+      };
+    });
+  }, [allDraftedCards, deckAssignments, filters, allCardSynergiesForFilter]);
 
   const mainDeckCardsWithoutBasics = useMemo(() => getCardsByZone('main'), [getCardsByZone]);
-  const sideDeckCards = useMemo(() => getCardsByZone('side'), [getCardsByZone]);
-  const extraDeckCards = useMemo(() => getCardsByZone('extra'), [getCardsByZone]);
-  const poolCards = useMemo(() => getCardsByZone('pool'), [getCardsByZone]);
+
+  // Helper to ensure synergy scores are applied to a card list
+  const applyScoresToCards = useCallback((cards: { card: YuGiOhCardType; index: number }[]) => {
+    return cards.map(c => {
+      const synergy = allCardSynergiesForFilter.get(c.index);
+      const adjustedScore = synergy ? synergy.adjustedScore : c.card.score;
+      return { ...c, card: { ...c.card, score: adjustedScore } };
+    });
+  }, [allCardSynergiesForFilter]);
+
+  // Apply synergy scores to all zone cards for consistent tier display
+  const sideDeckCards = useMemo(() => applyScoresToCards(getCardsByZone('side')), [getCardsByZone, applyScoresToCards]);
+  const extraDeckCards = useMemo(() => applyScoresToCards(getCardsByZone('extra')), [getCardsByZone, applyScoresToCards]);
+  const poolCards = useMemo(() => applyScoresToCards(getCardsByZone('pool')), [getCardsByZone, applyScoresToCards]);
 
   // Total count of basic resources added
   const totalBasicResourceCount = useMemo(() => {
@@ -290,6 +416,7 @@ export function Results() {
   }, [gameConfig.basicResources, basicResourceCounts]);
 
   // Main deck including basic resources (basic resources get negative indices to distinguish them)
+  // Also ensure synergy-adjusted scores are applied (belt-and-suspenders approach)
   const mainDeckCards = useMemo(() => {
     const basicCards = basicResourceCards.map((item, idx) => ({
       card: item.card,
@@ -298,23 +425,321 @@ export function Results() {
       resourceId: item.resourceId,
       count: item.count,
     }));
-    return [...mainDeckCardsWithoutBasics.map(c => ({ ...c, isBasicResource: false, resourceId: undefined, count: 1 })), ...basicCards];
-  }, [mainDeckCardsWithoutBasics, basicResourceCards]);
+    // Apply synergy-adjusted scores to ensure consistency
+    const cardsWithSynergy = mainDeckCardsWithoutBasics.map(c => {
+      const synergy = allCardSynergiesForFilter.get(c.index);
+      const adjustedScore = synergy ? synergy.adjustedScore : c.card.score;
+      return {
+        ...c,
+        card: { ...c.card, score: adjustedScore },
+        isBasicResource: false,
+        resourceId: undefined,
+        count: 1,
+      };
+    });
+    return [...cardsWithSynergy, ...basicCards];
+  }, [mainDeckCardsWithoutBasics, basicResourceCards, allCardSynergiesForFilter]);
+
+  // Save current deck configuration to database
+  const saveDeck = useCallback(async (name: string) => {
+    if (!sessionId || !currentPlayer?.id) return;
+
+    setIsSaving(true);
+    const deckData: SavedDeckData = {
+      assignments: Array.from(deckAssignments.entries()),
+      customStacks,
+      useCustomStacks,
+      basicResourceCounts: Array.from(basicResourceCounts.entries()),
+    };
+
+    const savedDeck = await draftService.saveDeck(sessionId, currentPlayer.id, name, deckData);
+
+    if (savedDeck) {
+      // Update local state - replace existing or add new
+      setSavedDecks(prev => {
+        const filtered = prev.filter(d => d.name !== name);
+        return [savedDeck, ...filtered];
+      });
+    }
+
+    setIsSaving(false);
+    setShowSaveModal(false);
+    setSaveDeckName('');
+  }, [sessionId, currentPlayer?.id, deckAssignments, customStacks, useCustomStacks, basicResourceCounts]);
+
+  // Load a saved deck configuration
+  const loadDeck = useCallback((deckId: string) => {
+    const deck = savedDecks.find(d => d.id === deckId);
+    if (!deck) return;
+
+    const data = deck.deck_data;
+    setDeckAssignments(new Map(data.assignments));
+    setCustomStacks(data.customStacks || { main: [], extra: [], side: [], pool: [] });
+    setUseCustomStacks(data.useCustomStacks || false);
+    setBasicResourceCounts(new Map(data.basicResourceCounts || []));
+    setShowLoadModal(false);
+  }, [savedDecks]);
+
+  // Delete a saved deck from database
+  const deleteSavedDeck = useCallback(async (deckId: string) => {
+    const success = await draftService.deleteSavedDeck(deckId);
+    if (success) {
+      setSavedDecks(prev => prev.filter(d => d.id !== deckId));
+    }
+  }, []);
+
+  // Custom stack management
+  const createCustomStack = useCallback((zone: DeckZone, name: string) => {
+    const id = `stack-${Date.now()}`;
+    setCustomStacks(prev => ({
+      ...prev,
+      [zone]: [...prev[zone], { id, name, cardIndices: [] }],
+    }));
+    return id;
+  }, []);
+
+  const deleteCustomStack = useCallback((zone: DeckZone, stackId: string) => {
+    setCustomStacks(prev => {
+      const stackToDelete = prev[zone].find(s => s.id === stackId);
+      if (!stackToDelete) return prev;
+
+      const cardsToMove = stackToDelete.cardIndices;
+      const remainingStacks = prev[zone].filter(s => s.id !== stackId);
+
+      // If there are cards to move, put them in an "Uncategorized" stack
+      if (cardsToMove.length > 0) {
+        // Check if an Uncategorized stack already exists
+        const uncategorizedStack = remainingStacks.find(s => s.name === 'Uncategorized');
+        if (uncategorizedStack) {
+          // Add cards to existing Uncategorized stack
+          uncategorizedStack.cardIndices = [...uncategorizedStack.cardIndices, ...cardsToMove];
+        } else {
+          // Create new Uncategorized stack at the end
+          remainingStacks.push({
+            id: `stack-uncategorized-${Date.now()}`,
+            name: 'Uncategorized',
+            cardIndices: cardsToMove,
+          });
+        }
+      }
+
+      return { ...prev, [zone]: remainingStacks };
+    });
+  }, []);
+
+  const renameCustomStack = useCallback((zone: DeckZone, stackId: string, newName: string) => {
+    setCustomStacks(prev => ({
+      ...prev,
+      [zone]: prev[zone].map(s => s.id === stackId ? { ...s, name: newName } : s),
+    }));
+  }, []);
+
+  const moveCardToStack = useCallback((zone: DeckZone, cardIndex: number, stackId: string) => {
+    setCustomStacks(prev => {
+      const updated = { ...prev };
+
+      // Remove card from all stacks and add to target
+      updated[zone] = updated[zone].map(s => ({
+        ...s,
+        cardIndices: s.id === stackId
+          ? [...s.cardIndices.filter(i => i !== cardIndex), cardIndex]
+          : s.cardIndices.filter(i => i !== cardIndex),
+      }));
+
+      // AUTO-DELETE: Remove any empty stacks
+      updated[zone] = updated[zone].filter(s => s.cardIndices.length > 0);
+
+      return updated;
+    });
+  }, []);
+
+  // Merge two stacks - move all cards from source to target
+  const mergeStacks = useCallback((zone: DeckZone, sourceStackId: string, targetStackId: string) => {
+    setCustomStacks(prev => {
+      const sourceStack = prev[zone].find(s => s.id === sourceStackId);
+      if (!sourceStack) return prev;
+
+      return {
+        ...prev,
+        [zone]: prev[zone]
+          .map(s => s.id === targetStackId
+            ? { ...s, cardIndices: [...s.cardIndices, ...sourceStack.cardIndices] }
+            : s
+          )
+          .filter(s => s.id !== sourceStackId), // Remove empty source
+      };
+    });
+  }, []);
+
+  // Create a new stack at a specific position (for insertion between stacks)
+  const createStackAtPosition = useCallback((zone: DeckZone, cardName: string, cardIndex: number, position: number) => {
+    const id = `stack-${Date.now()}`;
+    setCustomStacks(prev => {
+      // Remove card from any existing stack
+      const cleanedStacks = prev[zone].map(s => ({
+        ...s,
+        cardIndices: s.cardIndices.filter(i => i !== cardIndex),
+      })).filter(s => s.cardIndices.length > 0);
+
+      // Insert new stack at position
+      const newStack = { id, name: cardName, cardIndices: [cardIndex] };
+      cleanedStacks.splice(position, 0, newStack);
+
+      return { ...prev, [zone]: cleanedStacks };
+    });
+    return id;
+  }, []);
+
+  // Initialize custom stacks from default pile groups
+  const initializeCustomStacksFromDefaults = useCallback((_zone: DeckZone, zoneCards: { card: YuGiOhCardType; index: number }[]) => {
+    const groups = gameConfig.pileViewConfig?.groups || [];
+    const newStacks: { id: string; name: string; cardIndices: number[] }[] = [];
+
+    groups.forEach(group => {
+      const matchingCards = zoneCards.filter(c => group.matches(toCardWithAttributes(c.card)));
+      if (matchingCards.length > 0) {
+        newStacks.push({
+          id: `stack-${group.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: group.label,
+          cardIndices: matchingCards.map(c => c.index),
+        });
+      }
+    });
+
+    return newStacks;
+  }, [gameConfig]);
+
+  // Initialize stacks when in pile view
+  // This runs when entering pile view or when deck assignments change
+  useEffect(() => {
+    if (filters.viewMode !== 'pile') return;
+    if (allDraftedCards.length === 0) return;
+
+    // Pre-build custom stacks from defaults so they're ready when user drags
+    const getUnfilteredCardsByZone = (zone: DeckZone) => {
+      return allDraftedCards
+        .filter(({ index }) => deckAssignments.get(index) === zone)
+        .map(({ card, index }) => ({ card, index }));
+    };
+
+    // Initialize each zone independently (only if that zone's stacks are empty)
+    // This allows some zones to keep their customizations while others get defaults
+    setCustomStacks(prev => {
+      const updated = { ...prev };
+      let hasChanges = false;
+
+      const zones: DeckZone[] = ['main', 'extra', 'side', 'pool'];
+      zones.forEach(zone => {
+        if (prev[zone].length === 0) {
+          const newStacks = initializeCustomStacksFromDefaults(zone, getUnfilteredCardsByZone(zone));
+          if (newStacks.length > 0) {
+            updated[zone] = newStacks;
+            hasChanges = true;
+          }
+        }
+      });
+
+      return hasChanges ? updated : prev;
+    });
+  }, [filters.viewMode, allDraftedCards, deckAssignments, initializeCustomStacksFromDefaults]);
+
+  // Calculate synergy for selected card based on main deck cards
+  // IMPORTANT: Use the ORIGINAL card from allDraftedCards to avoid double-calculating synergy
+  // (cards in display have adjusted scores, but synergy calculation needs base scores)
+  const selectedCardSynergy = useMemo((): SynergyResult | null => {
+    if (!selectedCard || !cubeSynergies || !hasScores) return null;
+
+    // Get the ORIGINAL card (with base score) from allDraftedCards
+    const originalCard = allDraftedCards.find(c => c.index === selectedCard.index)?.card;
+    if (!originalCard) return null;
+
+    // Get main deck cards (excluding the selected card itself)
+    const mainDeckForSynergy = allDraftedCards
+      .filter(({ index }) => deckAssignments.get(index) === 'main' && index !== selectedCard.index)
+      .map(({ card }) => card);
+
+    return synergyService.calculateCardSynergy(originalCard, mainDeckForSynergy, cubeSynergies);
+  }, [selectedCard, cubeSynergies, hasScores, allDraftedCards, deckAssignments]);
+
+  // Autobuild deck using synergy scores
+  const autobuildDeck = useCallback(() => {
+    if (!cubeSynergies) return;
+
+    // Get extra deck max from config
+    const extraZoneConfig = gameConfig.deckZones.find(z => z.id === 'extra');
+    const extraMax = extraZoneConfig?.maxCards ?? 15;
+
+    // Get all non-extra deck cards that can go in main deck
+    const mainDeckCandidates = allDraftedCards.filter(({ card }) => !isExtraDeckCard(card.type));
+    const extraDeckCandidates = allDraftedCards.filter(({ card }) => isExtraDeckCard(card.type));
+
+    // Score each card based on base score + potential synergy with other high-scoring cards
+    // Start with the highest base-score cards and iteratively add cards that synergize
+
+    // Sort main deck candidates by base score descending
+    const sortedCandidates = [...mainDeckCandidates].sort((a, b) => (b.card.score ?? 50) - (a.card.score ?? 50));
+
+    const newMainDeck: number[] = [];
+    const mainDeckLimit = 40;
+
+    // Greedy algorithm: pick cards that maximize synergy-adjusted score
+    while (newMainDeck.length < mainDeckLimit && sortedCandidates.length > 0) {
+      // For each remaining candidate, calculate its synergy with current main deck
+      let bestIndex = 0;
+      let bestScore = -Infinity;
+
+      for (let i = 0; i < sortedCandidates.length; i++) {
+        const candidate = sortedCandidates[i];
+        const currentMain = newMainDeck.map(idx => allDraftedCards.find(c => c.index === idx)!.card);
+        const synergy = synergyService.calculateCardSynergy(candidate.card, currentMain, cubeSynergies);
+        const score = synergy.adjustedScore;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = i;
+        }
+      }
+
+      // Add the best card to main deck
+      const [chosen] = sortedCandidates.splice(bestIndex, 1);
+      newMainDeck.push(chosen.index);
+    }
+
+    // Build new assignments
+    const newAssignments = new Map<number, string>();
+
+    // Assign main deck cards
+    newMainDeck.forEach(idx => newAssignments.set(idx, 'main'));
+
+    // Assign extra deck cards (up to max)
+    extraDeckCandidates.slice(0, extraMax).forEach(({ index }) => newAssignments.set(index, 'extra'));
+
+    // Overflow extra deck goes to side
+    extraDeckCandidates.slice(extraMax).forEach(({ index }) => newAssignments.set(index, 'side'));
+
+    // Remaining main deck candidates go to side deck
+    sortedCandidates.forEach(({ index }) => newAssignments.set(index, 'side'));
+
+    setDeckAssignments(newAssignments);
+  }, [cubeSynergies, allDraftedCards, gameConfig.deckZones]);
 
   // Count stats from all drafted cards (not filtered)
   const monsterCount = allDraftedCards.filter(({ card }) => isMonsterCard(card.type)).length;
   const spellCount = allDraftedCards.filter(({ card }) => isSpellCard(card.type)).length;
   const trapCount = allDraftedCards.filter(({ card }) => isTrapCard(card.type)).length;
 
-  // Calculate tier counts for filter bar
+  // Calculate tier counts for filter bar (using adjusted scores)
   const tierCounts = useMemo(() => {
     const counts: Record<Tier, number> = { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
-    allDraftedCards.forEach(({ card }) => {
-      const tier = getTierFromScore(card.score) as Tier;
+    allDraftedCards.forEach(({ card, index }) => {
+      // Use adjusted score if available, otherwise base score
+      const synergy = allCardSynergiesForFilter.get(index);
+      const score = synergy ? synergy.adjustedScore : card.score;
+      const tier = getTierFromScore(score) as Tier;
       if (tier in counts) counts[tier]++;
     });
     return counts;
-  }, [allDraftedCards]);
+  }, [allDraftedCards, allCardSynergiesForFilter]);
 
   // Move card to a different zone
   // Get extra deck max from config
@@ -322,6 +747,9 @@ export function Results() {
   const extraDeckMax = extraZone?.maxCards ?? 15;
 
   const moveCard = useCallback((cardIndex: number, toZone: DeckZone) => {
+    // Get the current zone before updating (for stack cleanup)
+    const fromZone = deckAssignments.get(cardIndex);
+
     setDeckAssignments(prev => {
       const newAssignments = new Map(prev);
 
@@ -340,9 +768,21 @@ export function Results() {
       newAssignments.set(cardIndex, toZone);
       return newAssignments;
     });
+
+    // Clean up custom stacks: remove card from source zone's stacks
+    if (fromZone && fromZone !== toZone) {
+      setCustomStacks(prev => ({
+        ...prev,
+        [fromZone]: prev[fromZone].map(stack => ({
+          ...stack,
+          cardIndices: stack.cardIndices.filter(i => i !== cardIndex),
+        })),
+      }));
+    }
+
     setShowCardDetail(false);
     setSelectedCard(null);
-  }, [extraDeckMax]);
+  }, [extraDeckMax, deckAssignments]);
 
   // Handle clicking on basic resources
   const handleBasicResourceClick = useCallback((resource: BasicResource) => {
@@ -399,7 +839,7 @@ export function Results() {
     }
   }, [viewOnlyCard, showCardDetail]);
 
-  // Reset deck to initial state (with extra deck limit)
+  // Reset deck to initial state (with extra deck limit) AND reset stacks to defaults
   const resetDeck = useCallback(() => {
     const initialAssignments = new Map<number, DeckZone>();
     let extraDeckCount = 0;
@@ -418,8 +858,23 @@ export function Results() {
       }
     });
     setDeckAssignments(initialAssignments);
+
+    // Reset stacks to defaults - recreate from game config defaults
+    const getCardsByZoneFromAssignments = (zone: DeckZone) => {
+      return allDraftedCards
+        .filter(({ index }) => initialAssignments.get(index) === zone)
+        .map(({ card, index }) => ({ card, index }));
+    };
+
+    setCustomStacks({
+      main: initializeCustomStacksFromDefaults('main', getCardsByZoneFromAssignments('main')),
+      extra: initializeCustomStacksFromDefaults('extra', getCardsByZoneFromAssignments('extra')),
+      side: initializeCustomStacksFromDefaults('side', getCardsByZoneFromAssignments('side')),
+      pool: initializeCustomStacksFromDefaults('pool', getCardsByZoneFromAssignments('pool')),
+    });
+
     setSelectedCard(null);
-  }, [allDraftedCards, extraDeckMax]);
+  }, [allDraftedCards, extraDeckMax, initializeCustomStacksFromDefaults]);
 
   // Get unfiltered counts for each zone (main deck includes basic resources)
   const mainCountWithoutBasics = allDraftedCards.filter(({ index }) => deckAssignments.get(index) === 'main').length;
@@ -652,6 +1107,70 @@ ${sideDeck}
     }
   }, [generateDeckText, mainDeckCards, extraDeckCards, sideDeckCards, hasScores, gameConfig]);
 
+  // Shuffle array helper (Fisher-Yates)
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Get all main deck cards for hand simulation (including basic resources)
+  const getMainDeckForSimulation = useCallback(() => {
+    const cards: YuGiOhCardType[] = [];
+
+    // Add regular main deck cards (unfiltered)
+    allDraftedCards
+      .filter(({ index }) => deckAssignments.get(index) === 'main')
+      .forEach(({ card }) => cards.push(card));
+
+    // Add basic resources
+    if (gameConfig.basicResources) {
+      gameConfig.basicResources.forEach(resource => {
+        const count = basicResourceCounts.get(resource.id) || 0;
+        for (let i = 0; i < count; i++) {
+          cards.push({
+            id: typeof resource.id === 'number' ? resource.id : 0,
+            name: resource.name,
+            type: resource.type,
+            desc: resource.description,
+            imageUrl: resource.imageUrl,
+            attributes: resource.attributes || {},
+          } as YuGiOhCardType);
+        }
+      });
+    }
+
+    return cards;
+  }, [allDraftedCards, deckAssignments, gameConfig.basicResources, basicResourceCounts]);
+
+  // Draw a new hand (shuffle and draw 5)
+  const drawNewHand = useCallback(() => {
+    const mainDeck = getMainDeckForSimulation();
+    const shuffled = shuffleArray(mainDeck);
+    const handSize = Math.min(5, shuffled.length);
+    setSimulatedHand(shuffled.slice(0, handSize));
+    setRemainingDeck(shuffled.slice(handSize));
+    setShowHandSimulator(true);
+  }, [getMainDeckForSimulation]);
+
+  // Draw one more card
+  const drawOneCard = useCallback(() => {
+    if (remainingDeck.length === 0) return;
+    const [nextCard, ...rest] = remainingDeck;
+    setSimulatedHand(prev => [...prev, nextCard]);
+    setRemainingDeck(rest);
+  }, [remainingDeck]);
+
+  // Close hand simulator
+  const closeHandSimulator = useCallback(() => {
+    setShowHandSimulator(false);
+    setSimulatedHand([]);
+    setRemainingDeck([]);
+  }, []);
+
   // Show loading state
   if (isLoading && allDraftedCards.length === 0) {
     return (
@@ -706,7 +1225,15 @@ ${sideDeck}
               {!isViewingOtherPlayer && ' • Drag cards or click to move between zones'}
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <Button
+              onClick={drawNewHand}
+              disabled={mainCount === 0}
+              variant="secondary"
+            >
+              <Hand className="w-4 h-4 mr-2" />
+              Draw Hand
+            </Button>
             <Button variant="secondary" onClick={() => navigate('/')} className="whitespace-nowrap">
               New Draft
             </Button>
@@ -1108,7 +1635,46 @@ ${sideDeck}
             tierCounts={tierCounts}
             totalCount={allDraftedCards.length}
             filteredCount={mainDeckCards.length + extraDeckCards.length + sideDeckCards.length + poolCards.length}
+            showViewToggle
+            viewMode={filters.viewMode}
+            onViewModeChange={filters.setViewMode}
           />
+
+          {/* Autobuild and Save/load buttons */}
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <div className="flex items-center gap-2 ml-auto">
+              {/* Autobuild button */}
+              {cubeSynergies && hasScores && (
+                <button
+                  onClick={autobuildDeck}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 border border-green-500 rounded-lg text-sm text-white transition-colors"
+                  title="Automatically build a 40-card deck optimized for synergies"
+                >
+                  <Zap className="w-4 h-4" />
+                  <span>Autobuild</span>
+                </button>
+              )}
+
+              {/* Save deck button */}
+              <button
+                onClick={() => setShowSaveModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-yugi-card hover:bg-yugi-dark border border-yugi-border rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save</span>
+              </button>
+
+              {/* Load deck button */}
+              <button
+                onClick={() => setShowLoadModal(true)}
+                disabled={savedDecks.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-yugi-card hover:bg-yugi-dark disabled:opacity-50 disabled:cursor-not-allowed border border-yugi-border rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
+              >
+                <FolderOpen className="w-4 h-4" />
+                <span>Load{savedDecks.length > 0 && ` (${savedDecks.length})`}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Deck Zones */}
@@ -1140,6 +1706,13 @@ ${sideDeck}
                 onCardClick={handleCardClick}
                 onCardDrop={moveCard}
                 showTier={hasScores}
+                viewMode={filters.viewMode}
+                customStacks={customStacks.main}
+                onDeleteStack={(id) => deleteCustomStack('main', id)}
+                onRenameStack={(id, name) => renameCustomStack('main', id, name)}
+                onMoveToStack={(cardIndex, stackId) => moveCardToStack('main', cardIndex, stackId)}
+                onMergeStacks={(sourceId, targetId) => mergeStacks('main', sourceId, targetId)}
+                onCreateStackAtPosition={(name, cardIndex, position) => createStackAtPosition('main', name, cardIndex, position)}
               />
 
               {/* Extra Deck - only for games that have it */}
@@ -1155,6 +1728,13 @@ ${sideDeck}
                   onCardClick={handleCardClick}
                   onCardDrop={moveCard}
                   showTier={hasScores}
+                  viewMode={filters.viewMode}
+                  customStacks={customStacks.extra}
+                  onDeleteStack={(id) => deleteCustomStack('extra', id)}
+                  onRenameStack={(id, name) => renameCustomStack('extra', id, name)}
+                  onMoveToStack={(cardIndex, stackId) => moveCardToStack('extra', cardIndex, stackId)}
+                  onMergeStacks={(sourceId, targetId) => mergeStacks('extra', sourceId, targetId)}
+                  onCreateStackAtPosition={(name, cardIndex, position) => createStackAtPosition('extra', name, cardIndex, position)}
                 />
               )}
 
@@ -1171,6 +1751,13 @@ ${sideDeck}
                 onCardDrop={moveCard}
                 emptyMessage="Drag cards here or click to move"
                 showTier={hasScores}
+                viewMode={filters.viewMode}
+                customStacks={customStacks.side}
+                onDeleteStack={(id) => deleteCustomStack('side', id)}
+                onRenameStack={(id, name) => renameCustomStack('side', id, name)}
+                onMoveToStack={(cardIndex, stackId) => moveCardToStack('side', cardIndex, stackId)}
+                onMergeStacks={(sourceId, targetId) => mergeStacks('side', sourceId, targetId)}
+                onCreateStackAtPosition={(name, cardIndex, position) => createStackAtPosition('side', name, cardIndex, position)}
               />
             </div>
 
@@ -1188,6 +1775,13 @@ ${sideDeck}
               emptyMessage="Drag cards here to exclude from deck"
               icon={<Archive className="w-5 h-5" />}
               showTier={hasScores}
+              viewMode={filters.viewMode}
+              customStacks={customStacks.pool}
+              onDeleteStack={(id) => deleteCustomStack('pool', id)}
+              onRenameStack={(id, name) => renameCustomStack('pool', id, name)}
+              onMoveToStack={(cardIndex, stackId) => moveCardToStack('pool', cardIndex, stackId)}
+              onMergeStacks={(sourceId, targetId) => mergeStacks('pool', sourceId, targetId)}
+              onCreateStackAtPosition={(name, cardIndex, position) => createStackAtPosition('pool', name, cardIndex, position)}
             />
           </div>
         ) : (
@@ -1208,7 +1802,12 @@ ${sideDeck}
               imageUrl: selectedBasicResource.imageUrl,
               attributes: selectedBasicResource.attributes || {},
             } as YuGiOhCardType :
-            selectedCard?.card || viewOnlyCard || null
+            // Apply adjusted score to card if there's a synergy bonus (like during drafting)
+            selectedCard?.card ? (
+              selectedCardSynergy && selectedCardSynergy.synergyBonus > 0
+                ? { ...selectedCard.card, score: selectedCardSynergy.adjustedScore }
+                : selectedCard.card
+            ) : viewOnlyCard || null
           }
           isOpen={showCardDetail && (selectedCard !== null || viewOnlyCard !== null || selectedBasicResource !== null)}
           onClose={handleCloseCardDetail}
@@ -1227,12 +1826,23 @@ ${sideDeck}
             selectedCard?.zone === 'side' ? 'text-orange-400' : 'text-gray-400'
           }
           footer={selectedCard && !viewOnlyCard && (
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Move to:</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {selectedCard.zone !== 'main' && (
-                  gameConfig.id === 'yugioh' ? (
-                    !isExtraDeckCard(selectedCard.card.type) && (
+            <div className="space-y-4">
+              {/* Zone movement */}
+              <div>
+                <p className="text-xs text-gray-400 mb-2">Move to:</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {selectedCard.zone !== 'main' && (
+                    gameConfig.id === 'yugioh' ? (
+                      !isExtraDeckCard(selectedCard.card.type) && (
+                        <Button
+                          onClick={() => moveCard(selectedCard.index, 'main')}
+                          variant="secondary"
+                          className="justify-center"
+                        >
+                          Main Deck
+                        </Button>
+                      )
+                    ) : (
                       <Button
                         onClick={() => moveCard(selectedCard.index, 'main')}
                         variant="secondary"
@@ -1241,48 +1851,287 @@ ${sideDeck}
                         Main Deck
                       </Button>
                     )
-                  ) : (
+                  )}
+                  {gameConfig.deckZones.some(z => z.id === 'extra') && selectedCard.zone !== 'extra' && isExtraDeckCard(selectedCard.card.type) && (
                     <Button
-                      onClick={() => moveCard(selectedCard.index, 'main')}
+                      onClick={() => moveCard(selectedCard.index, 'extra')}
                       variant="secondary"
                       className="justify-center"
                     >
-                      Main Deck
+                      Extra Deck
                     </Button>
-                  )
-                )}
-                {gameConfig.deckZones.some(z => z.id === 'extra') && selectedCard.zone !== 'extra' && isExtraDeckCard(selectedCard.card.type) && (
-                  <Button
-                    onClick={() => moveCard(selectedCard.index, 'extra')}
-                    variant="secondary"
-                    className="justify-center"
-                  >
-                    Extra Deck
-                  </Button>
-                )}
-                {selectedCard.zone !== 'side' && (
-                  <Button
-                    onClick={() => moveCard(selectedCard.index, 'side')}
-                    variant="secondary"
-                    className="justify-center"
-                  >
-                    {gameConfig.id === 'mtg' ? 'Sideboard' : 'Side Deck'}
-                  </Button>
-                )}
-                {selectedCard.zone !== 'pool' && (
-                  <Button
-                    onClick={() => moveCard(selectedCard.index, 'pool')}
-                    variant="ghost"
-                    className="justify-center text-gray-400"
-                  >
-                    <Archive className="w-4 h-4 mr-1" />
-                    Remove
-                  </Button>
-                )}
+                  )}
+                  {selectedCard.zone !== 'side' && (
+                    <Button
+                      onClick={() => moveCard(selectedCard.index, 'side')}
+                      variant="secondary"
+                      className="justify-center"
+                    >
+                      {gameConfig.id === 'mtg' ? 'Sideboard' : 'Side Deck'}
+                    </Button>
+                  )}
+                  {selectedCard.zone !== 'pool' && (
+                    <Button
+                      onClick={() => moveCard(selectedCard.index, 'pool')}
+                      variant="ghost"
+                      className="justify-center text-gray-400"
+                    >
+                      <Archive className="w-4 h-4 mr-1" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </div>
+
+              {/* Stack assignment (only in pile view) */}
+              {filters.viewMode === 'pile' && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">Assign to stack:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Current zone's stacks */}
+                    {customStacks[selectedCard.zone as keyof typeof customStacks]?.map(stack => {
+                      const isInThisStack = stack.cardIndices.includes(selectedCard.index);
+                      return (
+                        <button
+                          key={stack.id}
+                          onClick={() => {
+                            if (!isInThisStack) {
+                              moveCardToStack(selectedCard.zone, selectedCard.index, stack.id);
+                            }
+                          }}
+                          className={cn(
+                            'px-3 py-1.5 text-sm rounded-lg border transition-colors',
+                            isInThisStack
+                              ? 'bg-gold-500/20 border-gold-500 text-gold-400'
+                              : 'bg-yugi-card border-yugi-border text-gray-300 hover:border-gold-500/50'
+                          )}
+                        >
+                          {stack.name}
+                          {isInThisStack && ' ✓'}
+                        </button>
+                      );
+                    })}
+                    {/* Create new stack button */}
+                    <button
+                      onClick={() => {
+                        const newStackId = createCustomStack(selectedCard.zone, selectedCard.card.name);
+                        moveCardToStack(selectedCard.zone, selectedCard.index, newStackId);
+                        handleCloseCardDetail();
+                      }}
+                      className="px-3 py-1.5 text-sm rounded-lg border border-dashed border-yugi-border text-gray-400 hover:border-gold-500/50 hover:text-gold-400 transition-colors flex items-center gap-1"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      New Stack
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
+          synergy={selectedCardSynergy}
+          hideScores={!hasScores}
         />
+
+        {/* Hand Simulator Modal */}
+        {showHandSimulator && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={closeHandSimulator}
+            />
+
+            {/* Modal */}
+            <div className="relative bg-yugi-darker border border-yugi-border rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              {/* Header - compact on mobile */}
+              <div className="flex items-center justify-between p-3 sm:p-4 border-b border-yugi-border flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <Hand className="w-5 h-5 text-gold-400 flex-shrink-0" />
+                  <h2 className="text-base sm:text-lg font-semibold text-white whitespace-nowrap">Hand Simulator</h2>
+                </div>
+                <button
+                  onClick={closeHandSimulator}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Hand display - scrollable middle section */}
+              <div className="p-3 sm:p-4 overflow-y-auto flex-1 min-h-[200px]">
+                {simulatedHand.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                    {simulatedHand.map((card, idx) => (
+                      <div key={`hand-${card.id}-${idx}`} className="transition-transform hover:scale-105">
+                        <YuGiOhCard card={card} size="full" showTier={hasScores} flush />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-400 py-12">
+                    No cards in hand
+                  </div>
+                )}
+              </div>
+
+              {/* Footer with actions - fixed at bottom, responsive layout */}
+              <div className="flex items-center justify-center gap-2 sm:gap-4 p-3 sm:p-4 border-t border-yugi-border bg-yugi-dark/50 flex-shrink-0">
+                {/* Deck count badge */}
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-yugi-darker rounded-lg border border-yugi-border">
+                  <span className="text-xs sm:text-sm font-bold text-gray-300">{remainingDeck.length}</span>
+                  <span className="text-xs text-gray-500 hidden sm:inline">deck</span>
+                </div>
+
+                {/* Action buttons */}
+                <Button
+                  onClick={drawNewHand}
+                  variant="secondary"
+                  className="whitespace-nowrap px-3 sm:px-4 text-sm"
+                >
+                  <Shuffle className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">New Hand</span>
+                </Button>
+                <Button
+                  onClick={drawOneCard}
+                  disabled={remainingDeck.length === 0}
+                  className="whitespace-nowrap px-3 sm:px-4 text-sm"
+                >
+                  <Plus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Draw</span>
+                </Button>
+
+                {/* Hand count badge */}
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-gold-400/20 rounded-lg border border-gold-400/50">
+                  <span className="text-xs sm:text-sm font-bold text-gold-400">{simulatedHand.length}</span>
+                  <span className="text-xs text-gold-400/70 hidden sm:inline">hand</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save Deck Modal */}
+        {showSaveModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setShowSaveModal(false)}
+            />
+            <div className="relative bg-yugi-darker border border-yugi-border rounded-xl shadow-2xl w-full max-w-md">
+              <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Save className="w-5 h-5 text-gold-400" />
+                  Save Deck Configuration
+                </h3>
+                <button
+                  onClick={() => setShowSaveModal(false)}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Save Name
+                  </label>
+                  <input
+                    type="text"
+                    value={saveDeckName}
+                    onChange={(e) => setSaveDeckName(e.target.value)}
+                    placeholder="My Deck v1..."
+                    className="w-full bg-yugi-dark border border-yugi-border rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && saveDeckName.trim()) {
+                        saveDeck(saveDeckName.trim());
+                      }
+                    }}
+                  />
+                </div>
+                {savedDecks.some(d => d.name === saveDeckName.trim()) && (
+                  <p className="text-sm text-yellow-400">
+                    This will overwrite the existing save "{saveDeckName.trim()}"
+                  </p>
+                )}
+                <div className="flex justify-end gap-3">
+                  <Button variant="ghost" onClick={() => setShowSaveModal(false)} disabled={isSaving}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => saveDeck(saveDeckName.trim())}
+                    disabled={!saveDeckName.trim() || isSaving}
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Load Deck Modal */}
+        {showLoadModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setShowLoadModal(false)}
+            />
+            <div className="relative bg-yugi-darker border border-yugi-border rounded-xl shadow-2xl w-full max-w-md">
+              <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <FolderOpen className="w-5 h-5 text-gold-400" />
+                  Load Saved Deck
+                </h3>
+                <button
+                  onClick={() => setShowLoadModal(false)}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-2 max-h-[60vh] overflow-y-auto">
+                {savedDecks.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">No saved decks</p>
+                ) : (
+                  savedDecks.map(deck => (
+                    <div
+                      key={deck.id}
+                      className="flex items-center justify-between p-3 bg-yugi-card rounded-lg border border-yugi-border hover:border-gold-500/50 transition-colors"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-white font-medium">{deck.name}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(deck.updated_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => loadDeck(deck.id)}
+                          className="px-3 py-1 bg-gold-500 hover:bg-gold-400 text-black text-sm font-medium rounded transition-colors"
+                        >
+                          Load
+                        </button>
+                        <button
+                          onClick={() => deleteSavedDeck(deck.id)}
+                          className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="p-4 border-t border-yugi-border">
+                <Button variant="ghost" onClick={() => setShowLoadModal(false)} className="w-full">
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
@@ -1305,6 +2154,12 @@ function StatCard({
   );
 }
 
+interface CustomStack {
+  id: string;
+  name: string;
+  cardIndices: number[];
+}
+
 function DeckZoneSection({
   title,
   count,
@@ -1318,6 +2173,14 @@ function DeckZoneSection({
   emptyMessage,
   icon,
   showTier = true,
+  viewMode = 'grid',
+  customStacks = [],
+  onDeleteStack,
+  onRenameStack,
+  onMoveToStack,
+  onMergeStacks,
+  onCreateStackAtPosition,
+  onDragStartCard,
 }: {
   title: string;
   count: number;
@@ -1331,14 +2194,25 @@ function DeckZoneSection({
   emptyMessage?: string;
   icon?: React.ReactNode;
   showTier?: boolean;
+  viewMode?: ViewMode;
+  customStacks?: CustomStack[];
+  onDeleteStack?: (stackId: string) => void;
+  onRenameStack?: (stackId: string, newName: string) => void;
+  onMoveToStack?: (cardIndex: number, stackId: string) => void;
+  onMergeStacks?: (sourceStackId: string, targetStackId: string) => void;
+  onCreateStackAtPosition?: (cardName: string, cardIndex: number, position: number) => string;
+  onDragStartCard?: () => void;
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const showFilteredCount = filteredCount !== count;
 
   const handleDragStart = (e: React.DragEvent, cardIndex: number) => {
+    e.dataTransfer.setData('dragType', 'card');
     e.dataTransfer.setData('cardIndex', cardIndex.toString());
     e.dataTransfer.setData('fromZone', zone);
     e.dataTransfer.effectAllowed = 'move';
+    // Auto-enable custom stacks when user starts dragging
+    onDragStartCard?.();
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -1361,6 +2235,20 @@ function DeckZoneSection({
     }
   };
 
+  // Handle cross-zone drops to this zone
+  const handleExternalDrop = useCallback((cardIndex: number) => {
+    onCardDrop(cardIndex, zone);
+  }, [onCardDrop, zone]);
+
+  // Convert cards to the format expected by StackablePileView
+  const stackableCards = useMemo(() => {
+    return cards.map(({ card, index, count }) => ({
+      card: toCardWithAttributes(card),
+      index,
+      count,
+    }));
+  }, [cards]);
+
   return (
     <div
       onDragOver={handleDragOver}
@@ -1379,7 +2267,29 @@ function DeckZoneSection({
         </span>
         {isDragOver && <span className="text-gold-400 text-sm ml-2">Drop here</span>}
       </h2>
-      {cards.length > 0 || isDragOver ? (
+
+      {viewMode === 'pile' ? (
+        /* Pile view with stacks - uses shared StackablePileView component */
+        <StackablePileView
+          stacks={customStacks}
+          cards={stackableCards}
+          onDeleteStack={(stackId) => onDeleteStack?.(stackId)}
+          onRenameStack={(stackId, newName) => onRenameStack?.(stackId, newName)}
+          onMoveCardToStack={(cardIndex, stackId) => onMoveToStack?.(cardIndex, stackId)}
+          onMergeStacks={(sourceId, targetId) => onMergeStacks?.(sourceId, targetId)}
+          onCreateStackAtPosition={onCreateStackAtPosition ? (name, cardIndex, position) => {
+            return onCreateStackAtPosition(name, cardIndex, position);
+          } : undefined}
+          onCardClick={(card, index) => onCardClick(card as unknown as YuGiOhCardType, index)}
+          selectedIndex={selectedIndex}
+          showTier={showTier}
+          showInsertionIndicators={true}
+          onExternalDrop={handleExternalDrop}
+          onDragStartCard={onDragStartCard}
+          zoneId={zone}
+        />
+      ) : cards.length > 0 || isDragOver ? (
+        /* Grid view */
         <div className={cn(
           "grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12",
           cards.length === 0 && "min-h-[120px] items-center justify-center"
