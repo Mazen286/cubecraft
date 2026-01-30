@@ -195,7 +195,7 @@ export function Draft() {
   const [myCardsStatsFilters, setMyCardsStatsFilters] = useState<Record<string, Set<string>>>({});
 
   // Pile navigation structure for My Cards drawer (when in pile view mode)
-  const [myCardsPileNavigation, _setMyCardsPileNavigation] = useState<PileNavigationMap | null>(null);
+  const [myCardsPileNavigation, setMyCardsPileNavigation] = useState<PileNavigationMap | null>(null);
 
   // Custom stacks for My Cards organization (persists to Results page)
   interface CustomStack {
@@ -371,6 +371,27 @@ export function Draft() {
 
     prevDraftedCountRef.current = draftedCards.length;
   }, [draftedCards, myCardsFilters.viewMode, customStacks, gameConfig]);
+
+  // Build pile navigation map from customStacks for keyboard navigation
+  useEffect(() => {
+    if (myCardsFilters.viewMode !== 'pile' || customStacks.length === 0) {
+      setMyCardsPileNavigation(null);
+      return;
+    }
+
+    // Build piles array (array of arrays of card indices)
+    const piles: number[][] = customStacks.map(stack => stack.cardIndices);
+
+    // Build cardToPile map (card index -> [pileIndex, positionInPile])
+    const cardToPile = new Map<number, [number, number]>();
+    customStacks.forEach((stack, pileIndex) => {
+      stack.cardIndices.forEach((cardIndex, posInPile) => {
+        cardToPile.set(cardIndex, [pileIndex, posInPile]);
+      });
+    });
+
+    setMyCardsPileNavigation({ piles, cardToPile });
+  }, [myCardsFilters.viewMode, customStacks]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1176,6 +1197,9 @@ export function Draft() {
   }, []);
 
   // Keyboard navigation for My Cards (drawer or inline)
+  // In pile mode, use draftedCards (since stack indices reference draftedCards)
+  // In grid mode, use filteredDraftedCards
+  const myCardsForNavigation = myCardsFilters.viewMode === 'pile' ? draftedCards : filteredDraftedCards;
   const {
     highlightedIndex: myCardsHighlightedIndex,
     setHighlightedIndex: setMyCardsHighlightedIndex,
@@ -1184,7 +1208,7 @@ export function Draft() {
     closeSheet: closeMyCardsSheet,
     handleCardClick: handleMyCardsCardClick,
   } = useCardKeyboardNavigation({
-    cards: filteredDraftedCards,
+    cards: myCardsForNavigation,
     columns: getMyCardsColumnCount,
     enabled: showMobileCards || (myCardsInline && focusedSection === 'myCards'),
     // Space/Enter with sheet open closes the drawer (only if drawer mode)
@@ -1959,6 +1983,7 @@ export function Draft() {
                         onCreateStackAtPosition={createStackAtPosition}
                         onCardClick={(card, index) => handleMyCardsCardClick(card as unknown as YuGiOhCardType, index)}
                         selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
+                        highlightedIndex={myCardsHighlightedIndex}
                         showTier={showScores}
                         showInsertionIndicators={true}
                         onDragStartCard={() => {}}
@@ -2326,6 +2351,7 @@ export function Draft() {
                         onCreateStackAtPosition={createStackAtPosition}
                         onCardClick={(card, index) => handleMyCardsCardClick(card as unknown as YuGiOhCardType, index)}
                         selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
+                        highlightedIndex={myCardsHighlightedIndex}
                         showTier={showScores}
                         showInsertionIndicators={true}
                         onDragStartCard={() => {}}
