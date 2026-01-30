@@ -2019,7 +2019,7 @@ export function Draft() {
                         onMoveCardToStack={moveCardToStack}
                         onMergeStacks={mergeStacks}
                         onCreateStackAtPosition={createStackAtPosition}
-                        onCardClick={(card, index) => handleMyCardsCardClick(card as unknown as YuGiOhCardType, index)}
+                        onCardClick={(_card, index) => handleMyCardsCardClick(draftedCards[index], index)}
                         selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
                         highlightedIndex={myCardsHighlightedIndex}
                         showTier={showScores}
@@ -2387,7 +2387,7 @@ export function Draft() {
                         onMoveCardToStack={moveCardToStack}
                         onMergeStacks={mergeStacks}
                         onCreateStackAtPosition={createStackAtPosition}
-                        onCardClick={(card, index) => handleMyCardsCardClick(card as unknown as YuGiOhCardType, index)}
+                        onCardClick={(_card, index) => handleMyCardsCardClick(draftedCards[index], index)}
                         selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
                         highlightedIndex={myCardsHighlightedIndex}
                         showTier={showScores}
