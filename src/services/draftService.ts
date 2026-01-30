@@ -7,10 +7,13 @@ import type {
   DraftPickInsert,
   DraftBurnedCardInsert,
   PackData,
+  SavedDeckRow,
+  SavedDeckData,
 } from '../lib/database.types';
 import type { DraftSettings, YuGiOhCard } from '../types';
 import { shuffleArray, createPacks } from '../lib/utils';
 import { cubeService } from './cubeService';
+import { synergyService } from './synergyService';
 import { getActiveGameConfig } from '../context/GameContext';
 import { getStoragePrefix, getUserId } from './utils';
 
@@ -536,8 +539,8 @@ export const draftService = {
   },
 
   /**
-   * Make a pick
-   * Uses optimistic locking to prevent duplicate picks from race conditions
+   * Make a pick using RPC function for atomic operation
+   * Single database call handles validation, pick recording, and hand update
    */
   async makePick(
     sessionId: string,
@@ -548,96 +551,43 @@ export const draftService = {
   ): Promise<void> {
     const supabase = getSupabase();
 
-    // Get current state
+    // Single RPC call handles: validation, insert pick, update hand
+    const { data, error } = await supabase.rpc('make_draft_pick', {
+      p_session_id: sessionId,
+      p_player_id: playerId,
+      p_card_id: cardId,
+      p_pick_time_seconds: pickTimeSeconds,
+      p_was_auto_pick: wasAutoPick,
+    });
+
+    if (error) {
+      console.error('[makePick] RPC error:', error);
+      throw new Error(error.message || 'Failed to make pick');
+    }
+
+    const result = data as { success: boolean; error?: string; all_picked?: boolean };
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to make pick');
+    }
+
+    // Get session for bot picks (we need cube_id)
+    // This is a quick read since we just need one field
     const { data: session } = await supabase
       .from('draft_sessions')
-      .select()
+      .select('cube_id, current_pack, current_pick')
       .eq('id', sessionId)
       .single();
 
-    const { data: player } = await supabase
-      .from('draft_players')
-      .select()
-      .eq('id', playerId)
-      .single();
-
-    if (!session || !player) {
-      throw new Error('Session or player not found');
+    if (session) {
+      // Trigger bot picks if there are bots in this session
+      await this.makeBotPicks(sessionId, session.cube_id, session.current_pack, session.current_pick);
     }
 
-    if (player.pick_made) {
-      throw new Error('Pick already made this round');
-    }
-
-    // Verify card is in hand
-    if (!player.current_hand.includes(cardId)) {
-      throw new Error('Card not in hand');
-    }
-
-    // Store the pack/pick numbers we read at the start
-    const pickPack = session.current_pack;
-    const pickNumber = session.current_pick;
-
-    // IMPORTANT: Insert pick record FIRST, before updating player hand
-    // This ensures we don't lose the card if the insert fails
-    const pickData: DraftPickInsert = {
-      session_id: sessionId,
-      player_id: playerId,
-      card_id: cardId,
-      pack_number: pickPack,
-      pick_number: pickNumber,
-      pick_time_seconds: pickTimeSeconds,
-      was_auto_pick: wasAutoPick,
-    };
-
-    const { error: pickError } = await supabase.from('draft_picks').insert(pickData);
-
-    if (pickError) {
-      // Check if it's a unique constraint violation
-      if (pickError.code === '23505') {
-        // Unique constraint - check which one
-        if (pickError.message?.includes('card_id')) {
-          // Card was already picked by someone else - shouldn't happen with proper pack management
-          console.log('[makePick] Card already picked by another player:', cardId);
-          throw new Error('Card already picked');
-        } else {
-          // Player already has a pick for this round - this is fine, means we already recorded it
-          console.log('[makePick] Pick already recorded for this round');
-        }
-      } else {
-        // Some other error - don't proceed
-        console.error('[makePick] Failed to insert pick:', pickError);
-        throw new Error('Failed to record pick');
-      }
-    }
-
-    // Re-fetch current hand to avoid race conditions where another process updated it
-    const { data: freshPlayer } = await supabase
-      .from('draft_players')
-      .select('current_hand')
-      .eq('id', playerId)
-      .single();
-
-    // Compute new hand from fresh data, removing the picked card
-    // Note: If fresh fetch fails, we still use the original data since the pick is recorded
-    // (the hand update is best-effort at this point)
-    if (!freshPlayer) {
-      console.warn('[makePick] Could not fetch fresh player data, using original hand for update');
-    }
-    const currentHand = freshPlayer?.current_hand || player.current_hand;
-    const newHand = currentHand.filter((id: number) => id !== cardId);
-    await supabase
-      .from('draft_players')
-      .update({ current_hand: newHand, pick_made: true })
-      .eq('id', playerId);
-
-    // Trigger bot picks if there are bots in this session
-    await this.makeBotPicks(sessionId, session.cube_id, session.current_pack, session.current_pick);
-
-    // Check if all players have made their pick
+    // Re-check if all players have picked (bots may have picked now)
     const { data: allPlayers } = await supabase
       .from('draft_players')
-      .select()
+      .select('pick_made')
       .eq('session_id', sessionId);
 
     const allPicked = allPlayers?.every((p) => p.pick_made);
@@ -654,7 +604,7 @@ export const draftService = {
    */
   async makeBotPicks(
     sessionId: string,
-    _cubeId: string, // Reserved for future cube-specific AI strategies
+    cubeId: string, // Used for loading cube-specific synergies
     _packNumber: number, // Deprecated - we fetch fresh state
     _pickNumber: number  // Deprecated - we fetch fresh state
   ): Promise<void> {
@@ -675,6 +625,9 @@ export const draftService = {
 
     const currentPack = session.current_pack;
     const currentPick = session.current_pick;
+
+    // Load synergies for intelligent picking
+    const cubeSynergies = await synergyService.loadCubeSynergies(cubeId);
 
     // Get all bot players who haven't picked yet
     const { data: bots, error: botsError } = await supabase
@@ -756,17 +709,23 @@ export const draftService = {
         let weightedScore = baseScore;
 
         if (card) {
-          // Archetype synergy bonus
-          if (card.archetype && collection.topArchetype === card.archetype) {
-            weightedScore += 15; // Big bonus for matching archetype
-          } else if (card.archetype && collection.archetypes.has(card.archetype)) {
-            const count = collection.archetypes.get(card.archetype)!;
-            if (count >= 2) {
-              weightedScore += 8; // Smaller bonus for building archetype
+          // Use cube-specific synergies if available
+          if (cubeSynergies) {
+            const synergyResult = synergyService.calculateCardSynergy(card, draftedCards, cubeSynergies);
+            weightedScore = synergyResult.adjustedScore;
+          } else {
+            // Fallback to basic archetype synergy if no cube synergies defined
+            if (card.archetype && collection.topArchetype === card.archetype) {
+              weightedScore += 15; // Big bonus for matching archetype
+            } else if (card.archetype && collection.archetypes.has(card.archetype)) {
+              const count = collection.archetypes.get(card.archetype)!;
+              if (count >= 2) {
+                weightedScore += 8; // Smaller bonus for building archetype
+              }
             }
           }
 
-          // Card type balance adjustments
+          // Card type balance adjustments (always apply)
           const cardType = card.type.toLowerCase();
           const isSpell = cardType.includes('spell');
           const isTrap = cardType.includes('trap');
@@ -1468,6 +1427,9 @@ export const draftService = {
       return { autoPickedCount: 0, autoPickedNames: [] };
     }
 
+    // Load synergies for intelligent auto-picking
+    const cubeSynergies = await synergyService.loadCubeSynergies(session.cube_id);
+
     const autoPickedNames: string[] = [];
 
     // Auto-pick for each player who hasn't picked
@@ -1532,17 +1494,23 @@ export const draftService = {
         let weightedScore = baseScore;
 
         if (card) {
-          // Archetype synergy bonus
-          if (card.archetype && collection.topArchetype === card.archetype) {
-            weightedScore += 15; // Big bonus for matching archetype
-          } else if (card.archetype && collection.archetypes.has(card.archetype)) {
-            const count = collection.archetypes.get(card.archetype)!;
-            if (count >= 2) {
-              weightedScore += 8; // Smaller bonus for building archetype
+          // Use cube-specific synergies if available
+          if (cubeSynergies) {
+            const synergyResult = synergyService.calculateCardSynergy(card, draftedCards, cubeSynergies);
+            weightedScore = synergyResult.adjustedScore;
+          } else {
+            // Fallback to basic archetype synergy if no cube synergies defined
+            if (card.archetype && collection.topArchetype === card.archetype) {
+              weightedScore += 15; // Big bonus for matching archetype
+            } else if (card.archetype && collection.archetypes.has(card.archetype)) {
+              const count = collection.archetypes.get(card.archetype)!;
+              if (count >= 2) {
+                weightedScore += 8; // Smaller bonus for building archetype
+              }
             }
           }
 
-          // Card type balance adjustments
+          // Card type balance adjustments (always apply)
           const cardType = card.type.toLowerCase();
           const isSpell = cardType.includes('spell');
           const isTrap = cardType.includes('trap');
@@ -2157,5 +2125,107 @@ export const draftService = {
     }));
 
     return results;
+  },
+
+  // =============================================================================
+  // Saved Decks
+  // =============================================================================
+
+  /**
+   * Get all saved decks for a player in a session
+   */
+  async getSavedDecks(sessionId: string, playerId: string): Promise<SavedDeckRow[]> {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('saved_decks')
+      .select()
+      .eq('session_id', sessionId)
+      .eq('player_id', playerId)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to fetch saved decks:', error);
+      return [];
+    }
+
+    return data || [];
+  },
+
+  /**
+   * Save or update a deck configuration
+   */
+  async saveDeck(
+    sessionId: string,
+    playerId: string,
+    name: string,
+    deckData: SavedDeckData
+  ): Promise<SavedDeckRow | null> {
+    const supabase = getSupabase();
+
+    // Check if a save with this name already exists
+    const { data: existing } = await supabase
+      .from('saved_decks')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('player_id', playerId)
+      .eq('name', name)
+      .single();
+
+    if (existing) {
+      // Update existing save
+      const { data, error } = await supabase
+        .from('saved_decks')
+        .update({
+          deck_data: deckData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to update saved deck:', error);
+        return null;
+      }
+
+      return data;
+    } else {
+      // Create new save
+      const { data, error } = await supabase
+        .from('saved_decks')
+        .insert({
+          session_id: sessionId,
+          player_id: playerId,
+          name,
+          deck_data: deckData,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to save deck:', error);
+        return null;
+      }
+
+      return data;
+    }
+  },
+
+  /**
+   * Delete a saved deck
+   */
+  async deleteSavedDeck(deckId: string): Promise<boolean> {
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('saved_decks')
+      .delete()
+      .eq('id', deckId);
+
+    if (error) {
+      console.error('Failed to delete saved deck:', error);
+      return false;
+    }
+
+    return true;
   },
 };
