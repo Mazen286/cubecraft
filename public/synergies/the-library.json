@@ -2312,6 +2312,126 @@
       "boost": { "cardName": "Gold Sarcophagus" },
       "bonus": 5,
       "bonusType": "flat"
+    },
+    {
+      "id": "fairy-tail-archetype",
+      "name": "Fairy Tail Synergy",
+      "category": "archetype",
+      "description": "Fairy Tail cards support each other",
+      "trigger": { "archetype": "Fairy Tail" },
+      "boost": { "archetype": "Fairy Tail" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "hecahands-archetype",
+      "name": "Hecahands Synergy",
+      "category": "archetype",
+      "description": "Hecahands cards work together",
+      "trigger": { "archetype": "Hecahands" },
+      "boost": { "archetype": "Hecahands" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "ragnaraika-archetype",
+      "name": "Ragnaraika Synergy",
+      "category": "archetype",
+      "description": "Ragnaraika cards combo together",
+      "trigger": { "archetype": "Ragnaraika" },
+      "boost": { "archetype": "Ragnaraika" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "kewl-tune-archetype",
+      "name": "Kewl Tune Synergy",
+      "category": "archetype",
+      "description": "Kewl Tune cards work together",
+      "trigger": { "archetype": "Kewl Tune" },
+      "boost": { "archetype": "Kewl Tune" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "k9-archetype",
+      "name": "K9 Synergy",
+      "category": "archetype",
+      "description": "K9 cards support each other",
+      "trigger": { "archetype": "K9" },
+      "boost": { "archetype": "K9" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "centur-ion-archetype",
+      "name": "Centur-Ion Synergy",
+      "category": "archetype",
+      "description": "Centur-Ion cards work together",
+      "trigger": { "archetype": "Centur-Ion" },
+      "boost": { "archetype": "Centur-Ion" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "silhouhatte-archetype",
+      "name": "Silhouhatte Synergy",
+      "category": "archetype",
+      "description": "Silhouhatte cards combo together",
+      "trigger": { "archetype": "Silhouhatte" },
+      "boost": { "archetype": "Silhouhatte" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "snake-eye-archetype",
+      "name": "Snake-Eye Synergy",
+      "category": "archetype",
+      "description": "Snake-Eye cards work together",
+      "trigger": { "archetype": "Snake-Eye" },
+      "boost": { "archetype": "Snake-Eye" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "enneacraft-archetype",
+      "name": "Enneacraft Synergy",
+      "category": "archetype",
+      "description": "Enneacraft cards work together",
+      "trigger": { "archetype": "Enneacraft" },
+      "boost": { "archetype": "Enneacraft" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "visas-archetype",
+      "name": "Visas Synergy",
+      "category": "archetype",
+      "description": "Visas cards work together",
+      "trigger": { "archetype": "Visas" },
+      "boost": { "archetype": "Visas" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
     }
   ]
 }
