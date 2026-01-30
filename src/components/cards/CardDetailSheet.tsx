@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
+import { Lightbulb } from 'lucide-react';
 import { BottomSheet } from '../ui/BottomSheet';
 import { YuGiOhCard } from './YuGiOhCard';
 import { ManaCostWithFaces, OracleText } from './ManaSymbols';
 import { useGameConfig } from '../../context/GameContext';
 import { hasErrata, getErrata } from '../../data/cardErrata';
 import { cn, getTierFromScore } from '../../lib/utils';
-import { type YuGiOhCard as YuGiOhCardType, toCardWithAttributes } from '../../types';
+import { type YuGiOhCard as YuGiOhCardType, type SynergyResult, toCardWithAttributes } from '../../types';
 import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
 import { ENERGY_COLORS } from '../../config/games/pokemon';
 
@@ -21,6 +22,8 @@ interface CardDetailSheetProps {
   zoneColor?: string;
   /** Hide card scores (competitive mode) */
   hideScores?: boolean;
+  /** Optional synergy information for this card */
+  synergy?: SynergyResult | null;
 }
 
 /**
@@ -35,6 +38,7 @@ export function CardDetailSheet({
   zoneLabel,
   zoneColor,
   hideScores,
+  synergy,
 }: CardDetailSheetProps) {
   const { gameConfig } = useGameConfig();
 
@@ -116,20 +120,113 @@ export function CardDetailSheet({
                 })}
               </div>
 
-              {/* Score */}
+              {/* Score - show base score when synergy is available */}
               {card.score !== undefined && !hideScores && (
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs md:text-sm text-gray-400">Score:</span>
-                  <span className={cn(
-                    "text-xs md:text-sm font-bold",
-                    card.score >= 90 ? 'text-red-400' :
-                    card.score >= 75 ? 'text-orange-400' :
-                    card.score >= 60 ? 'text-yellow-400' :
-                    card.score >= 45 ? 'text-green-400' :
-                    card.score >= 30 ? 'text-blue-400' : 'text-gray-400'
-                  )}>
-                    {card.score}/100 ({getTierFromScore(card.score)})
-                  </span>
+                  <span className="text-xs md:text-sm text-gray-400">Base Score:</span>
+                  {(() => {
+                    // Use base score from synergy if available, otherwise card.score
+                    const displayScore = synergy ? synergy.baseScore : card.score;
+                    return (
+                      <span className={cn(
+                        "text-xs md:text-sm font-bold",
+                        displayScore >= 90 ? 'text-red-400' :
+                        displayScore >= 75 ? 'text-orange-400' :
+                        displayScore >= 60 ? 'text-yellow-400' :
+                        displayScore >= 45 ? 'text-green-400' :
+                        displayScore >= 30 ? 'text-blue-400' : 'text-gray-400'
+                      )}>
+                        {displayScore}/100 ({getTierFromScore(displayScore)})
+                      </span>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Synergy Bonus */}
+              {synergy && synergy.synergyBonus > 0 && !hideScores && (
+                <div className="mb-3 p-2 md:p-3 bg-green-900/20 border border-green-700/50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lightbulb className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">
+                      +{synergy.synergyBonus} Synergy Bonus
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {(() => {
+                      // Category display names
+                      const categoryLabels: Record<string, string> = {
+                        archetype: 'Archetype',
+                        type: 'Type',
+                        attribute: 'Attribute',
+                        level: 'Level/Rank',
+                        recruiter: 'Recruiter',
+                        combo: 'Combo',
+                        virus: 'Virus',
+                        spell: 'Spell',
+                        'extra-deck': 'Extra Deck',
+                        generic: 'Synergy',
+                      };
+                      // Category colors
+                      const categoryColors: Record<string, string> = {
+                        archetype: 'text-purple-400',
+                        type: 'text-orange-400',
+                        attribute: 'text-blue-400',
+                        level: 'text-yellow-400',
+                        recruiter: 'text-cyan-400',
+                        combo: 'text-pink-400',
+                        virus: 'text-red-400',
+                        spell: 'text-teal-400',
+                        'extra-deck': 'text-indigo-400',
+                        generic: 'text-green-400',
+                      };
+                      // Group by category, then by card
+                      const categoryGroups = new Map<string, { cards: Map<string, number>, totalBonus: number }>();
+                      synergy.breakdown.forEach(b => {
+                        const cat = b.category || 'generic';
+                        if (!categoryGroups.has(cat)) {
+                          categoryGroups.set(cat, { cards: new Map(), totalBonus: 0 });
+                        }
+                        const group = categoryGroups.get(cat)!;
+                        group.totalBonus += b.bonus;
+                        const perCardBonus = b.triggerCards.length > 0
+                          ? b.bonus / b.triggerCards.length
+                          : b.bonus;
+                        b.triggerCards.forEach(cardName => {
+                          group.cards.set(cardName, (group.cards.get(cardName) || 0) + perCardBonus);
+                        });
+                      });
+                      // Convert to array and sort by bonus descending
+                      const sortedCategories = Array.from(categoryGroups.entries())
+                        .sort((a, b) => b[1].totalBonus - a[1].totalBonus);
+                      return sortedCategories.map(([cat, { cards, totalBonus }]) => (
+                        <div key={cat} className="text-xs">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <span className={categoryColors[cat] || 'text-green-400'}>
+                              {categoryLabels[cat] || cat}
+                            </span>
+                            <span className="text-green-400 font-medium">+{Math.round(totalBonus)}</span>
+                          </div>
+                          <div className="pl-2 text-gray-400">
+                            {Array.from(cards.entries())
+                              .sort((a, b) => b[1] - a[1])
+                              .slice(0, 3) // Show top 3 cards per category
+                              .map(([cardName], i) => (
+                                <span key={i}>
+                                  {i > 0 && ', '}
+                                  {cardName}
+                                </span>
+                              ))}
+                            {cards.size > 3 && <span> +{cards.size - 3} more</span>}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-green-700/30 text-xs">
+                    <span className="text-gray-400">Adjusted Score: </span>
+                    <span className="text-green-400 font-bold">{synergy.adjustedScore}/100</span>
+                  </div>
                 </div>
               )}
 

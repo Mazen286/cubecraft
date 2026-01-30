@@ -299,6 +299,9 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
                 ? 'Only ID is required (YGOProDeck card ID). Name and Score are optional.'
                 : 'Score is optional. Duplicates are allowed.'}
             </p>
+            <p className="text-yellow-500/80 text-xs mt-1">
+              Tip: If card names contain commas, wrap them in quotes: "Card, Name"
+            </p>
             <div className="bg-yugi-darker rounded p-3 font-mono text-xs">
               <p className="text-gray-400 mb-1">JSON format also supported:</p>
               <p className="text-white">{'[{ "name": "...", "type": "...", "score": 85 }, ...]'}</p>

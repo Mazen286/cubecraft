@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Search, SortAsc, SortDesc, X, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { Search, SortAsc, SortDesc, X, ChevronDown, ChevronUp, Filter, Grid3X3, Layers } from 'lucide-react';
 import { useGameConfig } from '../../context/GameContext';
-import type { UseCardFiltersReturn, Tier } from '../../hooks/useCardFilters';
+import type { UseCardFiltersReturn, Tier, ViewMode } from '../../hooks/useCardFilters';
 import type { Card } from '../../types/card';
 import { cn } from '../../lib/utils';
 import { ArchetypeFilter } from './ArchetypeFilter';
@@ -78,6 +78,15 @@ export interface CardFilterBarProps {
 
   /** Callback to clear all archetypes */
   onClearArchetypes?: () => void;
+
+  /** Show view mode toggle (grid/pile) - only shown if game has pileViewConfig */
+  showViewToggle?: boolean;
+
+  /** Current view mode */
+  viewMode?: ViewMode;
+
+  /** Callback when view mode changes */
+  onViewModeChange?: (mode: ViewMode) => void;
 }
 
 /**
@@ -103,6 +112,9 @@ export function CardFilterBar({
   selectedArchetypes,
   onToggleArchetype,
   onClearArchetypes,
+  showViewToggle = false,
+  viewMode = 'grid',
+  onViewModeChange,
 }: CardFilterBarProps) {
   const { gameConfig } = useGameConfig();
   const [showAdvancedPanel, setShowAdvancedPanel] = useState(false);
@@ -234,39 +246,74 @@ export function CardFilterBar({
           </button>
         )}
 
-        {/* Sort */}
-        {showSort && sortOptions.length > 0 && (
-          <div className="flex items-center gap-1 ml-auto">
-            <select
-              value={sortState.sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className={cn(
-                'bg-yugi-dark border border-yugi-border rounded-lg text-white focus:border-gold-500 focus:outline-none',
-                compact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5'
-              )}
-            >
-              {sortOptions.map(option => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={toggleSortDirection}
-              className={cn(
-                'bg-yugi-dark border border-yugi-border rounded-lg hover:border-gold-500 transition-colors',
-                compact ? 'p-1' : 'p-1.5'
-              )}
-              title={sortState.sortDirection === 'asc' ? 'Ascending' : 'Descending'}
-            >
-              {sortState.sortDirection === 'asc' ? (
-                <SortAsc className={cn('text-gray-300', compact ? 'w-3 h-3' : 'w-4 h-4')} />
-              ) : (
-                <SortDesc className={cn('text-gray-300', compact ? 'w-3 h-3' : 'w-4 h-4')} />
-              )}
-            </button>
-          </div>
-        )}
+        {/* View Toggle and Sort */}
+        <div className="flex items-center gap-2 ml-auto">
+          {/* View Mode Toggle - only show if game has pile view config and showViewToggle is true */}
+          {showViewToggle && gameConfig.pileViewConfig && onViewModeChange && (
+            <div className="flex items-center border border-yugi-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => onViewModeChange('grid')}
+                className={cn(
+                  'transition-colors',
+                  compact ? 'p-1' : 'p-1.5',
+                  viewMode === 'grid'
+                    ? 'bg-gold-500 text-black'
+                    : 'bg-yugi-dark text-gray-300 hover:bg-yugi-card'
+                )}
+                title="Grid View"
+              >
+                <Grid3X3 className={compact ? 'w-3 h-3' : 'w-4 h-4'} />
+              </button>
+              <button
+                onClick={() => onViewModeChange('pile')}
+                className={cn(
+                  'transition-colors',
+                  compact ? 'p-1' : 'p-1.5',
+                  viewMode === 'pile'
+                    ? 'bg-gold-500 text-black'
+                    : 'bg-yugi-dark text-gray-300 hover:bg-yugi-card'
+                )}
+                title="Pile View"
+              >
+                <Layers className={compact ? 'w-3 h-3' : 'w-4 h-4'} />
+              </button>
+            </div>
+          )}
+
+          {/* Sort */}
+          {showSort && sortOptions.length > 0 && (
+            <>
+              <select
+                value={sortState.sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className={cn(
+                  'bg-yugi-dark border border-yugi-border rounded-lg text-white focus:border-gold-500 focus:outline-none',
+                  compact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5'
+                )}
+              >
+                {sortOptions.map(option => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={toggleSortDirection}
+                className={cn(
+                  'bg-yugi-dark border border-yugi-border rounded-lg hover:border-gold-500 transition-colors',
+                  compact ? 'p-1' : 'p-1.5'
+                )}
+                title={sortState.sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+              >
+                {sortState.sortDirection === 'asc' ? (
+                  <SortAsc className={cn('text-gray-300', compact ? 'w-3 h-3' : 'w-4 h-4')} />
+                ) : (
+                  <SortDesc className={cn('text-gray-300', compact ? 'w-3 h-3' : 'w-4 h-4')} />
+                )}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Tier filter pills - only show if cube has scores */}

@@ -5,6 +5,7 @@
     {
       "id": "tour-guide-fiends",
       "name": "Tour Guide Targets",
+      "category": "combo",
       "description": "Level 3 Fiends can be summoned by Tour Guide",
       "trigger": { "cardName": "Tour Guide From the Underworld" },
       "boost": { "and": [{ "level": 3 }, { "race": "Fiend" }, { "mainDeckOnly": true }] },
@@ -14,6 +15,7 @@
     {
       "id": "kashtira-archetype",
       "name": "Kashtira Synergy",
+      "category": "archetype",
       "description": "Kashtira cards work best together",
       "trigger": { "archetype": "Kashtira" },
       "boost": { "archetype": "Kashtira" },
@@ -25,6 +27,7 @@
     {
       "id": "maliss-archetype",
       "name": "Maliss Synergy",
+      "category": "archetype",
       "description": "Maliss cards combo together",
       "trigger": { "archetype": "Maliss" },
       "boost": { "archetype": "Maliss" },
@@ -65,6 +68,7 @@
     {
       "id": "machina-fortress-machines",
       "name": "Machina Fortress Synergy",
+      "category": "type",
       "description": "Main Deck Machine monsters can be discarded for Machina Fortress",
       "trigger": { "cardName": "Machina Fortress" },
       "boost": { "and": [{ "race": "Machine" }, { "mainDeckOnly": true }] },
@@ -74,6 +78,7 @@
     {
       "id": "machina-fortress-enablers",
       "name": "Machina Fortress Enablers",
+      "category": "type",
       "description": "Main Deck Machine monsters make Machina Fortress valuable as discard fodder",
       "trigger": { "and": [{ "race": "Machine" }, { "mainDeckOnly": true }] },
       "boost": { "cardName": "Machina Fortress" },
@@ -85,6 +90,7 @@
     {
       "id": "giant-rat-earth",
       "name": "Giant Rat Targets",
+      "category": "recruiter",
       "description": "Giant Rat can recruit Earth monsters with 1500 or less ATK",
       "trigger": { "cardName": "Giant Rat" },
       "boost": { "and": [{ "attribute": "EARTH" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }] },
@@ -94,6 +100,7 @@
     {
       "id": "giant-rat-enabler",
       "name": "Giant Rat",
+      "category": "recruiter",
       "description": "EARTH monsters with 1500 ATK or less make Giant Rat valuable",
       "trigger": { "and": [{ "attribute": "EARTH" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }] },
       "boost": { "cardName": "Giant Rat" },
@@ -105,6 +112,7 @@
     {
       "id": "shining-angel-light",
       "name": "Shining Angel Targets",
+      "category": "recruiter",
       "description": "Shining Angel can recruit Light monsters with 1500 or less ATK",
       "trigger": { "cardName": "Shining Angel" },
       "boost": { "and": [{ "attribute": "LIGHT" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Fortune Lady Every"] }] },
@@ -114,6 +122,7 @@
     {
       "id": "shining-angel-enabler",
       "name": "Shining Angel",
+      "category": "recruiter",
       "description": "LIGHT monsters with 1500 ATK or less make Shining Angel valuable",
       "trigger": { "and": [{ "attribute": "LIGHT" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Fortune Lady Every"] }] },
       "boost": { "cardName": "Shining Angel" },
@@ -163,6 +172,7 @@
     {
       "id": "kinka-byo-targets",
       "name": "Kinka-byo Targets",
+      "category": "recruiter",
       "description": "Kinka-byo can revive Level 1 monsters from the GY",
       "trigger": { "cardName": "Kinka-byo" },
       "boost": { "and": [{ "level": 1 }, { "mainDeckOnly": true }, { "excludeCards": ["Kinka-byo"] }] },
@@ -172,6 +182,7 @@
     {
       "id": "kinka-byo-enabler",
       "name": "Kinka-byo",
+      "category": "recruiter",
       "description": "Level 1 monsters make Kinka-byo valuable",
       "trigger": { "and": [{ "level": 1 }, { "mainDeckOnly": true }, { "excludeCards": ["Kinka-byo"] }] },
       "boost": { "cardName": "Kinka-byo" },
@@ -183,6 +194,7 @@
     {
       "id": "flying-kamakiri-wind",
       "name": "Flying Kamakiri #1 Targets",
+      "category": "recruiter",
       "description": "Flying Kamakiri #1 can recruit Wind monsters with 1500 or less ATK",
       "trigger": { "cardName": "Flying Kamakiri #1" },
       "boost": { "and": [{ "attribute": "WIND" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Fortune Lady Wind"] }] },
@@ -192,6 +204,7 @@
     {
       "id": "flying-kamakiri-enabler",
       "name": "Flying Kamakiri #1",
+      "category": "recruiter",
       "description": "WIND monsters with 1500 ATK or less make Flying Kamakiri #1 valuable",
       "trigger": { "and": [{ "attribute": "WIND" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Fortune Lady Wind"] }] },
       "boost": { "cardName": "Flying Kamakiri #1" },
@@ -203,6 +216,7 @@
     {
       "id": "mystic-tomato-dark",
       "name": "Mystic Tomato Targets",
+      "category": "recruiter",
       "description": "Mystic Tomato can recruit Dark monsters with 1500 or less ATK",
       "trigger": { "cardName": "Mystic Tomato" },
       "boost": { "and": [{ "attribute": "DARK" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Kinka-byo", "Exodius the Ultimate Forbidden Lord", "Endless Decay", "Fortune Lady Dark", "Fortune Lady Past", "Eater of Millions", "The Unstoppable Exodia Incarnate", "Tragoedia"] }] },
@@ -212,6 +226,7 @@
     {
       "id": "mystic-tomato-enabler",
       "name": "Mystic Tomato",
+      "category": "recruiter",
       "description": "DARK monsters with 1500 ATK or less make Mystic Tomato valuable",
       "trigger": { "and": [{ "attribute": "DARK" }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Kinka-byo", "Exodius the Ultimate Forbidden Lord", "Endless Decay", "Fortune Lady Dark", "Fortune Lady Past", "Eater of Millions", "The Unstoppable Exodia Incarnate", "Tragoedia"] }] },
       "boost": { "cardName": "Mystic Tomato" },
@@ -223,6 +238,7 @@
     {
       "id": "mezuki-zombie-world",
       "name": "Mezuki + Zombie World",
+      "category": "type",
       "description": "Mezuki becomes insanely powerful with Zombie World",
       "trigger": { "cardName": "Mezuki" },
       "boost": { "cardName": "Zombie World" },
@@ -232,6 +248,7 @@
     {
       "id": "zombie-world-mezuki",
       "name": "Zombie World + Mezuki",
+      "category": "type",
       "description": "Zombie World becomes much better with Mezuki",
       "trigger": { "cardName": "Zombie World" },
       "boost": { "cardName": "Mezuki" },
@@ -241,6 +258,7 @@
     {
       "id": "zombie-world-zombie-master",
       "name": "Zombie World + Zombie Master",
+      "category": "type",
       "description": "Zombie Master combos with Zombie World",
       "trigger": { "cardName": "Zombie World" },
       "boost": { "cardName": "Zombie Master" },
@@ -250,6 +268,7 @@
     {
       "id": "zombie-master-zombie-world",
       "name": "Zombie Master + Zombie World",
+      "category": "type",
       "description": "Zombie World enables Zombie Master's full potential",
       "trigger": { "cardName": "Zombie Master" },
       "boost": { "cardName": "Zombie World" },
@@ -259,6 +278,7 @@
     {
       "id": "zombie-world-zombies",
       "name": "Zombie World + Zombies",
+      "category": "type",
       "description": "All Zombies benefit from Zombie World",
       "trigger": { "cardName": "Zombie World" },
       "boost": { "race": "Zombie" },
@@ -268,6 +288,7 @@
     {
       "id": "zombies-zombie-world",
       "name": "Zombies want Zombie World",
+      "category": "type",
       "description": "The more Zombies you have, the better Zombie World becomes",
       "trigger": { "race": "Zombie" },
       "boost": { "cardName": "Zombie World" },
@@ -317,6 +338,7 @@
     {
       "id": "pyramid-turtle-targets",
       "name": "Pyramid Turtle Targets",
+      "category": "recruiter",
       "description": "Pyramid Turtle can recruit Zombies with 2000 or less DEF",
       "trigger": { "cardName": "Pyramid Turtle" },
       "boost": { "and": [{ "race": "Zombie" }, { "maxDef": 2000 }, { "mainDeckOnly": true }] },
@@ -326,6 +348,7 @@
     {
       "id": "pyramid-turtle-enabler",
       "name": "Pyramid Turtle",
+      "category": "recruiter",
       "description": "Zombies with 2000 DEF or less make Pyramid Turtle valuable",
       "trigger": { "and": [{ "race": "Zombie" }, { "maxDef": 2000 }, { "mainDeckOnly": true }] },
       "boost": { "cardName": "Pyramid Turtle" },
@@ -337,6 +360,7 @@
     {
       "id": "hiita-fire-charmer",
       "name": "Hiita Synergy",
+      "category": "attribute",
       "description": "FIRE monsters synergize with Hiita the Fire Charmer",
       "trigger": { "attribute": "FIRE" },
       "boost": { "cardName": "Hiita the Fire Charmer, Ablaze" },
@@ -348,6 +372,7 @@
     {
       "id": "hiita-fire-charmer-reverse",
       "name": "Hiita Targets",
+      "category": "attribute",
       "description": "Hiita boosts FIRE monsters",
       "trigger": { "cardName": "Hiita the Fire Charmer, Ablaze" },
       "boost": { "attribute": "FIRE" },
@@ -357,6 +382,7 @@
     {
       "id": "wynn-wind-charmer",
       "name": "Wynn Synergy",
+      "category": "attribute",
       "description": "WIND monsters synergize with Wynn the Wind Charmer",
       "trigger": { "attribute": "WIND" },
       "boost": { "cardName": "Wynn the Wind Charmer, Verdant" },
@@ -368,6 +394,7 @@
     {
       "id": "wynn-wind-charmer-reverse",
       "name": "Wynn Targets",
+      "category": "attribute",
       "description": "Wynn boosts WIND monsters",
       "trigger": { "cardName": "Wynn the Wind Charmer, Verdant" },
       "boost": { "attribute": "WIND" },
@@ -377,6 +404,7 @@
     {
       "id": "eria-water-charmer",
       "name": "Eria Synergy",
+      "category": "attribute",
       "description": "WATER monsters synergize with Eria the Water Charmer",
       "trigger": { "attribute": "WATER" },
       "boost": { "cardName": "Eria the Water Charmer, Gentle" },
@@ -388,6 +416,7 @@
     {
       "id": "eria-water-charmer-reverse",
       "name": "Eria Targets",
+      "category": "attribute",
       "description": "Eria boosts WATER monsters",
       "trigger": { "cardName": "Eria the Water Charmer, Gentle" },
       "boost": { "attribute": "WATER" },
@@ -397,6 +426,7 @@
     {
       "id": "aussa-earth-charmer",
       "name": "Aussa Synergy",
+      "category": "attribute",
       "description": "EARTH monsters synergize with Aussa the Earth Charmer",
       "trigger": { "attribute": "EARTH" },
       "boost": { "cardName": "Aussa the Earth Charmer, Immovable" },
@@ -408,6 +438,7 @@
     {
       "id": "aussa-earth-charmer-reverse",
       "name": "Aussa Targets",
+      "category": "attribute",
       "description": "Aussa boosts EARTH monsters",
       "trigger": { "cardName": "Aussa the Earth Charmer, Immovable" },
       "boost": { "attribute": "EARTH" },
@@ -417,6 +448,7 @@
     {
       "id": "lyna-light-charmer",
       "name": "Lyna Synergy",
+      "category": "attribute",
       "description": "LIGHT monsters synergize with Lyna the Light Charmer",
       "trigger": { "attribute": "LIGHT" },
       "boost": { "cardName": "Lyna the Light Charmer, Lustrous" },
@@ -428,6 +460,7 @@
     {
       "id": "lyna-light-charmer-reverse",
       "name": "Lyna Targets",
+      "category": "attribute",
       "description": "Lyna boosts LIGHT monsters",
       "trigger": { "cardName": "Lyna the Light Charmer, Lustrous" },
       "boost": { "attribute": "LIGHT" },
@@ -437,6 +470,7 @@
     {
       "id": "dharc-dark-charmer",
       "name": "Dharc Synergy",
+      "category": "attribute",
       "description": "DARK monsters synergize with Dharc the Dark Charmer",
       "trigger": { "attribute": "DARK" },
       "boost": { "cardName": "Dharc the Dark Charmer, Gloomy" },
@@ -448,6 +482,7 @@
     {
       "id": "dharc-dark-charmer-reverse",
       "name": "Dharc Targets",
+      "category": "attribute",
       "description": "Dharc boosts DARK monsters",
       "trigger": { "cardName": "Dharc the Dark Charmer, Gloomy" },
       "boost": { "attribute": "DARK" },
@@ -873,6 +908,7 @@
     {
       "id": "synchro-needs-tuners",
       "name": "Synchro Materials",
+      "category": "extra-deck",
       "description": "Tuners are required to summon Synchro monsters",
       "trigger": { "cardType": "tuner" },
       "boost": { "cardType": "synchro" },
@@ -884,6 +920,7 @@
     {
       "id": "tuners-want-synchros",
       "name": "Tuner Synergy",
+      "category": "extra-deck",
       "description": "Tuners want Synchro monsters to summon",
       "trigger": { "cardType": "synchro" },
       "boost": { "cardType": "tuner" },
@@ -895,6 +932,7 @@
     {
       "id": "xyz-rank2-level2",
       "name": "Rank 2 XYZ Materials",
+      "category": "level",
       "description": "Level 2 monsters can be used to summon Rank 2 XYZ",
       "trigger": { "and": [{ "level": 2 }, { "mainDeckOnly": true }] },
       "boost": { "and": [{ "level": 2 }, { "cardType": "xyz" }] },
@@ -906,6 +944,7 @@
     {
       "id": "xyz-rank2-wants-level2",
       "name": "Rank 2 XYZ Synergy",
+      "category": "level",
       "description": "Rank 2 XYZ monsters want Level 2 materials",
       "trigger": { "and": [{ "level": 2 }, { "cardType": "xyz" }] },
       "boost": { "and": [{ "level": 2 }, { "mainDeckOnly": true }] },
@@ -915,6 +954,7 @@
     {
       "id": "xyz-rank3-level3",
       "name": "Rank 3 XYZ Materials",
+      "category": "level",
       "description": "Level 3 monsters can be used to summon Rank 3 XYZ",
       "trigger": { "and": [{ "level": 3 }, { "mainDeckOnly": true }] },
       "boost": { "and": [{ "level": 3 }, { "cardType": "xyz" }] },
@@ -926,6 +966,7 @@
     {
       "id": "xyz-rank3-wants-level3",
       "name": "Rank 3 XYZ Synergy",
+      "category": "level",
       "description": "Rank 3 XYZ monsters want Level 3 materials",
       "trigger": { "and": [{ "level": 3 }, { "cardType": "xyz" }] },
       "boost": { "and": [{ "level": 3 }, { "mainDeckOnly": true }] },
@@ -935,6 +976,7 @@
     {
       "id": "xyz-rank4-level4",
       "name": "Rank 4 XYZ Materials",
+      "category": "level",
       "description": "Level 4 monsters can be used to summon Rank 4 XYZ",
       "trigger": { "and": [{ "level": 4 }, { "mainDeckOnly": true }] },
       "boost": { "and": [{ "level": 4 }, { "cardType": "xyz" }], "excludeCards": ["Comics Hero King Arthur"] },
@@ -946,6 +988,7 @@
     {
       "id": "xyz-rank4-wants-level4",
       "name": "Rank 4 XYZ Synergy",
+      "category": "level",
       "description": "Rank 4 XYZ monsters want Level 4 materials",
       "trigger": { "and": [{ "level": 4 }, { "cardType": "xyz" }], "excludeCards": ["Comics Hero King Arthur"] },
       "boost": { "and": [{ "level": 4 }, { "mainDeckOnly": true }] },
@@ -955,6 +998,7 @@
     {
       "id": "comics-hero-king-arthur-materials",
       "name": "Comics Hero King Arthur Materials",
+      "category": "level",
       "description": "Level 4 Warriors can summon Comics Hero King Arthur",
       "trigger": { "and": [{ "level": 4 }, { "race": "Warrior" }, { "mainDeckOnly": true }] },
       "boost": { "cardName": "Comics Hero King Arthur" },
@@ -966,6 +1010,7 @@
     {
       "id": "comics-hero-king-arthur-wants-warriors",
       "name": "Comics Hero King Arthur Synergy",
+      "category": "level",
       "description": "Comics Hero King Arthur needs Level 4 Warrior materials",
       "trigger": { "cardName": "Comics Hero King Arthur" },
       "boost": { "and": [{ "level": 4 }, { "race": "Warrior" }, { "mainDeckOnly": true }] },
@@ -975,6 +1020,7 @@
     {
       "id": "xyz-rank5-level5",
       "name": "Rank 5 XYZ Materials",
+      "category": "level",
       "description": "Level 5 monsters can be used to summon Rank 5 XYZ",
       "trigger": { "and": [{ "level": 5 }, { "mainDeckOnly": true }] },
       "boost": { "and": [{ "level": 5 }, { "cardType": "xyz" }] },
@@ -986,6 +1032,7 @@
     {
       "id": "xyz-rank5-wants-level5",
       "name": "Rank 5 XYZ Synergy",
+      "category": "level",
       "description": "Rank 5 XYZ monsters want Level 5 materials",
       "trigger": { "and": [{ "level": 5 }, { "cardType": "xyz" }] },
       "boost": { "and": [{ "level": 5 }, { "mainDeckOnly": true }] },
@@ -995,6 +1042,7 @@
     {
       "id": "xyz-rank7-level7",
       "name": "Rank 7 XYZ Materials",
+      "category": "level",
       "description": "Level 7 monsters can be used to summon Rank 7 XYZ",
       "trigger": { "and": [{ "level": 7 }, { "mainDeckOnly": true }] },
       "boost": { "and": [{ "level": 7 }, { "cardType": "xyz" }] },
@@ -1006,6 +1054,7 @@
     {
       "id": "xyz-rank7-wants-level7",
       "name": "Rank 7 XYZ Synergy",
+      "category": "level",
       "description": "Rank 7 XYZ monsters want Level 7 materials",
       "trigger": { "and": [{ "level": 7 }, { "cardType": "xyz" }] },
       "boost": { "and": [{ "level": 7 }, { "mainDeckOnly": true }] },
@@ -1633,6 +1682,7 @@
     {
       "id": "crush-card-virus-targets",
       "name": "Crush Card Virus Targets",
+      "category": "virus",
       "description": "DARK monsters with 1000 ATK or less can be tributed for Crush Card Virus",
       "trigger": { "cardName": "Crush Card Virus" },
       "boost": { "and": [{ "attribute": "DARK" }, { "maxAtk": 1000 }, { "mainDeckOnly": true }, { "excludeCards": ["Endless Decay", "Exodius the Ultimate Forbidden Lord", "Fortune Lady Dark", "Fortune Lady Past", "Eater of Millions", "The Unstoppable Exodia Incarnate", "Tragoedia"] }] },
@@ -1642,6 +1692,7 @@
     {
       "id": "crush-card-virus-enablers",
       "name": "Crush Card Enablers",
+      "category": "virus",
       "description": "DARK monsters with 1000 ATK or less make Crush Card Virus valuable",
       "trigger": { "and": [{ "attribute": "DARK" }, { "maxAtk": 1000 }, { "mainDeckOnly": true }, { "excludeCards": ["Endless Decay", "Exodius the Ultimate Forbidden Lord", "Fortune Lady Dark", "Fortune Lady Past", "Eater of Millions", "The Unstoppable Exodia Incarnate", "Tragoedia"] }] },
       "boost": { "cardName": "Crush Card Virus" },
@@ -1653,6 +1704,7 @@
     {
       "id": "deck-devastation-virus-targets",
       "name": "Deck Devastation Virus Targets",
+      "category": "virus",
       "description": "DARK monsters with 2000+ ATK can be tributed for Deck Devastation Virus",
       "trigger": { "cardName": "Deck Devastation Virus" },
       "boost": { "and": [{ "attribute": "DARK" }, { "minAtk": 2000 }, { "mainDeckOnly": true }] },
@@ -1662,6 +1714,7 @@
     {
       "id": "deck-devastation-virus-enablers",
       "name": "Deck Devastation Virus Enablers",
+      "category": "virus",
       "description": "DARK monsters with 2000+ ATK make Deck Devastation Virus valuable",
       "trigger": { "and": [{ "attribute": "DARK" }, { "minAtk": 2000 }, { "mainDeckOnly": true }] },
       "boost": { "cardName": "Deck Devastation Virus" },
@@ -1673,6 +1726,7 @@
     {
       "id": "eradicator-epidemic-virus-targets",
       "name": "Eradicator Epidemic Virus Targets",
+      "category": "virus",
       "description": "DARK monsters with 2500+ ATK can be tributed for Eradicator Epidemic Virus",
       "trigger": { "cardName": "Eradicator Epidemic Virus" },
       "boost": { "and": [{ "attribute": "DARK" }, { "minAtk": 2500 }, { "mainDeckOnly": true }] },
@@ -1682,6 +1736,7 @@
     {
       "id": "eradicator-epidemic-virus-enablers",
       "name": "Eradicator Epidemic Virus Enablers",
+      "category": "virus",
       "description": "DARK monsters with 2500+ ATK make Eradicator Epidemic Virus valuable",
       "trigger": { "and": [{ "attribute": "DARK" }, { "minAtk": 2500 }, { "mainDeckOnly": true }] },
       "boost": { "cardName": "Eradicator Epidemic Virus" },
@@ -1744,10 +1799,243 @@
     {
       "id": "dark-magician-of-chaos-enablers",
       "name": "Dark Magician of Chaos Synergy",
+      "category": "spell",
       "description": "Dark Magician of Chaos can recover powerful Spells from the GY",
       "trigger": { "cardName": "Dark Magician of Chaos" },
       "boost": { "and": [{ "cardType": "spell" }, { "minScore": 65 }] },
       "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "therion-king-regulus-machines",
+      "name": "Therion King Regulus Machines",
+      "category": "type",
+      "description": "Machines can be equipped to Therion King Regulus",
+      "trigger": { "race": "Machine" },
+      "boost": { "cardName": "Therion \"King\" Regulus" },
+      "bonus": 4,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
+    },
+    {
+      "id": "therion-king-regulus-wants-machines",
+      "name": "Therion King Regulus Synergy",
+      "category": "type",
+      "description": "Therion King Regulus wants Machine monsters to equip",
+      "trigger": { "cardName": "Therion \"King\" Regulus" },
+      "boost": { "race": "Machine" },
+      "bonus": 3,
+      "bonusType": "flat"
+    },
+    {
+      "id": "magicians-left-hand-spellcasters",
+      "name": "Magician's Left Hand",
+      "category": "type",
+      "description": "Magician's Left Hand requires a Spellcaster on field to negate Spells",
+      "trigger": { "race": "Spellcaster" },
+      "boost": { "cardName": "Magician's Left Hand" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "magicians-left-hand-wants-spellcasters",
+      "name": "Magician's Left Hand Synergy",
+      "category": "type",
+      "description": "Spellcasters enable Magician's Left Hand",
+      "trigger": { "cardName": "Magician's Left Hand" },
+      "boost": { "race": "Spellcaster" },
+      "bonus": 1,
+      "bonusType": "flat"
+    },
+    {
+      "id": "magicians-right-hand-spellcasters",
+      "name": "Magician's Right Hand",
+      "category": "type",
+      "description": "Magician's Right Hand requires a Spellcaster on field to negate Traps",
+      "trigger": { "race": "Spellcaster" },
+      "boost": { "cardName": "Magician's Right Hand" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "magicians-right-hand-wants-spellcasters",
+      "name": "Magician's Right Hand Synergy",
+      "category": "type",
+      "description": "Spellcasters enable Magician's Right Hand",
+      "trigger": { "cardName": "Magician's Right Hand" },
+      "boost": { "race": "Spellcaster" },
+      "bonus": 1,
+      "bonusType": "flat"
+    },
+    {
+      "id": "lonefire-blossom-plants",
+      "name": "Lonefire Blossom",
+      "category": "type",
+      "description": "Lonefire Blossom can tribute itself to summon any Plant from deck",
+      "trigger": { "race": "Plant", "mainDeckOnly": true, "excludeCards": ["Lonefire Blossom"] },
+      "boost": { "cardName": "Lonefire Blossom" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 12
+    },
+    {
+      "id": "lonefire-blossom-targets",
+      "name": "Lonefire Blossom Targets",
+      "category": "type",
+      "description": "Plants can be summoned by Lonefire Blossom",
+      "trigger": { "cardName": "Lonefire Blossom" },
+      "boost": { "race": "Plant", "mainDeckOnly": true, "excludeCards": ["Lonefire Blossom"] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "spore-plants",
+      "name": "Spore",
+      "category": "type",
+      "description": "Spore can banish a Plant from GY to special summon itself",
+      "trigger": { "race": "Plant", "excludeCards": ["Spore"] },
+      "boost": { "cardName": "Spore" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "spore-wants-plants",
+      "name": "Spore Synergy",
+      "category": "type",
+      "description": "Plants enable Spore's revival effect",
+      "trigger": { "cardName": "Spore" },
+      "boost": { "race": "Plant", "excludeCards": ["Spore"] },
+      "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "blaster-fire-hand",
+      "name": "Blaster Hand Discard",
+      "category": "attribute",
+      "description": "FIRE monsters can be discarded with Blaster from hand",
+      "trigger": { "attribute": "FIRE", "mainDeckOnly": true, "excludeCards": ["Blaster, Dragon Ruler of Infernos"] },
+      "boost": { "cardName": "Blaster, Dragon Ruler of Infernos" },
+      "bonus": 1,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 4
+    },
+    {
+      "id": "tidal-water-hand",
+      "name": "Tidal Hand Discard",
+      "category": "attribute",
+      "description": "WATER monsters can be discarded with Tidal from hand",
+      "trigger": { "attribute": "WATER", "mainDeckOnly": true, "excludeCards": ["Tidal, Dragon Ruler of Waterfalls"] },
+      "boost": { "cardName": "Tidal, Dragon Ruler of Waterfalls" },
+      "bonus": 1,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 4
+    },
+    {
+      "id": "tempest-wind-hand",
+      "name": "Tempest Hand Discard",
+      "category": "attribute",
+      "description": "WIND monsters can be discarded with Tempest from hand",
+      "trigger": { "attribute": "WIND", "mainDeckOnly": true, "excludeCards": ["Tempest, Dragon Ruler of Storms"] },
+      "boost": { "cardName": "Tempest, Dragon Ruler of Storms" },
+      "bonus": 1,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 4
+    },
+    {
+      "id": "redox-earth-hand",
+      "name": "Redox Hand Discard",
+      "category": "attribute",
+      "description": "EARTH monsters can be discarded with Redox from hand",
+      "trigger": { "attribute": "EARTH", "mainDeckOnly": true, "excludeCards": ["Redox, Dragon Ruler of Boulders"] },
+      "boost": { "cardName": "Redox, Dragon Ruler of Boulders" },
+      "bonus": 1,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 4
+    },
+    {
+      "id": "dragon-rulers-dragons-gy",
+      "name": "Dragon Ruler GY Banish",
+      "category": "type",
+      "description": "Dragons in GY can be banished to summon Dragon Rulers",
+      "trigger": { "race": "Dragon", "excludeCards": ["Blaster, Dragon Ruler of Infernos", "Tidal, Dragon Ruler of Waterfalls", "Tempest, Dragon Ruler of Storms", "Redox, Dragon Ruler of Boulders"] },
+      "boost": { "or": [
+        { "cardName": "Blaster, Dragon Ruler of Infernos" },
+        { "cardName": "Tidal, Dragon Ruler of Waterfalls" },
+        { "cardName": "Tempest, Dragon Ruler of Storms" },
+        { "cardName": "Redox, Dragon Ruler of Boulders" }
+      ]},
+      "bonus": 1,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 5
+    },
+    {
+      "id": "dragon-rulers-boost-dragons",
+      "name": "Dragon Ruler Dragon Synergy",
+      "category": "type",
+      "description": "Dragon Rulers synergize with other Dragons",
+      "trigger": { "or": [
+        { "cardName": "Blaster, Dragon Ruler of Infernos" },
+        { "cardName": "Tidal, Dragon Ruler of Waterfalls" },
+        { "cardName": "Tempest, Dragon Ruler of Storms" },
+        { "cardName": "Redox, Dragon Ruler of Boulders" }
+      ]},
+      "boost": { "race": "Dragon", "excludeCards": ["Blaster, Dragon Ruler of Infernos", "Tidal, Dragon Ruler of Waterfalls", "Tempest, Dragon Ruler of Storms", "Redox, Dragon Ruler of Boulders"] },
+      "bonus": 1,
+      "bonusType": "flat"
+    },
+    {
+      "id": "gold-sarcophagus-maliss",
+      "name": "Gold Sarcophagus Maliss Synergy",
+      "category": "combo",
+      "description": "Gold Sarcophagus can banish Maliss monsters to trigger their effects",
+      "trigger": { "cardName": "Gold Sarcophagus" },
+      "boost": { "and": [{ "archetype": "Maliss" }, { "mainDeckOnly": true }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "gold-sarcophagus-wants-maliss",
+      "name": "Gold Sarcophagus wants Maliss",
+      "category": "combo",
+      "description": "Gold Sarcophagus is better with Maliss banish targets",
+      "trigger": { "and": [{ "archetype": "Maliss" }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Gold Sarcophagus" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "gold-sarcophagus-dotscaper",
+      "name": "Gold Sarcophagus Dotscaper Combo",
+      "category": "combo",
+      "description": "Gold Sarcophagus can banish Dotscaper to special summon it",
+      "trigger": { "cardName": "Gold Sarcophagus" },
+      "boost": { "cardName": "Dotscaper" },
+      "bonus": 8,
+      "bonusType": "flat"
+    },
+    {
+      "id": "gold-sarcophagus-wants-dotscaper",
+      "name": "Gold Sarcophagus wants Dotscaper",
+      "category": "combo",
+      "description": "Gold Sarcophagus is better with Dotscaper as a banish target",
+      "trigger": { "cardName": "Dotscaper" },
+      "boost": { "cardName": "Gold Sarcophagus" },
+      "bonus": 5,
       "bonusType": "flat"
     }
   ]

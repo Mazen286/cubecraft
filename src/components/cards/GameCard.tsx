@@ -79,7 +79,7 @@ export const GameCard = memo(function GameCard({
         sizeClasses[size],
         onClick && 'hover:scale-105 hover:z-10',
         isSelected && 'ring-2 ring-offset-2 ring-offset-yugi-dark scale-105',
-        isHighlighted && !isSelected && 'ring-2 ring-blue-400/70 ring-offset-1 ring-offset-yugi-dark',
+        isHighlighted && !isSelected && 'ring-2 ring-white/70 ring-offset-1 ring-offset-yugi-dark',
         draggable && 'cursor-grab active:cursor-grabbing',
         className
       )}

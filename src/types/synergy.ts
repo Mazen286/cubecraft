@@ -81,6 +81,19 @@ export interface SynergyBoost {
   or?: SynergyBoost[];
 }
 
+/** Synergy category for UI display */
+export type SynergyCategory =
+  | 'archetype'    // Archetype-based synergies (Kashtira, Maliss, etc.)
+  | 'type'         // Monster type/race synergies (Zombie, Machine, etc.)
+  | 'attribute'    // Attribute synergies (DARK, LIGHT, etc.)
+  | 'level'        // Level/Rank-based synergies (XYZ materials, etc.)
+  | 'recruiter'    // Recruiter cards (Giant Rat, Pyramid Turtle, etc.)
+  | 'combo'        // Specific card combos (Tour Guide + Fiends, etc.)
+  | 'virus'        // Virus card synergies
+  | 'spell'        // Spell-related synergies
+  | 'extra-deck'   // Extra deck synergies (Fusion, Synchro, etc.)
+  | 'generic';     // Generic/other synergies
+
 /**
  * A single synergy rule
  */
@@ -89,6 +102,8 @@ export interface SynergyRule {
   id: string;
   /** Human-readable name for this synergy */
   name: string;
+  /** Category for UI display (e.g., "archetype", "type", "combo") */
+  category?: SynergyCategory;
   /** Description shown in UI */
   description: string;
   /**
@@ -151,6 +166,8 @@ export interface SynergyBreakdown {
   ruleId: string;
   /** Name of the synergy */
   name: string;
+  /** Category for UI display */
+  category?: SynergyCategory;
   /** Description for tooltip */
   description: string;
   /** The bonus amount applied */

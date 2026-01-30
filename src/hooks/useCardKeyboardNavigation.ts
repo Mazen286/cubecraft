@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+export interface PileNavigationMap {
+  /** Map from card index to [pileIndex, positionInPile] */
+  cardToPile: Map<number, [number, number]>;
+  /** Array of piles, each containing array of card indices */
+  piles: number[][];
+}
+
 interface UseCardKeyboardNavigationOptions<T> {
   /** The array of cards to navigate through */
   cards: T[];
@@ -23,6 +30,12 @@ interface UseCardKeyboardNavigationOptions<T> {
   onToggleSortDirection?: () => void;
   /** Callback for Escape when no sheet open and no highlight (e.g., close viewer) */
   onEscapeNoSelection?: () => void;
+  /** Pile navigation map for pile-based navigation (up/down in pile, left/right between piles) */
+  pileNavigation?: PileNavigationMap | null;
+  /** Callback when trying to navigate up past the top row */
+  onNavigateOutTop?: () => void;
+  /** Callback when trying to navigate down past the bottom row */
+  onNavigateOutBottom?: () => void;
 }
 
 interface UseCardKeyboardNavigationResult<T> {
@@ -95,6 +108,9 @@ export function useCardKeyboardNavigation<T>({
   onSortChange,
   onToggleSortDirection,
   onEscapeNoSelection,
+  pileNavigation,
+  onNavigateOutTop,
+  onNavigateOutBottom,
 }: UseCardKeyboardNavigationOptions<T>): UseCardKeyboardNavigationResult<T> {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [sheetCard, setSheetCard] = useState<T | null>(null);
@@ -160,11 +176,30 @@ export function useCardKeyboardNavigation<T>({
         case 'ArrowRight': {
           e.preventDefault();
           if (isSheetOpen) {
-            // Sheet is open - close it and move highlight
             closeSheet();
           }
-          const nextIndex = highlightedIndex < 0 ? 0 : (highlightedIndex + 1) % cardCount;
-          setHighlightedIndex(nextIndex);
+
+          if (pileNavigation && pileNavigation.piles.length > 0) {
+            // Pile navigation: move to same position in next pile
+            const pileInfo = highlightedIndex >= 0 ? pileNavigation.cardToPile.get(highlightedIndex) : null;
+            if (pileInfo) {
+              const [currentPileIdx, posInPile] = pileInfo;
+              const nextPileIdx = (currentPileIdx + 1) % pileNavigation.piles.length;
+              const nextPile = pileNavigation.piles[nextPileIdx];
+              // Go to same position or last card in pile
+              const nextPos = Math.min(posInPile, nextPile.length - 1);
+              setHighlightedIndex(nextPile[nextPos]);
+            } else {
+              // No highlight yet, go to first card in first pile
+              if (pileNavigation.piles[0]?.length > 0) {
+                setHighlightedIndex(pileNavigation.piles[0][0]);
+              }
+            }
+          } else {
+            // Grid navigation
+            const nextIndex = highlightedIndex < 0 ? 0 : (highlightedIndex + 1) % cardCount;
+            setHighlightedIndex(nextIndex);
+          }
           break;
         }
         case 'ArrowLeft': {
@@ -172,24 +207,68 @@ export function useCardKeyboardNavigation<T>({
           if (isSheetOpen) {
             closeSheet();
           }
-          const prevIndex = highlightedIndex < 0 ? cardCount - 1 : (highlightedIndex - 1 + cardCount) % cardCount;
-          setHighlightedIndex(prevIndex);
+
+          if (pileNavigation && pileNavigation.piles.length > 0) {
+            // Pile navigation: move to same position in previous pile
+            const pileInfo = highlightedIndex >= 0 ? pileNavigation.cardToPile.get(highlightedIndex) : null;
+            if (pileInfo) {
+              const [currentPileIdx, posInPile] = pileInfo;
+              const prevPileIdx = (currentPileIdx - 1 + pileNavigation.piles.length) % pileNavigation.piles.length;
+              const prevPile = pileNavigation.piles[prevPileIdx];
+              // Go to same position or last card in pile
+              const prevPos = Math.min(posInPile, prevPile.length - 1);
+              setHighlightedIndex(prevPile[prevPos]);
+            } else {
+              // No highlight yet, go to first card in last pile
+              const lastPile = pileNavigation.piles[pileNavigation.piles.length - 1];
+              if (lastPile?.length > 0) {
+                setHighlightedIndex(lastPile[0]);
+              }
+            }
+          } else {
+            // Grid navigation
+            const prevIndex = highlightedIndex < 0 ? cardCount - 1 : (highlightedIndex - 1 + cardCount) % cardCount;
+            setHighlightedIndex(prevIndex);
+          }
           break;
         }
         case 'ArrowDown': {
           e.preventDefault();
           if (isSheetOpen) {
-            // Close the sheet when pressing down while sheet is open
             closeSheet();
             return;
           }
-          if (highlightedIndex < 0) {
-            setHighlightedIndex(0);
+
+          if (pileNavigation && pileNavigation.piles.length > 0) {
+            // Pile navigation: move down within pile
+            const pileInfo = highlightedIndex >= 0 ? pileNavigation.cardToPile.get(highlightedIndex) : null;
+            if (pileInfo) {
+              const [pileIdx, posInPile] = pileInfo;
+              const pile = pileNavigation.piles[pileIdx];
+              if (posInPile < pile.length - 1) {
+                setHighlightedIndex(pile[posInPile + 1]);
+              } else if (onNavigateOutBottom) {
+                // At bottom of pile, navigate out
+                onNavigateOutBottom();
+              }
+            } else {
+              // No highlight yet, go to first card in first pile
+              if (pileNavigation.piles[0]?.length > 0) {
+                setHighlightedIndex(pileNavigation.piles[0][0]);
+              }
+            }
           } else {
-            // Move down one row
-            const nextIndex = highlightedIndex + cols;
-            if (nextIndex < cardCount) {
-              setHighlightedIndex(nextIndex);
+            // Grid navigation
+            if (highlightedIndex < 0) {
+              setHighlightedIndex(0);
+            } else {
+              const nextIndex = highlightedIndex + cols;
+              if (nextIndex < cardCount) {
+                setHighlightedIndex(nextIndex);
+              } else if (onNavigateOutBottom) {
+                // At bottom row, navigate out
+                onNavigateOutBottom();
+              }
             }
           }
           break;
@@ -200,13 +279,38 @@ export function useCardKeyboardNavigation<T>({
             closeSheet();
             return;
           }
-          if (highlightedIndex < 0) {
-            setHighlightedIndex(cardCount - 1);
+
+          if (pileNavigation && pileNavigation.piles.length > 0) {
+            // Pile navigation: move up within pile
+            const pileInfo = highlightedIndex >= 0 ? pileNavigation.cardToPile.get(highlightedIndex) : null;
+            if (pileInfo) {
+              const [pileIdx, posInPile] = pileInfo;
+              const pile = pileNavigation.piles[pileIdx];
+              if (posInPile > 0) {
+                setHighlightedIndex(pile[posInPile - 1]);
+              } else if (onNavigateOutTop) {
+                // At top of pile, navigate out
+                onNavigateOutTop();
+              }
+            } else {
+              // No highlight yet, go to last card in last pile
+              const lastPile = pileNavigation.piles[pileNavigation.piles.length - 1];
+              if (lastPile?.length > 0) {
+                setHighlightedIndex(lastPile[lastPile.length - 1]);
+              }
+            }
           } else {
-            // Move up one row
-            const prevIndex = highlightedIndex - cols;
-            if (prevIndex >= 0) {
-              setHighlightedIndex(prevIndex);
+            // Grid navigation
+            if (highlightedIndex < 0) {
+              setHighlightedIndex(cardCount - 1);
+            } else {
+              const prevIndex = highlightedIndex - cols;
+              if (prevIndex >= 0) {
+                setHighlightedIndex(prevIndex);
+              } else if (onNavigateOutTop) {
+                // At top row, navigate out
+                onNavigateOutTop();
+              }
             }
           }
           break;
@@ -306,6 +410,9 @@ export function useCardKeyboardNavigation<T>({
     onSortChange,
     onToggleSortDirection,
     onEscapeNoSelection,
+    pileNavigation,
+    onNavigateOutTop,
+    onNavigateOutBottom,
   ]);
 
   return {

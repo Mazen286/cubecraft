@@ -16,6 +16,7 @@ const TOC = [
     { id: 'solo-mode', title: '3.1 Solo Mode & AI Bots' },
     { id: 'card-ratings', title: '3.2 Card Ratings & Tiers' },
     { id: 'sessions', title: '3.3 Sessions & Reconnection' },
+    { id: 'synergies', title: '3.4 Card Synergies' },
   ]},
   { id: 'deck-construction', title: '4. Deck Construction' },
   { id: 'tournament', title: '5. Tournament Structure' },
@@ -600,6 +601,75 @@ export function Rulebook() {
                   <li>Export your deck list for use in other tools.</li>
                   <li>Access draft history to review past sessions.</li>
                 </ul>
+              </section>
+
+              {/* 3.4 Card Synergies */}
+              <section id="synergies" className="mb-8 pl-4 border-l-2 border-yugi-border">
+                <h3 className="text-lg font-semibold text-gold-400 mb-3">3.4 Card Synergies</h3>
+                <p className="text-gray-300 mb-4">
+                  Some cubes include synergy data that helps identify powerful card combinations. When you draft a card that synergizes with cards in your pool, the system highlights this and adjusts the displayed score.
+                </p>
+
+                <p className="text-gray-400 font-medium mb-2">How Synergies Work:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
+                  <li>Each synergy rule has a <strong className="text-white">trigger</strong> (cards you've drafted) and a <strong className="text-white">boost</strong> (cards that benefit).</li>
+                  <li>When you have the trigger card(s), matching boost cards receive a score bonus.</li>
+                  <li>Some synergies <strong className="text-white">scale</strong> - the more trigger cards you have, the bigger the bonus.</li>
+                  <li>Adjusted scores are capped at 100.</li>
+                </ul>
+
+                <p className="text-gray-400 font-medium mb-2">Identifying Synergies During Draft:</p>
+                <ul className="list-disc list-inside text-gray-300 space-y-2 mb-4">
+                  <li>Cards with synergy bonuses show a <strong className="text-gold-400">lightbulb icon</strong>.</li>
+                  <li>The displayed score includes the synergy bonus (e.g., a 60 base + 20 bonus shows as 80).</li>
+                  <li>Click/tap a card to see the full breakdown of base score, bonuses, and which cards triggered the synergy.</li>
+                </ul>
+
+                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                  <p className="text-white font-semibold mb-3">Common Synergy Types:</p>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-gold-400 font-medium">Card-Specific Combos</p>
+                      <p className="text-gray-300">Certain cards unlock the potential of others. Example: <strong className="text-white">Tour Guide From the Underworld</strong> makes all Level 3 Fiends more valuable since she can summon them from deck.</p>
+                    </div>
+                    <div>
+                      <p className="text-gold-400 font-medium">Archetype Synergy</p>
+                      <p className="text-gray-300">Cards of the same archetype work better together. Example: The more <strong className="text-white">Kashtira</strong> cards you draft, the more valuable additional Kashtira cards become.</p>
+                    </div>
+                    <div>
+                      <p className="text-gold-400 font-medium">Attribute/Type Synergy</p>
+                      <p className="text-gray-300">Cards that support specific attributes or types. Example: <strong className="text-white">Mystic Tomato</strong> boosts DARK monsters, <strong className="text-white">Shining Angel</strong> boosts LIGHT monsters.</p>
+                    </div>
+                    <div>
+                      <p className="text-gold-400 font-medium">Two-Way Combos</p>
+                      <p className="text-gray-300">Some pairs boost each other. Example: <strong className="text-white">Mezuki</strong> and <strong className="text-white">Zombie World</strong> - drafting either makes the other significantly more valuable.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yugi-darker rounded-lg p-4 mb-4 example-box">
+                  <p className="text-gold-400 font-semibold mb-2">Example Synergies (The Library Cube):</p>
+                  <ul className="text-gray-300 text-sm space-y-2">
+                    <li><strong className="text-white">Tour Guide + Level 3 Fiends:</strong> +20 to all Level 3 Fiend monsters</li>
+                    <li><strong className="text-white">Kashtira cards:</strong> +15 per Kashtira in pool (max +30)</li>
+                    <li><strong className="text-white">Maliss cards:</strong> +15 per Maliss in pool (max +30)</li>
+                    <li><strong className="text-white">Toy Box + Toy archetype:</strong> +25 to all Toy cards</li>
+                    <li><strong className="text-white">Machina Fortress + Machines:</strong> +10 to all Machine monsters</li>
+                    <li><strong className="text-white">Zombie World + Zombies:</strong> +10 to all Zombie monsters, plus special bonuses for Mezuki and Zombie Master</li>
+                  </ul>
+                </div>
+
+                <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4">
+                  <p className="text-red-400 font-semibold mb-2">Competitive Mode</p>
+                  <p className="text-gray-300 text-sm">
+                    When <strong className="text-white">Competitive Mode</strong> is enabled, synergy indicators and score adjustments are <strong className="text-red-400">hidden</strong>. This creates a more challenging draft experience where you must recognize synergies yourself.
+                  </p>
+                </div>
+
+                <p className="text-gray-400 font-medium mt-4 mb-2">Bot AI & Synergies:</p>
+                <p className="text-gray-300">
+                  AI bots also use synergy data when making picks. If a cube has defined synergies, bots will prioritize cards that synergize with their drafted pool, making them smarter opponents.
+                </p>
               </section>
             </section>
 

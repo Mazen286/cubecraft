@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -35,10 +35,30 @@ export function BottomSheet({
   header,
   centerTitle = false,
 }: BottomSheetProps) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Handle Escape key to close the sheet
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+
+    // Use capture phase to ensure we handle it first
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div
+      ref={sheetRef}
       className="fixed inset-0 flex items-end justify-center"
       style={{ zIndex }}
     >

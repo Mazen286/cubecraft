@@ -52,6 +52,11 @@ export interface Database {
         Insert: AnonymousMigrationInsert;
         Update: never;
       };
+      saved_decks: {
+        Row: SavedDeckRow;
+        Insert: SavedDeckInsert;
+        Update: SavedDeckUpdate;
+      };
     };
   };
 }
@@ -361,6 +366,41 @@ export interface CardScoreInsert {
 export interface CardScoreUpdate {
   score?: number;
   updated_at?: string;
+}
+
+// Saved Decks table - stores deck builder configurations
+export interface SavedDeckRow {
+  id: string;
+  session_id: string;
+  player_id: string;
+  name: string;
+  deck_data: SavedDeckData;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SavedDeckInsert {
+  id?: string;
+  session_id: string;
+  player_id: string;
+  name: string;
+  deck_data: SavedDeckData;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SavedDeckUpdate {
+  name?: string;
+  deck_data?: SavedDeckData;
+  updated_at?: string;
+}
+
+// Data structure for saved deck configuration
+export interface SavedDeckData {
+  assignments: [number, string][]; // [cardIndex, zone][]
+  customStacks: Record<string, { id: string; name: string; cardIndices: number[] }[]>;
+  useCustomStacks: boolean;
+  basicResourceCounts: [string | number, number][]; // [resourceId, count][]
 }
 
 // Realtime payload types

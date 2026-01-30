@@ -1,4 +1,4 @@
-import type { GameConfig, DeckZone, ExportFormat, FilterGroup } from '../gameConfig';
+import type { GameConfig, DeckZone, ExportFormat, FilterGroup, PileViewConfig } from '../gameConfig';
 import type { Card } from '../../types/card';
 import type { YuGiOhCardAttributes } from '../../types/card';
 
@@ -296,6 +296,87 @@ const yugiohFilterGroups: FilterGroup[] = [
 ];
 
 /**
+ * Get the level/rank of a monster card (0 for non-monsters or link monsters)
+ */
+function getCardLevel(card: Card): number {
+  const attrs = card.attributes as YuGiOhCardAttributes | undefined;
+  return attrs?.level || 0;
+}
+
+/**
+ * Get the link rating of a Link monster (0 for non-link monsters)
+ */
+function getLinkRating(card: Card): number {
+  const attrs = card.attributes as YuGiOhCardAttributes | undefined;
+  return attrs?.linkval || 0;
+}
+
+/**
+ * Check if card is a main deck monster (not Fusion/Synchro/XYZ/Link)
+ */
+function isMainDeckMonster(card: Card): boolean {
+  return isMonsterCard(card) && !isExtraDeckCard(card);
+}
+
+/**
+ * Pile view configuration for Yu-Gi-Oh!
+ * Groups: Main deck monsters by Level, Extra deck monsters by type/rank, Spells, Traps
+ */
+const yugiohPileViewConfig: PileViewConfig = {
+  groups: [
+    // Main deck monster levels 1-12
+    ...Array.from({ length: 12 }, (_, i) => i + 1).map(level => ({
+      id: `level-${level}`,
+      label: `Lv${level}`,
+      matches: (card: Card) => isMainDeckMonster(card) && getCardLevel(card) === level,
+      order: level,
+    })),
+    // Spells (before extra deck for better visual grouping)
+    {
+      id: 'spells',
+      label: 'Spells',
+      matches: isSpellCard,
+      order: 50,
+    },
+    // Traps
+    {
+      id: 'traps',
+      label: 'Traps',
+      matches: isTrapCard,
+      order: 51,
+    },
+    // Fusion monsters
+    {
+      id: 'fusion',
+      label: 'Fusion',
+      matches: isFusionMonster,
+      order: 100,
+    },
+    // Synchro monsters
+    {
+      id: 'synchro',
+      label: 'Synchro',
+      matches: isSynchroMonster,
+      order: 101,
+    },
+    // XYZ monsters by Rank (1-12)
+    ...Array.from({ length: 12 }, (_, i) => i + 1).map(rank => ({
+      id: `rank-${rank}`,
+      label: `R${rank}`,
+      matches: (card: Card) => isXyzMonster(card) && getCardLevel(card) === rank,
+      order: 110 + rank,
+    })),
+    // Link monsters by Link rating (1-6)
+    ...Array.from({ length: 6 }, (_, i) => i + 1).map(link => ({
+      id: `link-${link}`,
+      label: `Link-${link}`,
+      matches: (card: Card) => isLinkMonster(card) && getLinkRating(card) === link,
+      order: 130 + link,
+    })),
+  ],
+};
+
+/**
  * Export formats for Yu-Gi-Oh!
  */
 const yugiohExportFormats: ExportFormat[] = [
@@ -491,6 +572,8 @@ export const yugiohConfig: GameConfig = {
     burnedPerPack: 5,
     timerSeconds: 120,
   },
+
+  pileViewConfig: yugiohPileViewConfig,
 
   api: {
     baseUrl: 'https://db.ygoprodeck.com/api/v7',

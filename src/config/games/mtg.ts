@@ -1,4 +1,4 @@
-import type { GameConfig, DeckZone, ExportFormat, BasicResource, FilterGroup } from '../gameConfig';
+import type { GameConfig, DeckZone, ExportFormat, BasicResource, FilterGroup, PileViewConfig } from '../gameConfig';
 import type { Card } from '../../types/card';
 
 /**
@@ -278,6 +278,37 @@ const mtgFilterGroups: FilterGroup[] = [
 ];
 
 /**
+ * Get the CMC (mana value) of a card
+ */
+function getCardCMC(card: Card): number {
+  const attrs = card.attributes as MTGCardAttributes;
+  return attrs.cmc ?? 0;
+}
+
+/**
+ * Pile view configuration for MTG
+ * Groups cards by CMC (0, 1, 2, 3, 4, 5, 6+)
+ */
+const mtgPileViewConfig: PileViewConfig = {
+  groups: [
+    // CMC 0-5 (individual piles)
+    ...Array.from({ length: 6 }, (_, i) => ({
+      id: `cmc-${i}`,
+      label: `${i}`,
+      matches: (card: Card) => getCardCMC(card) === i,
+      order: i,
+    })),
+    // CMC 6+ (grouped)
+    {
+      id: 'cmc-6plus',
+      label: '6+',
+      matches: (card: Card) => getCardCMC(card) >= 6,
+      order: 6,
+    },
+  ],
+};
+
+/**
  * Export formats for MTG
  */
 const mtgExportFormats: ExportFormat[] = [
@@ -527,6 +558,8 @@ export const mtgConfig: GameConfig = {
     burnedPerPack: 0,
     timerSeconds: 60,
   },
+
+  pileViewConfig: mtgPileViewConfig,
 
   api: {
     baseUrl: 'https://api.scryfall.com',

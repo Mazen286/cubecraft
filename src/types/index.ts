@@ -10,6 +10,16 @@ export type {
 
 export { fromLegacyYuGiOhCard, toLegacyYuGiOhCard, toCardWithAttributes } from './card';
 
+// Re-export synergy types
+export type {
+  SynergyTrigger,
+  SynergyBoost,
+  SynergyRule,
+  CubeSynergies,
+  SynergyResult,
+  SynergyBreakdown,
+} from './synergy';
+
 // Yu-Gi-Oh! Card Types - essential fields for drafting
 // NOTE: This interface is kept for backward compatibility.
 // New code should use the generic Card type with YuGiOhCardAttributes.

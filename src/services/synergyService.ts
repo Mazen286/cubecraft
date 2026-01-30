@@ -274,6 +274,7 @@ export function calculateCardSynergy(
     breakdown.push({
       ruleId: rule.id,
       name: rule.name,
+      category: rule.category,
       description: rule.description,
       bonus,
       triggerCards: triggerCards.map(c => c.name),

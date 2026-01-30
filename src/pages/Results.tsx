@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
@@ -12,6 +12,7 @@ import { Download, BarChart3, Clock, Zap, ChevronDown, ChevronUp, Flame, Trophy,
 import { useDraftSession } from '../hooks/useDraftSession';
 import { useCards } from '../hooks/useCards';
 import { useCardFilters, type Tier, type ViewMode } from '../hooks/useCardFilters';
+import { useCardKeyboardNavigation } from '../hooks/useCardKeyboardNavigation';
 import { statisticsService } from '../services/statisticsService';
 import { draftService } from '../services/draftService';
 import { synergyService } from '../services/synergyService';
@@ -193,6 +194,8 @@ export function Results() {
   const [showHandSimulator, setShowHandSimulator] = useState(false);
   const [simulatedHand, setSimulatedHand] = useState<YuGiOhCardType[]>([]);
   const [remainingDeck, setRemainingDeck] = useState<YuGiOhCardType[]>([]);
+  const [handSelectedCard, setHandSelectedCard] = useState<YuGiOhCardType | null>(null);
+  const [handHighlightedIndex, setHandHighlightedIndex] = useState(-1);
 
   // Custom stacks state for manual card grouping
   const [customStacks, setCustomStacks] = useState<Record<DeckZone, { id: string; name: string; cardIndices: number[] }[]>>({
@@ -440,6 +443,218 @@ export function Results() {
     return [...cardsWithSynergy, ...basicCards];
   }, [mainDeckCardsWithoutBasics, basicResourceCards, allCardSynergiesForFilter]);
 
+  // Combined array of all zone cards for keyboard navigation
+  const allZoneCards = useMemo(() => {
+    return [
+      ...mainDeckCards.filter(c => !c.isBasicResource),
+      ...extraDeckCards,
+      ...sideDeckCards,
+      ...poolCards,
+    ];
+  }, [mainDeckCards, extraDeckCards, sideDeckCards, poolCards]);
+
+  // Zone boundaries for keyboard navigation
+  const zoneBoundaries = useMemo(() => {
+    const mainCount = mainDeckCards.filter(c => !c.isBasicResource).length;
+    const extraCount = extraDeckCards.length;
+    const sideCount = sideDeckCards.length;
+    const poolCount = poolCards.length;
+
+    return [
+      { zone: 'main', start: 0, end: mainCount },
+      { zone: 'extra', start: mainCount, end: mainCount + extraCount },
+      { zone: 'side', start: mainCount + extraCount, end: mainCount + extraCount + sideCount },
+      { zone: 'pool', start: mainCount + extraCount + sideCount, end: mainCount + extraCount + sideCount + poolCount },
+    ].filter(z => z.end > z.start); // Only include non-empty zones
+  }, [mainDeckCards, extraDeckCards, sideDeckCards, poolCards]);
+
+  // Get responsive column count for deck grids
+  const getDeckColumnCount = useCallback(() => {
+    const width = window.innerWidth;
+    if (width < 640) return 4;   // default
+    if (width < 768) return 5;   // sm
+    if (width < 1024) return 6;  // md
+    if (width < 1280) return 8;  // lg
+    if (width < 1536) return 10; // xl
+    return 12;                   // 2xl
+  }, []);
+
+  // Get available sort options for keyboard shortcuts
+  const availableSortOptions = useMemo(() => {
+    const options = gameConfig.sortOptions?.map(s => s.id) || ['name'];
+    // Add 'score' if scores are available
+    if (hasScores) {
+      return [...options, 'score'];
+    }
+    return options;
+  }, [gameConfig.sortOptions, hasScores]);
+
+  // Keyboard navigation for deck cards
+  const {
+    highlightedIndex: deckHighlightedIndex,
+    setHighlightedIndex: setDeckHighlightedIndex,
+    sheetCard: deckSheetCard,
+    isSheetOpen: isDeckSheetOpen,
+    closeSheet: closeDeckSheet,
+    handleCardClick: handleDeckKeyboardClick,
+  } = useCardKeyboardNavigation({
+    cards: allZoneCards,
+    columns: getDeckColumnCount,
+    enabled: allZoneCards.length > 0 && !showHandSimulator,
+    sortOptions: availableSortOptions,
+    currentSortBy: filters.sortState.sortBy,
+    onSortChange: filters.setSortBy,
+    onToggleSortDirection: filters.toggleSortDirection,
+  });
+
+  // Zone-aware up/down navigation (intercepts before the hook's handler)
+  useEffect(() => {
+    if (allZoneCards.length === 0 || showHandSimulator) return;
+
+    const handleZoneNavigation = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+      // Close sheet on arrow key if open
+      if (isDeckSheetOpen) {
+        closeDeckSheet();
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      const cols = getDeckColumnCount();
+      const currentIndex = deckHighlightedIndex;
+
+      // Find which zone the current card is in
+      const currentZoneIdx = zoneBoundaries.findIndex(
+        z => currentIndex >= z.start && currentIndex < z.end
+      );
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (currentIndex < 0) {
+          // No selection, start at first card
+          setDeckHighlightedIndex(0);
+          return;
+        }
+
+        if (currentZoneIdx === -1) return;
+
+        const zone = zoneBoundaries[currentZoneIdx];
+        const posInZone = currentIndex - zone.start;
+        const zoneSize = zone.end - zone.start;
+        const rowsInZone = Math.ceil(zoneSize / cols);
+        const currentRow = Math.floor(posInZone / cols);
+        const currentCol = posInZone % cols;
+
+        if (currentRow < rowsInZone - 1) {
+          // Move down within zone
+          const nextPosInZone = (currentRow + 1) * cols + currentCol;
+          if (nextPosInZone < zoneSize) {
+            setDeckHighlightedIndex(zone.start + nextPosInZone);
+          } else {
+            // Column doesn't exist in next row, go to last card in zone
+            setDeckHighlightedIndex(zone.end - 1);
+          }
+        } else if (currentZoneIdx < zoneBoundaries.length - 1) {
+          // Move to next zone's first row, same column
+          const nextZone = zoneBoundaries[currentZoneIdx + 1];
+          const nextZoneSize = nextZone.end - nextZone.start;
+          const targetCol = Math.min(currentCol, nextZoneSize - 1);
+          setDeckHighlightedIndex(nextZone.start + targetCol);
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (currentIndex < 0) {
+          // No selection, start at last card
+          setDeckHighlightedIndex(allZoneCards.length - 1);
+          return;
+        }
+
+        if (currentZoneIdx === -1) return;
+
+        const zone = zoneBoundaries[currentZoneIdx];
+        const posInZone = currentIndex - zone.start;
+        const currentRow = Math.floor(posInZone / cols);
+        const currentCol = posInZone % cols;
+
+        if (currentRow > 0) {
+          // Move up within zone
+          const prevPosInZone = (currentRow - 1) * cols + currentCol;
+          setDeckHighlightedIndex(zone.start + prevPosInZone);
+        } else if (currentZoneIdx > 0) {
+          // Move to previous zone's last row, same column
+          const prevZone = zoneBoundaries[currentZoneIdx - 1];
+          const prevZoneSize = prevZone.end - prevZone.start;
+          const prevZoneRows = Math.ceil(prevZoneSize / cols);
+          const lastRowStart = (prevZoneRows - 1) * cols;
+          const lastRowSize = prevZoneSize - lastRowStart;
+          const targetCol = Math.min(currentCol, lastRowSize - 1);
+          setDeckHighlightedIndex(prevZone.start + lastRowStart + targetCol);
+        }
+      }
+    };
+
+    // Use capture phase to intercept before the hook's handler
+    window.addEventListener('keydown', handleZoneNavigation, true);
+    return () => window.removeEventListener('keydown', handleZoneNavigation, true);
+  }, [allZoneCards.length, showHandSimulator, deckHighlightedIndex, isDeckSheetOpen, closeDeckSheet, setDeckHighlightedIndex, zoneBoundaries, getDeckColumnCount]);
+
+  // Sync keyboard navigation with card detail state
+  const prevDeckSheetCardRef = useRef<typeof deckSheetCard>(null);
+  useEffect(() => {
+    if (deckSheetCard && deckSheetCard !== prevDeckSheetCardRef.current) {
+      const cardWithIndex = allZoneCards.find(c => c.card.id === deckSheetCard.card.id);
+      if (cardWithIndex) {
+        setSelectedCard({ card: cardWithIndex.card, zone: deckAssignments.get(cardWithIndex.index) || 'main', index: cardWithIndex.index });
+        setShowCardDetail(true);
+      }
+    }
+    prevDeckSheetCardRef.current = deckSheetCard;
+  }, [deckSheetCard, allZoneCards, deckAssignments]);
+
+  // Close card detail when keyboard navigation closes sheet (e.g., arrow keys)
+  // Only close if the sheet was previously open (not on initial render/click)
+  const prevDeckSheetOpenRef = useRef(isDeckSheetOpen);
+  useEffect(() => {
+    if (prevDeckSheetOpenRef.current && !isDeckSheetOpen && showCardDetail && selectedCard) {
+      setShowCardDetail(false);
+      setSelectedCard(null);
+    }
+    prevDeckSheetOpenRef.current = isDeckSheetOpen;
+  }, [isDeckSheetOpen, showCardDetail, selectedCard]);
+
+  // Close keyboard sheet when card detail is closed externally
+  // Only close if showCardDetail was previously true (not on initial open via keyboard)
+  const prevShowCardDetailRef = useRef(showCardDetail);
+  useEffect(() => {
+    if (prevShowCardDetailRef.current && !showCardDetail && isDeckSheetOpen) {
+      closeDeckSheet();
+    }
+    prevShowCardDetailRef.current = showCardDetail;
+  }, [showCardDetail, isDeckSheetOpen, closeDeckSheet]);
+
+  // Get the highlighted card's original index for passing to DeckZoneSection
+  const highlightedCardIndex = useMemo(() => {
+    if (deckHighlightedIndex < 0 || deckHighlightedIndex >= allZoneCards.length) return undefined;
+    return allZoneCards[deckHighlightedIndex]?.index;
+  }, [deckHighlightedIndex, allZoneCards]);
+
+  // Auto-scroll to keep highlighted card visible
+  useEffect(() => {
+    if (highlightedCardIndex === undefined) return;
+
+    const highlightedCard = document.querySelector(`[data-card-index="${highlightedCardIndex}"]`);
+    if (highlightedCard) {
+      highlightedCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [highlightedCardIndex]);
+
   // Save current deck configuration to database
   const saveDeck = useCallback(async (name: string) => {
     if (!sessionId || !currentPlayer?.id) return;
@@ -660,6 +875,18 @@ export function Results() {
 
     return synergyService.calculateCardSynergy(originalCard, mainDeckForSynergy, cubeSynergies);
   }, [selectedCard, cubeSynergies, hasScores, allDraftedCards, deckAssignments]);
+
+  // Calculate synergy for hand simulator selected card
+  const handSelectedCardSynergy = useMemo((): SynergyResult | null => {
+    if (!handSelectedCard || !cubeSynergies || !hasScores) return null;
+
+    // Get main deck cards (excluding the selected card itself)
+    const mainDeckForSynergy = allDraftedCards
+      .filter(({ card, index }) => deckAssignments.get(index) === 'main' && card.id !== handSelectedCard.id)
+      .map(({ card }) => card);
+
+    return synergyService.calculateCardSynergy(handSelectedCard, mainDeckForSynergy, cubeSynergies);
+  }, [handSelectedCard, cubeSynergies, hasScores, allDraftedCards, deckAssignments]);
 
   // Autobuild deck using synergy scores
   const autobuildDeck = useCallback(() => {
@@ -1154,6 +1381,8 @@ ${sideDeck}
     setSimulatedHand(shuffled.slice(0, handSize));
     setRemainingDeck(shuffled.slice(handSize));
     setShowHandSimulator(true);
+    setHandSelectedCard(null);
+    setHandHighlightedIndex(-1);
   }, [getMainDeckForSimulation]);
 
   // Draw one more card
@@ -1169,7 +1398,130 @@ ${sideDeck}
     setShowHandSimulator(false);
     setSimulatedHand([]);
     setRemainingDeck([]);
+    setHandSelectedCard(null);
+    setHandHighlightedIndex(-1);
   }, []);
+
+  // Hand simulator keyboard shortcuts
+  useEffect(() => {
+    if (!showHandSimulator) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const cardCount = simulatedHand.length;
+      // Estimate columns based on viewport (matches grid classes)
+      const width = window.innerWidth;
+      const cols = width < 640 ? 3 : width < 768 ? 4 : width < 1024 ? 5 : 6;
+
+      switch (e.key) {
+        case 'ArrowRight': {
+          e.preventDefault();
+          if (handSelectedCard) setHandSelectedCard(null);
+          if (cardCount === 0) break;
+          const nextIndex = handHighlightedIndex < 0 ? 0 : (handHighlightedIndex + 1) % cardCount;
+          setHandHighlightedIndex(nextIndex);
+          break;
+        }
+        case 'ArrowLeft': {
+          e.preventDefault();
+          if (handSelectedCard) setHandSelectedCard(null);
+          if (cardCount === 0) break;
+          const prevIndex = handHighlightedIndex < 0 ? cardCount - 1 : (handHighlightedIndex - 1 + cardCount) % cardCount;
+          setHandHighlightedIndex(prevIndex);
+          break;
+        }
+        case 'ArrowDown': {
+          e.preventDefault();
+          if (handSelectedCard) {
+            setHandSelectedCard(null);
+            break;
+          }
+          if (cardCount === 0) break;
+          if (handHighlightedIndex < 0) {
+            setHandHighlightedIndex(0);
+          } else {
+            const nextIndex = handHighlightedIndex + cols;
+            if (nextIndex < cardCount) {
+              setHandHighlightedIndex(nextIndex);
+            }
+          }
+          break;
+        }
+        case 'ArrowUp': {
+          e.preventDefault();
+          if (handSelectedCard) {
+            setHandSelectedCard(null);
+            break;
+          }
+          if (cardCount === 0) break;
+          if (handHighlightedIndex < 0) {
+            setHandHighlightedIndex(cardCount - 1);
+          } else {
+            const prevIndex = handHighlightedIndex - cols;
+            if (prevIndex >= 0) {
+              setHandHighlightedIndex(prevIndex);
+            }
+          }
+          break;
+        }
+        case 'Enter':
+        case ' ': {
+          e.preventDefault();
+          if (handSelectedCard) {
+            // Close card detail
+            setHandSelectedCard(null);
+          } else if (handHighlightedIndex >= 0 && handHighlightedIndex < cardCount) {
+            // Open card detail for highlighted card
+            setHandSelectedCard(simulatedHand[handHighlightedIndex]);
+          }
+          break;
+        }
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9': {
+          const num = parseInt(e.key) - 1;
+          if (num < cardCount) {
+            e.preventDefault();
+            setHandHighlightedIndex(num);
+          }
+          break;
+        }
+        case 'd':
+        case 'D':
+          e.preventDefault();
+          if (remainingDeck.length > 0) {
+            drawOneCard();
+          }
+          break;
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          drawNewHand();
+          break;
+        case 'Escape':
+          e.preventDefault();
+          if (handSelectedCard) {
+            setHandSelectedCard(null);
+          } else if (handHighlightedIndex >= 0) {
+            setHandHighlightedIndex(-1);
+          } else {
+            closeHandSimulator();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showHandSimulator, simulatedHand, handHighlightedIndex, handSelectedCard, remainingDeck.length, drawOneCard, drawNewHand, closeHandSimulator]);
 
   // Show loading state
   if (isLoading && allDraftedCards.length === 0) {
@@ -1703,6 +2055,7 @@ ${sideDeck}
                 zone="main"
                 cards={mainDeckCards}
                 selectedIndex={selectedCard?.index}
+                highlightedIndex={highlightedCardIndex}
                 onCardClick={handleCardClick}
                 onCardDrop={moveCard}
                 showTier={hasScores}
@@ -1725,6 +2078,7 @@ ${sideDeck}
                   zone="extra"
                   cards={extraDeckCards}
                   selectedIndex={selectedCard?.index}
+                  highlightedIndex={highlightedCardIndex}
                   onCardClick={handleCardClick}
                   onCardDrop={moveCard}
                   showTier={hasScores}
@@ -1747,6 +2101,7 @@ ${sideDeck}
                 zone="side"
                 cards={sideDeckCards}
                 selectedIndex={selectedCard?.index}
+                highlightedIndex={highlightedCardIndex}
                 onCardClick={handleCardClick}
                 onCardDrop={moveCard}
                 emptyMessage="Drag cards here or click to move"
@@ -1770,6 +2125,7 @@ ${sideDeck}
               zone="pool"
               cards={poolCards}
               selectedIndex={selectedCard?.index}
+              highlightedIndex={highlightedCardIndex}
               onCardClick={handleCardClick}
               onCardDrop={moveCard}
               emptyMessage="Drag cards here to exclude from deck"
@@ -1962,7 +2318,16 @@ ${sideDeck}
                 {simulatedHand.length > 0 ? (
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
                     {simulatedHand.map((card, idx) => (
-                      <div key={`hand-${card.id}-${idx}`} className="transition-transform hover:scale-105">
+                      <div
+                        key={`hand-${card.id}-${idx}`}
+                        className={`transition-transform hover:scale-105 cursor-pointer rounded-lg ${
+                          idx === handHighlightedIndex ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-darker' : ''
+                        }`}
+                        onClick={() => {
+                          setHandHighlightedIndex(idx);
+                          setHandSelectedCard(card);
+                        }}
+                      >
                         <YuGiOhCard card={card} size="full" showTier={hasScores} flush />
                       </div>
                     ))}
@@ -1987,17 +2352,21 @@ ${sideDeck}
                   onClick={drawNewHand}
                   variant="secondary"
                   className="whitespace-nowrap px-3 sm:px-4 text-sm"
+                  title="New Hand (R)"
                 >
                   <Shuffle className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">New Hand</span>
+                  <kbd className="hidden md:inline ml-1.5 px-1.5 py-0.5 text-xs bg-white/10 rounded">R</kbd>
                 </Button>
                 <Button
                   onClick={drawOneCard}
                   disabled={remainingDeck.length === 0}
                   className="whitespace-nowrap px-3 sm:px-4 text-sm"
+                  title="Draw (D)"
                 >
                   <Plus className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Draw</span>
+                  <kbd className="hidden md:inline ml-1.5 px-1.5 py-0.5 text-xs bg-white/10 rounded">D</kbd>
                 </Button>
 
                 {/* Hand count badge */}
@@ -2007,6 +2376,15 @@ ${sideDeck}
                 </div>
               </div>
             </div>
+
+            {/* Hand simulator card detail sheet */}
+            <CardDetailSheet
+              card={handSelectedCard}
+              isOpen={!!handSelectedCard}
+              onClose={() => setHandSelectedCard(null)}
+              showTier={hasScores}
+              synergy={handSelectedCardSynergy}
+            />
           </div>
         )}
 
@@ -2168,6 +2546,7 @@ function DeckZoneSection({
   zone,
   cards,
   selectedIndex,
+  highlightedIndex,
   onCardClick,
   onCardDrop,
   emptyMessage,
@@ -2189,6 +2568,7 @@ function DeckZoneSection({
   zone: DeckZone;
   cards: { card: YuGiOhCardType; index: number; count?: number }[];
   selectedIndex?: number;
+  highlightedIndex?: number;
   onCardClick: (card: YuGiOhCardType, index: number) => void;
   onCardDrop: (cardIndex: number, toZone: DeckZone) => void;
   emptyMessage?: string;
@@ -2282,6 +2662,7 @@ function DeckZoneSection({
           } : undefined}
           onCardClick={(card, index) => onCardClick(card as unknown as YuGiOhCardType, index)}
           selectedIndex={selectedIndex}
+          highlightedIndex={highlightedIndex}
           showTier={showTier}
           showInsertionIndicators={true}
           onExternalDrop={handleExternalDrop}
@@ -2300,12 +2681,14 @@ function DeckZoneSection({
             return (
             <div
               key={`deck-${index}-${card.id}`}
+              data-card-index={index}
               draggable={!isBasicResource}
               onDragStart={isBasicResource ? undefined : (e) => handleDragStart(e, index)}
               className={cn(
                 'transition-all relative',
                 isBasicResource ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
-                selectedIndex === index && 'ring-2 ring-gold-400 z-10'
+                selectedIndex === index && 'ring-2 ring-gold-400 z-10',
+                highlightedIndex === index && selectedIndex !== index && 'ring-2 ring-blue-400 z-10'
               )}
               onClick={() => onCardClick(card, index)}
             >

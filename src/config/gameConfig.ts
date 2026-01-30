@@ -1,6 +1,23 @@
 import type { Card } from '../types/card';
 
 /**
+ * Defines a group for pile view (e.g., Level 1 monsters, CMC 2)
+ */
+export interface PileGroup {
+  id: string;
+  label: string;
+  matches: (card: Card) => boolean;
+  order: number;
+}
+
+/**
+ * Configuration for pile/stacked view of cards
+ */
+export interface PileViewConfig {
+  groups: PileGroup[];
+}
+
+/**
  * Defines a zone/section of a deck (e.g., Main Deck, Extra Deck, Sideboard)
  */
 export interface DeckZone {
@@ -243,6 +260,12 @@ export interface GameConfig {
     burnedPerPack?: number;
     timerSeconds?: number;
   };
+
+  /**
+   * Configuration for pile/stacked view grouping
+   * If defined, enables pile view toggle in card displays
+   */
+  pileViewConfig?: PileViewConfig;
 
   /** API configuration (optional, for fetching card data) */
   api?: {

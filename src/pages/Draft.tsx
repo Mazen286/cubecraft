@@ -161,6 +161,7 @@ export function Draft() {
   const clearMyCardsHighlightRef = useRef<() => void>(() => {});
   const setPackHighlightToBottomRef = useRef<() => void>(() => {});
   const setMyCardsHighlightToTopRef = useRef<() => void>(() => {});
+  const prevMobileViewCardRef = useRef<YuGiOhCardType | null>(null);
 
   // Pack sort state
   const [packSortBy, setPackSortBy] = useState<string>('none');
@@ -1238,11 +1239,20 @@ export function Draft() {
     }
   }, [myCardsSelectedCard]);
 
-  // Close My Cards sheet when mobileViewCard is cleared externally
+  // Clear mobileViewCard when My Cards sheet is closed (e.g., by arrow navigation)
   useEffect(() => {
-    if (!mobileViewCard && isMyCardsSheetOpen) {
+    if (!isMyCardsSheetOpen && mobileViewCard) {
+      setMobileViewCard(null);
+    }
+  }, [isMyCardsSheetOpen, mobileViewCard]);
+
+  // Close My Cards sheet when mobileViewCard is cleared externally
+  // Only close if mobileViewCard went from a value to null (not on initial open)
+  useEffect(() => {
+    if (prevMobileViewCardRef.current && !mobileViewCard && isMyCardsSheetOpen) {
       closeMyCardsSheet();
     }
+    prevMobileViewCardRef.current = mobileViewCard;
   }, [mobileViewCard, isMyCardsSheetOpen, closeMyCardsSheet]);
 
   // Reset description expansion when card changes (must be after useCardKeyboardNavigation)

@@ -30,6 +30,11 @@ export interface CardSortState {
 }
 
 /**
+ * View mode for displaying cards
+ */
+export type ViewMode = 'grid' | 'pile';
+
+/**
  * Options for useCardFilters hook
  */
 export interface UseCardFiltersOptions {
@@ -41,6 +46,8 @@ export interface UseCardFiltersOptions {
   defaultSort?: string;
   /** Default sort direction */
   defaultDirection?: 'asc' | 'desc';
+  /** Default view mode */
+  defaultViewMode?: ViewMode;
 }
 
 /**
@@ -50,6 +57,7 @@ export interface UseCardFiltersReturn {
   // State
   filterState: CardFilterState;
   sortState: CardSortState;
+  viewMode: ViewMode;
 
   // Setters
   setSearch: (search: string) => void;
@@ -62,6 +70,7 @@ export interface UseCardFiltersReturn {
   setSortBy: (sortBy: string) => void;
   setSortDirection: (direction: 'asc' | 'desc') => void;
   toggleSortDirection: () => void;
+  setViewMode: (mode: ViewMode) => void;
   clearAllFilters: () => void;
   clearAdvancedFilters: () => void;
 
@@ -85,6 +94,7 @@ export function useCardFilters(options: UseCardFiltersOptions = {}): UseCardFilt
     includeScoreSort: _includeScoreSort = true,
     defaultSort = 'name',
     defaultDirection = 'asc',
+    defaultViewMode = 'grid',
   } = options;
   // TODO: Use includePickSort and includeScoreSort to filter sort options
   void _includePickSort;
@@ -100,6 +110,9 @@ export function useCardFilters(options: UseCardFiltersOptions = {}): UseCardFilt
   // Sort state
   const [sortBy, setSortBy] = useState(defaultSort);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(defaultDirection);
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
 
   // Toggle tier in filter
   const toggleTier = useCallback((tier: Tier) => {
@@ -412,6 +425,7 @@ export function useCardFilters(options: UseCardFiltersOptions = {}): UseCardFilt
   return {
     filterState,
     sortState,
+    viewMode,
     setSearch,
     setTypeFilter,
     setTierFilter,
@@ -422,6 +436,7 @@ export function useCardFilters(options: UseCardFiltersOptions = {}): UseCardFilt
     setSortBy,
     setSortDirection,
     toggleSortDirection,
+    setViewMode,
     clearAllFilters,
     clearAdvancedFilters,
     hasActiveFilters,
