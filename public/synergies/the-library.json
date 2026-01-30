@@ -65,11 +65,22 @@
     {
       "id": "machina-fortress-machines",
       "name": "Machina Fortress Synergy",
-      "description": "Machine monsters fuel Machina Fortress",
+      "description": "Main Deck Machine monsters can be discarded for Machina Fortress",
       "trigger": { "cardName": "Machina Fortress" },
-      "boost": { "race": "Machine" },
+      "boost": { "and": [{ "race": "Machine" }, { "mainDeckOnly": true }] },
       "bonus": 3,
       "bonusType": "flat"
+    },
+    {
+      "id": "machina-fortress-enablers",
+      "name": "Machina Fortress Enablers",
+      "description": "Main Deck Machine monsters make Machina Fortress valuable as discard fodder",
+      "trigger": { "and": [{ "race": "Machine" }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Machina Fortress" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
     },
     {
       "id": "giant-rat-earth",
