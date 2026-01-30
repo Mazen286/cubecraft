@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Pause, ChevronDown, ChevronUp, ArrowRight, X, SortAsc, SortDesc, PanelBottomOpen, PanelBottomClose, Lightbulb, PlusCircle, Sparkles } from 'lucide-react';
+import { Layers, Pause, ChevronDown, ChevronUp, ArrowRight, X, SortAsc, SortDesc, PanelBottomOpen, PanelBottomClose, Lightbulb, Sparkles } from 'lucide-react';
 import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { CubeStats } from '../components/cube/CubeStats';
@@ -204,7 +204,7 @@ export function Draft() {
     cardIndices: number[];
   }
   const [customStacks, setCustomStacks] = useState<CustomStack[]>([]);
-  const [useCustomStacks, setUseCustomStacks] = useState(false);
+  // useCustomStacks removed - pile view always uses stacks (like Results.tsx)
 
   // Load custom stacks from localStorage on mount
   useEffect(() => {
@@ -214,7 +214,6 @@ export function Draft() {
         try {
           const data = JSON.parse(saved);
           setCustomStacks(data.stacks || []);
-          setUseCustomStacks(data.enabled || false);
         } catch (e) {
           console.error('Failed to load custom stacks:', e);
         }
@@ -224,13 +223,12 @@ export function Draft() {
 
   // Save custom stacks to localStorage when they change
   useEffect(() => {
-    if (sessionId && (customStacks.length > 0 || useCustomStacks)) {
+    if (sessionId && customStacks.length > 0) {
       localStorage.setItem(`draft-stacks-${sessionId}`, JSON.stringify({
         stacks: customStacks,
-        enabled: useCustomStacks,
       }));
     }
-  }, [sessionId, customStacks, useCustomStacks]);
+  }, [sessionId, customStacks]);
 
   // Custom stack management functions
   const createCustomStack = useCallback((name: string) => {
@@ -269,8 +267,26 @@ export function Draft() {
     });
   }, []);
 
-  // Custom stacks UI state
-  const [newStackDragOver, setNewStackDragOver] = useState(false);
+  // Create a new stack at a specific position (for insertion between stacks)
+  const createStackAtPosition = useCallback((name: string, cardIndex: number, position: number): string => {
+    const id = `stack-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    setCustomStacks(prev => {
+      // Remove card from any existing stack
+      let cleanedStacks = prev.map(s => ({
+        ...s,
+        cardIndices: s.cardIndices.filter(i => i !== cardIndex),
+      }));
+
+      // Insert new stack at position
+      const newStack = { id, name, cardIndices: [cardIndex] };
+      cleanedStacks.splice(position, 0, newStack);
+
+      return cleanedStacks;
+    });
+
+    return id;
+  }, []);
 
   // Convert drafted cards to the format expected by StackablePileView
   const stackableCards = useMemo(() => {
@@ -280,19 +296,6 @@ export function Draft() {
     }));
   }, [draftedCards]);
 
-  // Get cards not in any stack
-  const getUnstackedCards = useCallback(() => {
-    const stackedIndices = new Set(customStacks.flatMap(s => s.cardIndices));
-    return draftedCards
-      .map((card, index) => ({ card, index }))
-      .filter(c => !stackedIndices.has(c.index));
-  }, [customStacks, draftedCards]);
-
-  // Handle card drag for custom stacks (used by Unstacked cards section)
-  const handleMyCardDragStart = useCallback((e: React.DragEvent, cardIndex: number) => {
-    e.dataTransfer.setData('dragType', 'card');
-    e.dataTransfer.setData('cardIndex', cardIndex.toString());
-  }, []);
 
   // Initialize custom stacks from default pile groups
   const initializeCustomStacksFromDefaults = useCallback((cards: { card: YuGiOhCardType; index: number }[]) => {
@@ -316,9 +319,23 @@ export function Draft() {
   // Track previous drafted cards count to detect new cards
   const prevDraftedCountRef = useRef(draftedCards.length);
 
-  // Auto-assign newly drafted cards to their matching default stack
+  // Auto-initialize stacks when entering pile view (like Results.tsx)
   useEffect(() => {
-    if (!useCustomStacks || customStacks.length === 0) {
+    if (myCardsFilters.viewMode !== 'pile') return;
+    if (draftedCards.length === 0) return;
+    if (customStacks.length > 0) return; // Already have stacks
+
+    // Initialize stacks from default pile groups
+    const indexedCards = draftedCards.map((card, index) => ({ card, index }));
+    const newStacks = initializeCustomStacksFromDefaults(indexedCards);
+    if (newStacks.length > 0) {
+      setCustomStacks(newStacks);
+    }
+  }, [myCardsFilters.viewMode, draftedCards, customStacks.length, initializeCustomStacksFromDefaults]);
+
+  // Auto-assign newly drafted cards to their matching default stack (when in pile view)
+  useEffect(() => {
+    if (myCardsFilters.viewMode !== 'pile' || customStacks.length === 0) {
       prevDraftedCountRef.current = draftedCards.length;
       return;
     }
@@ -359,7 +376,7 @@ export function Draft() {
     }
 
     prevDraftedCountRef.current = draftedCards.length;
-  }, [draftedCards, useCustomStacks, customStacks, gameConfig]);
+  }, [draftedCards, myCardsFilters.viewMode, customStacks, gameConfig]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1888,23 +1905,6 @@ export function Draft() {
                   {isDragOver && <span className="text-gold-400 text-sm ml-2">Drop to pick!</span>}
                 </h3>
                 <div className="flex items-center gap-4">
-                  {/* Custom Stacks Toggle */}
-                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={useCustomStacks}
-                      onChange={(e) => {
-                        const enabling = e.target.checked;
-                        setUseCustomStacks(enabling);
-                        if (enabling && customStacks.length === 0) {
-                          const indexedCards = draftedCards.map((card, index) => ({ card, index }));
-                          setCustomStacks(initializeCustomStacksFromDefaults(indexedCards));
-                        }
-                      }}
-                      className="w-3.5 h-3.5 rounded border-gray-600 text-gold-500 focus:ring-gold-500 focus:ring-offset-0 bg-yugi-dark"
-                    />
-                    <span className="text-gray-400">Custom Stacks</span>
-                  </label>
                   <div className="flex items-center gap-3 text-xs text-gray-400">
                     <span>Main: <span className="text-white font-medium">{myCardsStats.mainDeck}</span></span>
                     <span>Extra: <span className="text-purple-400 font-medium">{myCardsStats.extraDeck}</span></span>
@@ -1951,9 +1951,9 @@ export function Draft() {
               {/* Cards Grid/Pile/Custom Stacks */}
               <div className="p-4 max-h-[40vh] overflow-y-auto custom-scrollbar">
                 {draftedCards.length > 0 ? (
-                  useCustomStacks && myCardsFilters.viewMode === 'pile' ? (
-                    /* Custom Stacks Mode - uses shared StackablePileView component */
-                    <div className="flex flex-wrap gap-4 items-start">
+                  filteredDraftedCards.length > 0 ? (
+                    myCardsFilters.viewMode === 'pile' ? (
+                      /* Pile view - uses shared StackablePileView component */
                       <StackablePileView
                         stacks={customStacks}
                         cards={stackableCards}
@@ -1961,101 +1961,14 @@ export function Draft() {
                         onRenameStack={renameCustomStack}
                         onMoveCardToStack={moveCardToStack}
                         onMergeStacks={mergeStacks}
+                        onCreateStackAtPosition={createStackAtPosition}
                         onCardClick={(card, index) => handleMyCardsCardClick(card as unknown as YuGiOhCardType, index)}
                         selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
                         showTier={showScores}
-                        showInsertionIndicators={false}
+                        showInsertionIndicators={true}
                         onDragStartCard={() => {}}
                         zoneId="my-cards"
-                        className="contents"
-                      />
-
-                      {/* Unstacked cards */}
-                      {getUnstackedCards().length > 0 && (
-                        <div className="flex flex-col items-center">
-                          <div className="mb-2 text-center px-2 py-1">
-                            <span className="text-sm font-semibold text-gray-500">Unsorted</span>
-                            <span className="text-xs text-gray-600 ml-1">({getUnstackedCards().length})</span>
-                          </div>
-                          <div
-                            className="relative w-[80px] sm:w-[100px] bg-yugi-card/30 rounded-lg border border-dashed border-gray-600"
-                            style={{
-                              height: `${140 + (getUnstackedCards().length - 1) * 28}px`,
-                              minHeight: '60px'
-                            }}
-                          >
-                            {getUnstackedCards().map(({ card, index }, stackIndex) => (
-                              <div
-                                key={`unstacked-${index}-${card.id}`}
-                                draggable
-                                onDragStart={(e) => handleMyCardDragStart(e, index)}
-                                className={cn(
-                                  'absolute left-0 right-0 transition-all duration-200',
-                                  'cursor-grab active:cursor-grabbing',
-                                  'hover:-translate-y-2 hover:z-50',
-                                  mobileViewCard?.id === card.id && 'ring-2 ring-gold-400'
-                                )}
-                                style={{
-                                  top: `${stackIndex * 28}px`,
-                                  zIndex: mobileViewCard?.id === card.id ? 50 : stackIndex + 1,
-                                }}
-                                onClick={() => handleMyCardsCardClick(card, index)}
-                              >
-                                <YuGiOhCard card={card} size="full" showTier={showScores} flush />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Drop zone to create new stack */}
-                      <div
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setNewStackDragOver(true);
-                        }}
-                        onDragLeave={() => setNewStackDragOver(false)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setNewStackDragOver(false);
-                          const dragType = e.dataTransfer.getData('dragType');
-                          if (dragType !== 'stack') {
-                            const cardIndexStr = e.dataTransfer.getData('cardIndex');
-                            if (cardIndexStr) {
-                              const cardIndex = parseInt(cardIndexStr, 10);
-                              const card = draftedCards[cardIndex];
-                              if (card) {
-                                const newStackId = createCustomStack(card.name);
-                                moveCardToStack(cardIndex, newStackId);
-                              }
-                            }
-                          }
-                        }}
-                        className={cn(
-                          'flex flex-col items-center justify-center w-[80px] sm:w-[100px] h-[140px]',
-                          'border-2 border-dashed rounded-lg transition-colors',
-                          newStackDragOver ? 'border-gold-400 bg-gold-400/10' : 'border-yugi-border'
-                        )}
-                      >
-                        <PlusCircle className="w-6 h-6 text-gray-500 mb-1" />
-                        <span className="text-xs text-gray-500 text-center">New Stack</span>
-                      </div>
-                    </div>
-                  ) : filteredDraftedCards.length > 0 ? (
-                    myCardsFilters.viewMode === 'pile' ? (
-                      <CardPileView
-                        cards={filteredDraftedCardsWithIndex}
-                        selectedIndex={mobileViewCard ? filteredDraftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
-                        highlightedIndex={myCardsHighlightedIndex}
-                        onCardClick={(_card, index) => {
-                          const originalCard = filteredDraftedCards[index];
-                          if (originalCard) {
-                            handleMyCardsCardClick(originalCard, index);
-                          }
-                        }}
-                        showTier={showScores}
-                        onPileStructureChange={setMyCardsPileNavigation}
+                        className="flex flex-wrap gap-4 items-start"
                       />
                     ) : (
                       <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16">
@@ -2234,23 +2147,6 @@ export function Draft() {
                         {showMyCardsStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         <span>Build Stats</span>
                       </button>
-                      {/* Custom Stacks Toggle */}
-                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={useCustomStacks}
-                          onChange={(e) => {
-                            const enabling = e.target.checked;
-                            setUseCustomStacks(enabling);
-                            if (enabling && customStacks.length === 0) {
-                              const indexedCards = draftedCards.map((card, index) => ({ card, index }));
-                              setCustomStacks(initializeCustomStacksFromDefaults(indexedCards));
-                            }
-                          }}
-                          className="w-3.5 h-3.5 rounded border-gray-600 text-gold-500 focus:ring-gold-500 focus:ring-offset-0 bg-yugi-dark"
-                        />
-                        <span className="text-gray-400">Custom Stacks</span>
-                      </label>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
                       <span>Main: <span className="text-white font-medium">{myCardsStats.mainDeck}</span></span>
@@ -2422,9 +2318,9 @@ export function Draft() {
               {/* Content - with proper touch scrolling */}
               <div className="flex-1 overflow-y-auto overscroll-contain p-2 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {draftedCards.length > 0 ? (
-                  useCustomStacks && myCardsFilters.viewMode === 'pile' ? (
-                    /* Custom Stacks Mode in Drawer - uses shared StackablePileView component */
-                    <div className="flex flex-wrap gap-4 items-start">
+                  filteredDraftedCards.length > 0 ? (
+                    myCardsFilters.viewMode === 'pile' ? (
+                      /* Pile view - uses shared StackablePileView component */
                       <StackablePileView
                         stacks={customStacks}
                         cards={stackableCards}
@@ -2432,102 +2328,14 @@ export function Draft() {
                         onRenameStack={renameCustomStack}
                         onMoveCardToStack={moveCardToStack}
                         onMergeStacks={mergeStacks}
+                        onCreateStackAtPosition={createStackAtPosition}
                         onCardClick={(card, index) => handleMyCardsCardClick(card as unknown as YuGiOhCardType, index)}
                         selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
                         showTier={showScores}
-                        showInsertionIndicators={false}
+                        showInsertionIndicators={true}
                         onDragStartCard={() => {}}
                         zoneId="my-cards-drawer"
-                        className="contents"
-                      />
-
-                      {/* Unstacked cards */}
-                      {getUnstackedCards().length > 0 && (
-                        <div className="flex flex-col items-center">
-                          <div className="mb-2 text-center px-2 py-1">
-                            <span className="text-sm font-semibold text-gray-500">Unsorted</span>
-                            <span className="text-xs text-gray-600 ml-1">({getUnstackedCards().length})</span>
-                          </div>
-                          <div
-                            className="relative w-[80px] sm:w-[100px] bg-yugi-card/30 rounded-lg border border-dashed border-gray-600"
-                            style={{
-                              height: `${140 + (getUnstackedCards().length - 1) * 28}px`,
-                              minHeight: '60px'
-                            }}
-                          >
-                            {getUnstackedCards().map(({ card, index }, stackIndex) => (
-                              <div
-                                key={`drawer-unstacked-${index}-${card.id}`}
-                                draggable
-                                onDragStart={(e) => handleMyCardDragStart(e, index)}
-                                className={cn(
-                                  'absolute left-0 right-0 transition-all duration-200',
-                                  'cursor-grab active:cursor-grabbing',
-                                  'hover:-translate-y-2 hover:z-50',
-                                  mobileViewCard?.id === card.id && 'ring-2 ring-gold-400'
-                                )}
-                                style={{
-                                  top: `${stackIndex * 28}px`,
-                                  zIndex: mobileViewCard?.id === card.id ? 50 : stackIndex + 1,
-                                }}
-                                onClick={() => handleMyCardsCardClick(card, index)}
-                              >
-                                <YuGiOhCard card={card} size="full" showTier={showScores} flush />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Drop zone to create new stack */}
-                      <div
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setNewStackDragOver(true);
-                        }}
-                        onDragLeave={() => setNewStackDragOver(false)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setNewStackDragOver(false);
-                          const dragType = e.dataTransfer.getData('dragType');
-                          if (dragType !== 'stack') {
-                            const cardIndexStr = e.dataTransfer.getData('cardIndex');
-                            if (cardIndexStr) {
-                              const cardIndex = parseInt(cardIndexStr, 10);
-                              const card = draftedCards[cardIndex];
-                              if (card) {
-                                const newStackId = createCustomStack(card.name);
-                                moveCardToStack(cardIndex, newStackId);
-                              }
-                            }
-                          }
-                        }}
-                        className={cn(
-                          'flex flex-col items-center justify-center w-[80px] sm:w-[100px] h-[140px]',
-                          'border-2 border-dashed rounded-lg transition-colors',
-                          newStackDragOver ? 'border-gold-400 bg-gold-400/10' : 'border-yugi-border'
-                        )}
-                      >
-                        <PlusCircle className="w-6 h-6 text-gray-500 mb-1" />
-                        <span className="text-xs text-gray-500 text-center">New Stack</span>
-                      </div>
-                    </div>
-                  ) : filteredDraftedCards.length > 0 ? (
-                    myCardsFilters.viewMode === 'pile' ? (
-                      /* Pile view */
-                      <CardPileView
-                        cards={filteredDraftedCardsWithIndex}
-                        selectedIndex={mobileViewCard ? filteredDraftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
-                        highlightedIndex={myCardsHighlightedIndex}
-                        onCardClick={(_card, index) => {
-                          const originalCard = filteredDraftedCards[index];
-                          if (originalCard) {
-                            handleMyCardsCardClick(originalCard, index);
-                          }
-                        }}
-                        showTier={showScores}
-                        onPileStructureChange={setMyCardsPileNavigation}
+                        className="flex flex-wrap gap-4 items-start"
                       />
                     ) : (
                       /* Grid view - smaller cards for more visibility */

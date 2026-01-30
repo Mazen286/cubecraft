@@ -112,6 +112,9 @@ function cardMatchesTrigger(card: YuGiOhCard, trigger: SynergyTrigger): boolean 
   if (trigger.minDef !== undefined && (card.def === undefined || card.def < trigger.minDef)) {
     return false;
   }
+  if (trigger.minScore !== undefined && (card.score === undefined || card.score < trigger.minScore)) {
+    return false;
+  }
   if (trigger.mainDeckOnly && isExtraDeckMonster(card)) {
     return false;
   }
@@ -182,6 +185,10 @@ function cardMatchesBoost(card: YuGiOhCard, boost: SynergyBoost): boolean {
   if (boost.minDef !== undefined) {
     hasCondition = true;
     if (card.def === undefined || card.def < boost.minDef) matches = false;
+  }
+  if (boost.minScore !== undefined) {
+    hasCondition = true;
+    if (card.score === undefined || card.score < boost.minScore) matches = false;
   }
   if (boost.mainDeckOnly) {
     hasCondition = true;

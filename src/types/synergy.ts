@@ -31,6 +31,8 @@ export interface SynergyTrigger {
   maxDef?: number;
   /** Minimum DEF value */
   minDef?: number;
+  /** Minimum card score (for cards like Dark Magician of Chaos that want good spells) */
+  minScore?: number;
   /** Only match Main Deck monsters (excludes Fusion, Synchro, XYZ, Link) */
   mainDeckOnly?: boolean;
   /** Exclude specific card names from matching */
@@ -67,6 +69,8 @@ export interface SynergyBoost {
   maxDef?: number;
   /** Minimum DEF value */
   minDef?: number;
+  /** Minimum card score (for cards like Dark Magician of Chaos that want good spells) */
+  minScore?: number;
   /** Only match Main Deck monsters (excludes Fusion, Synchro, XYZ, Link) */
   mainDeckOnly?: boolean;
   /** Exclude specific card names from matching */

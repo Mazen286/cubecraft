@@ -600,7 +600,7 @@ export const draftService = {
 
   /**
    * Make picks for all bot players (AI picks highest-scored card)
-   * Uses optimistic locking to prevent race conditions with multiple clients
+   * Processes all bots in PARALLEL for speed - each bot has their own hand so no conflicts
    */
   async makeBotPicks(
     sessionId: string,
@@ -623,10 +623,7 @@ export const draftService = {
       return;
     }
 
-    const currentPack = session.current_pack;
-    const currentPick = session.current_pick;
-
-    // Load synergies for intelligent picking
+    // Load synergies for intelligent picking (cached after first load)
     const cubeSynergies = await synergyService.loadCubeSynergies(cubeId);
 
     // Get all bot players who haven't picked yet
@@ -647,190 +644,108 @@ export const draftService = {
       return;
     }
 
-    console.log(`[makeBotPicks] Found ${bots.length} bots needing picks`);
+    console.log(`[makeBotPicks] Processing ${bots.length} bots in parallel`);
 
-    for (const bot of bots) {
-      // Re-check session paused state before each bot pick
-      const { data: currentSession } = await supabase
-        .from('draft_sessions')
-        .select('paused, status')
-        .eq('id', sessionId)
-        .single();
+    // Fetch all bot drafted picks in parallel
+    const draftedPicksResults = await Promise.all(
+      bots.map(bot =>
+        supabase
+          .from('draft_picks')
+          .select('card_id')
+          .eq('session_id', sessionId)
+          .eq('player_id', bot.id)
+      )
+    );
 
-      if (!currentSession || currentSession.paused || currentSession.status !== 'in_progress') {
-        console.log('[makeBotPicks] Session paused or ended mid-loop, stopping bot picks');
-        break;
-      }
+    // Process all bots in parallel - each bot has their own hand, no conflicts
+    await Promise.all(
+      bots.map(async (bot, index) => {
+        const currentHand: number[] = bot.current_hand;
 
-      // Re-fetch current hand to get fresh data
-      const { data: freshBot } = await supabase
-        .from('draft_players')
-        .select('current_hand, pick_made')
-        .eq('id', bot.id)
-        .single();
+        // Skip if hand is empty
+        if (currentHand.length === 0) {
+          console.log(`[makeBotPicks] Skipping ${bot.name}: empty hand`);
+          return;
+        }
 
-      // Skip if already picked (another process handled it)
-      if (freshBot?.pick_made) {
-        console.log(`[makeBotPicks] Skipping ${bot.name}: already picked`);
-        continue;
-      }
+        // Get this bot's drafted cards
+        const draftedPicksData = draftedPicksResults[index].data || [];
+        const draftedCards = draftedPicksData
+          .map(p => cubeService.getCardFromAnyCube(p.card_id))
+          .filter((c): c is YuGiOhCard => c !== null);
 
-      // IMPORTANT: Never fall back to stale data - if fresh read fails, skip this bot
-      if (!freshBot) {
-        console.log(`[makeBotPicks] Skipping ${bot.name}: could not fetch fresh data`);
-        continue;
-      }
-      const currentHand: number[] = freshBot.current_hand;
+        // Analyze bot's collection for intelligent picking
+        const collection = analyzeBotCollection(draftedCards);
 
-      // Skip if hand is empty (no cards to pick from)
-      if (currentHand.length === 0) {
-        console.log(`[makeBotPicks] Skipping ${bot.name}: empty hand`);
-        continue;
-      }
+        // Calculate weighted scores considering synergy and balance
+        const cardScores = currentHand.map((cardId: number) => {
+          const card = cubeService.getCardFromAnyCube(cardId);
+          const baseScore = card?.score ?? 50;
+          let weightedScore = baseScore;
 
-      // Get bot's drafted cards for intelligent picking
-      const { data: draftedPicksData } = await supabase
-        .from('draft_picks')
-        .select('card_id')
-        .eq('session_id', sessionId)
-        .eq('player_id', bot.id);
+          if (card) {
+            // Use cube-specific synergies if available
+            if (cubeSynergies) {
+              const synergyResult = synergyService.calculateCardSynergy(card, draftedCards, cubeSynergies);
+              weightedScore = synergyResult.adjustedScore;
+            } else {
+              // Fallback to basic archetype synergy if no cube synergies defined
+              if (card.archetype && collection.topArchetype === card.archetype) {
+                weightedScore += 15;
+              } else if (card.archetype && collection.archetypes.has(card.archetype)) {
+                const count = collection.archetypes.get(card.archetype)!;
+                if (count >= 2) {
+                  weightedScore += 8;
+                }
+              }
+            }
 
-      const draftedCards = (draftedPicksData || [])
-        .map(p => cubeService.getCardFromAnyCube(p.card_id))
-        .filter((c): c is YuGiOhCard => c !== null);
+            // Card type balance adjustments
+            const cardType = card.type.toLowerCase();
+            const isSpell = cardType.includes('spell');
+            const isTrap = cardType.includes('trap');
+            const isMonster = !isSpell && !isTrap;
 
-      // Analyze bot's collection for intelligent picking
-      const collection = analyzeBotCollection(draftedCards);
-
-      // Calculate weighted scores considering synergy and balance
-      const cardScores: { cardId: number; score: number; weightedScore: number }[] = currentHand.map((cardId: number) => {
-        const card = cubeService.getCardFromAnyCube(cardId);
-        const baseScore = card?.score ?? 50;
-        let weightedScore = baseScore;
-
-        if (card) {
-          // Use cube-specific synergies if available
-          if (cubeSynergies) {
-            const synergyResult = synergyService.calculateCardSynergy(card, draftedCards, cubeSynergies);
-            weightedScore = synergyResult.adjustedScore;
-          } else {
-            // Fallback to basic archetype synergy if no cube synergies defined
-            if (card.archetype && collection.topArchetype === card.archetype) {
-              weightedScore += 15; // Big bonus for matching archetype
-            } else if (card.archetype && collection.archetypes.has(card.archetype)) {
-              const count = collection.archetypes.get(card.archetype)!;
-              if (count >= 2) {
-                weightedScore += 8; // Smaller bonus for building archetype
+            if (collection.totalCards >= 5) {
+              if (isSpell && collection.spellRatio < 0.25) {
+                weightedScore += 5;
+              } else if (isTrap && collection.trapRatio < 0.10) {
+                weightedScore += 5;
+              } else if (isMonster && collection.monsterRatio > 0.70) {
+                weightedScore -= 5;
               }
             }
           }
 
-          // Card type balance adjustments (always apply)
-          const cardType = card.type.toLowerCase();
-          const isSpell = cardType.includes('spell');
-          const isTrap = cardType.includes('trap');
-          const isMonster = !isSpell && !isTrap;
+          return { cardId, score: baseScore, weightedScore };
+        });
 
-          if (collection.totalCards >= 5) {
-            if (isSpell && collection.spellRatio < 0.25) {
-              weightedScore += 5; // Need more spells
-            } else if (isTrap && collection.trapRatio < 0.10) {
-              weightedScore += 5; // Need more traps
-            } else if (isMonster && collection.monsterRatio > 0.70) {
-              weightedScore -= 5; // Too many monsters
-            }
-          }
-        }
+        // Sort by weighted score, then by base score
+        cardScores.sort((a, b) => b.weightedScore - a.weightedScore || b.score - a.score);
 
-        return {
-          cardId,
-          score: baseScore,
-          weightedScore,
-        };
-      });
+        // Pick best card using RPC (handles all validation and updates atomically)
+        const bestCard = cardScores[0];
+        if (bestCard) {
+          const { data, error } = await supabase.rpc('make_draft_pick', {
+            p_session_id: sessionId,
+            p_player_id: bot.id,
+            p_card_id: bestCard.cardId,
+            p_pick_time_seconds: 0,
+            p_was_auto_pick: true,
+          });
 
-      // Sort by weighted score (includes synergy/balance), then by base score
-      cardScores.sort((a, b) => b.weightedScore - a.weightedScore || b.score - a.score);
-
-      // Try each card in order until one succeeds (in case some are already picked)
-      let pickedCardId: number | null = null;
-      for (const cardOption of cardScores) {
-        const pickData: DraftPickInsert = {
-          session_id: sessionId,
-          player_id: bot.id,
-          card_id: cardOption.cardId,
-          pack_number: currentPack,
-          pick_number: currentPick,
-          pick_time_seconds: 0,
-          was_auto_pick: true,
-        };
-
-        const { error: pickError } = await supabase.from('draft_picks').insert(pickData);
-
-        if (!pickError) {
-          // Success - this card was picked
-          pickedCardId = cardOption.cardId;
-          console.log(`[makeBotPicks] Bot ${bot.name} picked card ${pickedCardId}`);
-          break;
-        } else if (pickError.code === '23505') {
-          // Unique constraint violation
-          if (pickError.message?.includes('card_id')) {
-            // Card already picked by someone else - try next card
-            console.log(`[makeBotPicks] Card ${cardOption.cardId} already picked, trying next`);
-            continue;
+          if (error) {
+            console.error(`[makeBotPicks] Bot ${bot.name} RPC error:`, error);
+          } else if (data?.success) {
+            console.log(`[makeBotPicks] Bot ${bot.name} picked card ${bestCard.cardId}`);
           } else {
-            // Bot already has a pick for this round - another process handled it
-            // Find the actual pick and update hand properly
-            console.log(`[makeBotPicks] Bot ${bot.name} pick already recorded, finding actual pick...`);
-            const { data: existingPick } = await supabase
-              .from('draft_picks')
-              .select('card_id')
-              .eq('session_id', sessionId)
-              .eq('player_id', bot.id)
-              .eq('pack_number', currentPack)
-              .eq('pick_number', currentPick)
-              .single();
-
-            if (existingPick) {
-              // Remove the actual picked card from hand
-              const correctedHand = currentHand.filter((id: number) => id !== existingPick.card_id);
-              await supabase
-                .from('draft_players')
-                .update({ current_hand: correctedHand, pick_made: true })
-                .eq('id', bot.id);
-              console.log(`[makeBotPicks] Bot ${bot.name} hand corrected, removed card ${existingPick.card_id}`);
-            } else {
-              // Fallback: just mark as picked
-              await supabase
-                .from('draft_players')
-                .update({ pick_made: true })
-                .eq('id', bot.id);
-              console.log(`[makeBotPicks] Bot ${bot.name} pick_made set but couldn't find pick to correct hand`);
-            }
-            break;
+            console.log(`[makeBotPicks] Bot ${bot.name} pick failed:`, data?.error);
           }
-        } else {
-          // Some other error - log and try next card
-          console.error(`[makeBotPicks] Error picking card ${cardOption.cardId}:`, pickError);
-          continue;
         }
-      }
+      })
+    );
 
-      // Only update hand if we successfully picked a card
-      if (!pickedCardId) {
-        console.log(`[makeBotPicks] Bot ${bot.name} - no card picked in this attempt`);
-        continue;
-      }
-
-      // Update hand to remove the picked card
-      const newHand = currentHand.filter((id: number) => id !== pickedCardId);
-      await supabase
-        .from('draft_players')
-        .update({ current_hand: newHand, pick_made: true })
-        .eq('id', bot.id);
-
-      console.log(`[makeBotPicks] Bot ${bot.name} hand updated`);
-    }
+    console.log('[makeBotPicks] All bot picks processed');
   },
 
   /**
@@ -896,15 +811,17 @@ export const draftService = {
         await supabase.from('draft_burned_cards').insert(burnedCards);
       }
 
-      // Clear hands after recording burns
-      for (const player of players) {
-        if (player.current_hand.length > 0) {
-          await supabase
-            .from('draft_players')
-            .update({ current_hand: [] })
-            .eq('id', player.id);
-        }
-      }
+      // Clear hands after recording burns (parallel updates)
+      await Promise.all(
+        players
+          .filter(player => player.current_hand.length > 0)
+          .map(player =>
+            supabase
+              .from('draft_players')
+              .update({ current_hand: [] })
+              .eq('id', player.id)
+          )
+      );
 
       // Move to next pack or end draft
       // Account for burned cards: each pack gives (packSize - burnedPerPack) picks
@@ -956,24 +873,29 @@ export const draftService = {
       const nextPackNumber = session.current_pack + 1;
       console.log(`[passPacks] Distributing pack ${nextPackNumber}`);
 
-      for (const player of players) {
-        const playerPack = packData.find(
-          (p) => p.player_seat === player.seat_position && p.pack_number === nextPackNumber
-        );
-        if (playerPack) {
-          console.log(`[passPacks] Player ${player.name} (seat ${player.seat_position}) getting pack ${nextPackNumber}: ${playerPack.cards.length} cards`);
-          const { error: updateError } = await supabase
-            .from('draft_players')
-            .update({ current_hand: playerPack.cards, pick_made: false })
-            .eq('id', player.id);
+      // Distribute packs in parallel
+      await Promise.all(
+        players.map(async player => {
+          const playerPack = packData.find(
+            (p) => p.player_seat === player.seat_position && p.pack_number === nextPackNumber
+          );
+          if (playerPack) {
+            console.log(`[passPacks] Player ${player.name} (seat ${player.seat_position}) getting pack ${nextPackNumber}: ${playerPack.cards.length} cards`);
+            const { error: updateError } = await supabase
+              .from('draft_players')
+              .update({ current_hand: playerPack.cards, pick_made: false })
+              .eq('id', player.id);
 
-          if (updateError) {
-            console.error(`[passPacks] Failed to distribute pack to player ${player.name}:`, updateError);
+            if (updateError) {
+              console.error(`[passPacks] Failed to distribute pack to player ${player.name}:`, updateError);
+            }
+            return true;
+          } else {
+            console.error(`[passPacks] No pack data found for player ${player.name} (seat ${player.seat_position}, pack ${nextPackNumber})`);
+            return false;
           }
-        } else {
-          console.error(`[passPacks] No pack data found for player ${player.name} (seat ${player.seat_position}, pack ${nextPackNumber})`);
-        }
-      }
+        })
+      );
 
       // Trigger immediate bot picks for the new pack
       await this.makeBotPicks(sessionId, session.cube_id, nextPackNumber, 1);
@@ -1003,25 +925,27 @@ export const draftService = {
         return;
       }
 
-      // Now safe to pass hands since we won the race
+      // Now safe to pass hands since we won the race (parallel updates)
       console.log(`[passPacks] Passing hands to next player (direction: ${isLeftDirection ? 'left' : 'right'})`);
-      for (const player of players) {
-        const sourceSeat = isLeftDirection
-          ? (player.seat_position + 1) % playerCount
-          : (player.seat_position - 1 + playerCount) % playerCount;
+      await Promise.all(
+        players.map(async player => {
+          const sourceSeat = isLeftDirection
+            ? (player.seat_position + 1) % playerCount
+            : (player.seat_position - 1 + playerCount) % playerCount;
 
-        const newHand = hands[sourceSeat] || [];
-        console.log(`[passPacks] Player ${player.name} (seat ${player.seat_position}) getting hand from seat ${sourceSeat}: ${newHand.length} cards`);
+          const newHand = hands[sourceSeat] || [];
+          console.log(`[passPacks] Player ${player.name} (seat ${player.seat_position}) getting hand from seat ${sourceSeat}: ${newHand.length} cards`);
 
-        const { error: updateError } = await supabase
-          .from('draft_players')
-          .update({ current_hand: newHand, pick_made: false })
-          .eq('id', player.id);
+          const { error: updateError } = await supabase
+            .from('draft_players')
+            .update({ current_hand: newHand, pick_made: false })
+            .eq('id', player.id);
 
-        if (updateError) {
-          console.error(`[passPacks] Failed to update hand for player ${player.name}:`, updateError);
-        }
-      }
+          if (updateError) {
+            console.error(`[passPacks] Failed to update hand for player ${player.name}:`, updateError);
+          }
+        })
+      );
 
       // Trigger immediate bot picks after hands are passed
       await this.makeBotPicks(sessionId, session.cube_id, session.current_pack, session.current_pick + 1);

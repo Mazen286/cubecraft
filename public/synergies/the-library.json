@@ -937,7 +937,7 @@
       "name": "Rank 4 XYZ Materials",
       "description": "Level 4 monsters can be used to summon Rank 4 XYZ",
       "trigger": { "and": [{ "level": 4 }, { "mainDeckOnly": true }] },
-      "boost": { "and": [{ "level": 4 }, { "cardType": "xyz" }] },
+      "boost": { "and": [{ "level": 4 }, { "cardType": "xyz" }], "excludeCards": ["Comics Hero King Arthur"] },
       "bonus": 3,
       "bonusType": "flat",
       "scaling": true,
@@ -947,9 +947,29 @@
       "id": "xyz-rank4-wants-level4",
       "name": "Rank 4 XYZ Synergy",
       "description": "Rank 4 XYZ monsters want Level 4 materials",
-      "trigger": { "and": [{ "level": 4 }, { "cardType": "xyz" }] },
+      "trigger": { "and": [{ "level": 4 }, { "cardType": "xyz" }], "excludeCards": ["Comics Hero King Arthur"] },
       "boost": { "and": [{ "level": 4 }, { "mainDeckOnly": true }] },
       "bonus": 2,
+      "bonusType": "flat"
+    },
+    {
+      "id": "comics-hero-king-arthur-materials",
+      "name": "Comics Hero King Arthur Materials",
+      "description": "Level 4 Warriors can summon Comics Hero King Arthur",
+      "trigger": { "and": [{ "level": 4 }, { "race": "Warrior" }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Comics Hero King Arthur" },
+      "bonus": 5,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "comics-hero-king-arthur-wants-warriors",
+      "name": "Comics Hero King Arthur Synergy",
+      "description": "Comics Hero King Arthur needs Level 4 Warrior materials",
+      "trigger": { "cardName": "Comics Hero King Arthur" },
+      "boost": { "and": [{ "level": 4 }, { "race": "Warrior" }, { "mainDeckOnly": true }] },
+      "bonus": 3,
       "bonusType": "flat"
     },
     {
@@ -1709,6 +1729,26 @@
       "bonusType": "flat",
       "scaling": true,
       "maxBonus": 15
+    },
+    {
+      "id": "dark-magician-of-chaos-spells",
+      "name": "Dark Magician of Chaos Spell Recovery",
+      "description": "High-quality Spells make Dark Magician of Chaos more valuable",
+      "trigger": { "and": [{ "cardType": "spell" }, { "minScore": 65 }] },
+      "boost": { "cardName": "Dark Magician of Chaos" },
+      "bonus": 4,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 15
+    },
+    {
+      "id": "dark-magician-of-chaos-enablers",
+      "name": "Dark Magician of Chaos Synergy",
+      "description": "Dark Magician of Chaos can recover powerful Spells from the GY",
+      "trigger": { "cardName": "Dark Magician of Chaos" },
+      "boost": { "and": [{ "cardType": "spell" }, { "minScore": 65 }] },
+      "bonus": 3,
+      "bonusType": "flat"
     }
   ]
 }
