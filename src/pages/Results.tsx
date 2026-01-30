@@ -496,7 +496,7 @@ export function Results() {
     sheetCard: deckSheetCard,
     isSheetOpen: isDeckSheetOpen,
     closeSheet: closeDeckSheet,
-    handleCardClick: handleDeckKeyboardClick,
+    handleCardClick: _handleDeckKeyboardClick,
   } = useCardKeyboardNavigation({
     cards: allZoneCards,
     columns: getDeckColumnCount,
@@ -2382,7 +2382,7 @@ ${sideDeck}
               card={handSelectedCard}
               isOpen={!!handSelectedCard}
               onClose={() => setHandSelectedCard(null)}
-              showTier={hasScores}
+              hideScores={!hasScores}
               synergy={handSelectedCardSynergy}
             />
           </div>

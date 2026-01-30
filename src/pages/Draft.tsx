@@ -10,7 +10,6 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useToast } from '../components/ui/Toast';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
-import { CardPileView } from '../components/cards/CardPileView';
 import { StackablePileView } from '../components/cards/StackablePileView';
 import { type YuGiOhCard as YuGiOhCardType, type CubeSynergies, type SynergyResult, toCardWithAttributes } from '../types';
 import { formatTime, getTierFromScore, cn } from '../lib/utils';
@@ -196,7 +195,7 @@ export function Draft() {
   const [myCardsStatsFilters, setMyCardsStatsFilters] = useState<Record<string, Set<string>>>({});
 
   // Pile navigation structure for My Cards drawer (when in pile view mode)
-  const [myCardsPileNavigation, setMyCardsPileNavigation] = useState<PileNavigationMap | null>(null);
+  const [myCardsPileNavigation, _setMyCardsPileNavigation] = useState<PileNavigationMap | null>(null);
 
   // Custom stacks for My Cards organization (persists to Results page)
   interface CustomStack {
@@ -232,12 +231,6 @@ export function Draft() {
   }, [sessionId, customStacks]);
 
   // Custom stack management functions
-  const createCustomStack = useCallback((name: string) => {
-    const id = `stack-${Date.now()}`;
-    setCustomStacks(prev => [...prev, { id, name, cardIndices: [] }]);
-    return id;
-  }, []);
-
   const deleteCustomStack = useCallback((stackId: string) => {
     setCustomStacks(prev => prev.filter(s => s.id !== stackId));
   }, []);
@@ -621,14 +614,6 @@ export function Draft() {
   // Filtered cards as generic format for CubeStats
   const filteredDraftedCardsAsGeneric = useMemo(() => {
     return filteredDraftedCards.map(card => toCardWithAttributes(card));
-  }, [filteredDraftedCards]);
-
-  // Filtered cards as CardWithIndex format for pile view
-  const filteredDraftedCardsWithIndex = useMemo(() => {
-    return filteredDraftedCards.map((card, index) => ({
-      card: toCardWithAttributes(card),
-      index,
-    }));
   }, [filteredDraftedCards]);
 
   // Handle stats filter click (from CubeStats)
