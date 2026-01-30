@@ -236,6 +236,28 @@
       "maxBonus": 8
     },
     {
+      "id": "red-sparrow-summoner-targets",
+      "name": "Red Sparrow Summoner Targets",
+      "category": "recruiter",
+      "description": "Red Sparrow Summoner can recruit Level 4 or lower monsters with 1500 or less ATK",
+      "trigger": { "cardName": "Red Sparrow Summoner" },
+      "boost": { "and": [{ "maxLevel": 4 }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Red Sparrow Summoner"] }] },
+      "bonus": 5,
+      "bonusType": "flat"
+    },
+    {
+      "id": "red-sparrow-summoner-enabler",
+      "name": "Red Sparrow Summoner",
+      "category": "recruiter",
+      "description": "Level 4 or lower monsters with 1500 ATK or less make Red Sparrow Summoner valuable",
+      "trigger": { "and": [{ "maxLevel": 4 }, { "maxAtk": 1500 }, { "mainDeckOnly": true }, { "excludeCards": ["Red Sparrow Summoner"] }] },
+      "boost": { "cardName": "Red Sparrow Summoner" },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
       "id": "mezuki-zombie-world",
       "name": "Mezuki + Zombie World",
       "category": "type",
