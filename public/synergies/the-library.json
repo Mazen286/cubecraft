@@ -2432,6 +2432,100 @@
       "bonusType": "flat",
       "scaling": true,
       "maxBonus": 8
+    },
+    {
+      "id": "foolish-burial-targets",
+      "name": "Foolish Burial Targets",
+      "category": "combo",
+      "description": "Foolish Burial can send monsters that want to be in the GY",
+      "trigger": { "cardName": "Foolish Burial" },
+      "boost": { "or": [
+        { "cardName": "Glow-Up Bulb" },
+        { "cardName": "Plaguespreader Zombie" },
+        { "cardName": "Spore" },
+        { "cardName": "Mezuki" },
+        { "cardName": "Dandylion" },
+        { "cardName": "Bacon Saver" },
+        { "cardName": "Necro Gardna" },
+        { "cardName": "Fairy Tail - Snow" },
+        { "cardName": "Jet Synchron" },
+        { "cardName": "Treeborn Frog" },
+        { "cardName": "Destiny HERO - Disk Commander" },
+        { "cardName": "Glow-Up Bloom" },
+        { "cardName": "Dotscaper" }
+      ]},
+      "bonus": 8,
+      "bonusType": "flat"
+    },
+    {
+      "id": "foolish-burial-enablers",
+      "name": "Foolish Burial",
+      "category": "combo",
+      "description": "Cards that want to be in GY make Foolish Burial valuable",
+      "trigger": { "or": [
+        { "cardName": "Glow-Up Bulb" },
+        { "cardName": "Plaguespreader Zombie" },
+        { "cardName": "Spore" },
+        { "cardName": "Mezuki" },
+        { "cardName": "Dandylion" },
+        { "cardName": "Bacon Saver" },
+        { "cardName": "Necro Gardna" },
+        { "cardName": "Fairy Tail - Snow" },
+        { "cardName": "Jet Synchron" },
+        { "cardName": "Treeborn Frog" },
+        { "cardName": "Destiny HERO - Disk Commander" },
+        { "cardName": "Glow-Up Bloom" },
+        { "cardName": "Dotscaper" }
+      ]},
+      "boost": { "cardName": "Foolish Burial" },
+      "bonus": 4,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 15
+    },
+    {
+      "id": "foolish-burial-maliss",
+      "name": "Foolish Burial Maliss Synergy",
+      "category": "combo",
+      "description": "Foolish Burial can send Maliss monsters to GY for banish effects",
+      "trigger": { "cardName": "Foolish Burial" },
+      "boost": { "and": [{ "archetype": "Maliss" }, { "mainDeckOnly": true }] },
+      "bonus": 6,
+      "bonusType": "flat"
+    },
+    {
+      "id": "foolish-burial-wants-maliss",
+      "name": "Foolish Burial wants Maliss",
+      "category": "combo",
+      "description": "Maliss monsters make Foolish Burial valuable",
+      "trigger": { "and": [{ "archetype": "Maliss" }, { "mainDeckOnly": true }] },
+      "boost": { "cardName": "Foolish Burial" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
+    },
+    {
+      "id": "foolish-burial-shaddoll",
+      "name": "Foolish Burial Shaddoll Synergy",
+      "category": "combo",
+      "description": "Foolish Burial can send Shaddolls to trigger their GY effects",
+      "trigger": { "cardName": "Foolish Burial" },
+      "boost": { "archetype": "Shaddoll" },
+      "bonus": 6,
+      "bonusType": "flat"
+    },
+    {
+      "id": "foolish-burial-wants-shaddoll",
+      "name": "Foolish Burial wants Shaddoll",
+      "category": "combo",
+      "description": "Shaddoll monsters make Foolish Burial valuable",
+      "trigger": { "archetype": "Shaddoll" },
+      "boost": { "cardName": "Foolish Burial" },
+      "bonus": 3,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 10
     }
   ]
 }
