@@ -775,7 +775,8 @@
       "trigger": { "attribute": "LIGHT" },
       "boost": { "or": [
         { "cardName": "Black Dragon Collapserpent" },
-        { "cardName": "Ghost Ship" }
+        { "cardName": "Ghost Ship" },
+        { "cardName": "Soul of Purity and Light" }
       ]},
       "bonus": 2,
       "bonusType": "flat",
@@ -788,7 +789,8 @@
       "description": "These cards make LIGHT monsters more valuable",
       "trigger": { "or": [
         { "cardName": "Black Dragon Collapserpent" },
-        { "cardName": "Ghost Ship" }
+        { "cardName": "Ghost Ship" },
+        { "cardName": "Soul of Purity and Light" }
       ]},
       "boost": { "attribute": "LIGHT" },
       "bonus": 2,
