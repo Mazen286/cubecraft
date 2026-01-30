@@ -295,6 +295,7 @@ export function Draft() {
   const initializeCustomStacksFromDefaults = useCallback((cards: { card: YuGiOhCardType; index: number }[]) => {
     const groups = gameConfig.pileViewConfig?.groups || [];
     const newStacks: CustomStack[] = [];
+    const assignedIndices = new Set<number>();
 
     groups.forEach(group => {
       const matchingCards = cards.filter(c => group.matches(toCardWithAttributes(c.card)));
@@ -304,8 +305,19 @@ export function Draft() {
           name: group.label,
           cardIndices: matchingCards.map(c => c.index),
         });
+        matchingCards.forEach(c => assignedIndices.add(c.index));
       }
     });
+
+    // Add "Other" stack for cards that don't match any group
+    const uncategorizedCards = cards.filter(c => !assignedIndices.has(c.index));
+    if (uncategorizedCards.length > 0) {
+      newStacks.push({
+        id: `stack-other-${Date.now()}-${Math.random()}`,
+        name: 'Other',
+        cardIndices: uncategorizedCards.map(c => c.index),
+      });
+    }
 
     return newStacks;
   }, [gameConfig]);
@@ -343,6 +355,7 @@ export function Draft() {
         const groups = gameConfig.pileViewConfig?.groups || [];
 
         // Find which group this card matches
+        let foundMatch = false;
         for (const group of groups) {
           if (group.matches(toCardWithAttributes(newCard))) {
             // Find the stack with this group's label
@@ -363,7 +376,27 @@ export function Draft() {
                 cardIndices: [newCardIndex],
               }]);
             }
+            foundMatch = true;
             break;
+          }
+        }
+
+        // If no group matched, add to "Other" stack
+        if (!foundMatch) {
+          const otherStack = customStacks.find(s => s.name === 'Other');
+          if (otherStack) {
+            setCustomStacks(prev => prev.map(s =>
+              s.id === otherStack.id
+                ? { ...s, cardIndices: [...s.cardIndices, newCardIndex] }
+                : s
+            ));
+          } else {
+            // Create "Other" stack
+            setCustomStacks(prev => [...prev, {
+              id: `stack-other-${Date.now()}-${Math.random()}`,
+              name: 'Other',
+              cardIndices: [newCardIndex],
+            }]);
           }
         }
       }
@@ -1237,6 +1270,11 @@ export function Draft() {
       setMyCardsHighlightedIndex(0);
     }
   };
+
+  // Reset highlight when view mode changes to avoid stale indices
+  useEffect(() => {
+    setMyCardsHighlightedIndex(-1);
+  }, [myCardsFilters.viewMode, setMyCardsHighlightedIndex]);
 
   // Note: Arrows navigate cards in My Cards drawer via useCardKeyboardNavigation hook
   // Escape closes the drawer (handled by onEscapeNoSelection callback)
