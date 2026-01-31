@@ -101,13 +101,14 @@ const LANES = [
 ];
 
 // Layer visual properties
+// z-index must stay below content (z-10+) to avoid clipping issues with overflow containers
 const LAYER_CONFIG = {
   background: {
     scaleRange: [0.15, 0.22],
     opacityRange: [1, 1],
     durationRange: [55, 75],
     blur: 2,
-    zIndex: 5,
+    zIndex: 1,
     glowChance: 0,
     rotateChance: 0, // Disabled for now - needs proper 3D flip implementation
   },
@@ -116,7 +117,7 @@ const LAYER_CONFIG = {
     opacityRange: [1, 1],
     durationRange: [40, 55],
     blur: 0,
-    zIndex: 10,
+    zIndex: 2,
     glowChance: 0,
     rotateChance: 0, // Disabled for now
   },
@@ -125,7 +126,7 @@ const LAYER_CONFIG = {
     opacityRange: [1, 1],
     durationRange: [30, 45],
     blur: 0,
-    zIndex: 15,
+    zIndex: 3,
     glowChance: 0.3,
     rotateChance: 0, // Disabled for now
   },
@@ -353,8 +354,8 @@ export function FloatingCards() {
 
   return (
     <div
-      className="hidden md:block fixed inset-0 overflow-hidden pointer-events-none"
-      style={{ bottom: 80, contain: 'layout paint' }}
+      className="hidden md:block fixed inset-0 pointer-events-none"
+      style={{ zIndex: 1 }}
       aria-hidden="true"
     >
       {cards.map(card => (

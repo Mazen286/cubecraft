@@ -1608,6 +1608,7 @@ export const draftService = {
     status: 'waiting' | 'in_progress';
     cubeId: string;
     mode: string;
+    isHost: boolean;
   } | null> {
     const lastSession = getLastSession();
     if (!lastSession) return null;
@@ -1615,6 +1616,8 @@ export const draftService = {
     // Verify session is still active via draft_sessions (this table works)
     try {
       const supabase = getSupabase();
+      const userId = getUserId();
+
       const { data: session } = await supabase
         .from('draft_sessions')
         .select('id, room_code, status, cube_id, mode')
@@ -1623,12 +1626,27 @@ export const draftService = {
         .single();
 
       if (session) {
+        // Check if current user is the host
+        let isHost = false;
+        try {
+          const { data: player } = await supabase
+            .from('draft_players')
+            .select('is_host')
+            .eq('session_id', session.id)
+            .eq('user_id', userId)
+            .single();
+          isHost = player?.is_host ?? false;
+        } catch {
+          // Player not found, not the host
+        }
+
         return {
           sessionId: session.id,
           roomCode: session.room_code,
           status: session.status,
           cubeId: session.cube_id,
           mode: session.mode,
+          isHost,
         };
       }
     } catch {

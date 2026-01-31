@@ -14,7 +14,7 @@ export function Layout({ children, className }: LayoutProps) {
   return (
     <div className={cn('min-h-screen flex flex-col', className)}>
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
+      <main className="relative z-10 flex-1 container mx-auto px-4 py-8 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
         {children}
       </main>
       <Footer />
@@ -73,7 +73,7 @@ function Header() {
   const showRejoinButton = activeSession && !isOnDraftPage;
 
   return (
-    <header className="sticky top-0 z-50 glass-card border-t-0 border-x-0 rounded-none">
+    <header className="sticky top-0 z-50 glass-card border-t-0 border-x-0 rounded-none bg-yugi-darker/95">
       <div className="container mx-auto px-4 py-4 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
@@ -163,7 +163,7 @@ function Header() {
 
 function Footer() {
   return (
-    <footer className="border-t border-yugi-border mt-auto">
+    <footer className="relative z-40 border-t border-yugi-border mt-auto bg-yugi-darker">
       <div className="container mx-auto px-4 py-6 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-300">
           <p>

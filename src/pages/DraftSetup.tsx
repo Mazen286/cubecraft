@@ -1,5 +1,5 @@
 import { useState, useMemo, memo, useCallback, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { BottomSheet } from '../components/ui/BottomSheet';
@@ -51,10 +51,13 @@ const CUBES_PER_SECTION = 6;
 
 export function DraftSetup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setGame } = useGameConfig();
   const { user } = useAuth();
   const [settings, setSettings] = useState<DraftSettings>(DEFAULT_SETTINGS);
-  const [selectedCube, setSelectedCube] = useState<string>('the-library');
+  // Use cube from URL param if provided, otherwise default to 'the-library'
+  const cubeFromUrl = searchParams.get('cube');
+  const [selectedCube, setSelectedCube] = useState<string>(cubeFromUrl || 'the-library');
   const [playerName, setPlayerNameState] = useState<string>(() => getPlayerName());
   const [validationError, setValidationError] = useState<string | null>(null);
   const [viewingCube, setViewingCube] = useState<{ id: string; name: string } | null>(null);
@@ -78,6 +81,31 @@ export function DraftSetup() {
 
   // Memoize available cubes to prevent re-computation on every render
   const featuredCubes = useMemo(() => cubeService.getAvailableCubes(), []);
+
+  // Handle cube pre-selection from URL param
+  useEffect(() => {
+    if (cubeFromUrl) {
+      // Find the cube in all available cubes and apply its game context
+      const allLocalCubes = cubeService.getAvailableCubes();
+      const cube = allLocalCubes.find(c => c.id === cubeFromUrl);
+      if (cube?.gameId) {
+        setGame(cube.gameId);
+        // Apply game-specific draft defaults
+        const gameConfig = getGameConfig(cube.gameId);
+        if (gameConfig?.draftDefaults) {
+          const defaults = gameConfig.draftDefaults;
+          setSettings(prev => ({
+            ...prev,
+            playerCount: defaults.playerCount ?? prev.playerCount,
+            cardsPerPlayer: defaults.cardsPerPlayer ?? prev.cardsPerPlayer,
+            packSize: defaults.packSize ?? prev.packSize,
+            burnedPerPack: defaults.burnedPerPack ?? prev.burnedPerPack,
+            timerSeconds: defaults.timerSeconds ?? prev.timerSeconds,
+          }));
+        }
+      }
+    }
+  }, [cubeFromUrl, setGame]);
 
   // Load database cubes on mount
   useEffect(() => {
