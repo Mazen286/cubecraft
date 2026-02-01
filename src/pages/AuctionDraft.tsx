@@ -1105,7 +1105,7 @@ export function AuctionDraft() {
         {/* Floating button to view drafted cards */}
         <button
           onClick={() => setShowMobileCards(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30 transition-all"
+          className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30 transition-all"
         >
           <Layers className="w-5 h-5" />
           <span>My Cards ({draftedCards.length})</span>

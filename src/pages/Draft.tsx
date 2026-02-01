@@ -2074,7 +2074,7 @@ export function Draft() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
+            className={`fixed bottom-24 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
               isDragOver
                 ? 'bg-green-500 text-white scale-110 shadow-green-500/50 shadow-2xl ring-4 ring-green-400/50 ring-offset-2 ring-offset-yugi-darker'
                 : isDragging
@@ -2095,7 +2095,7 @@ export function Draft() {
               setShowMobileCards(false); // Close drawer when switching to inline
             }
           }}
-          className="fixed bottom-6 right-52 z-40 flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-full shadow-lg transition-all bg-yugi-card hover:bg-yugi-dark border border-yugi-border text-gray-300 hover:text-white"
+          className="fixed bottom-24 md:bottom-6 right-44 md:right-52 z-40 flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-full shadow-lg transition-all bg-yugi-card hover:bg-yugi-dark border border-yugi-border text-gray-300 hover:text-white"
           title={myCardsInline ? 'Show My Cards in drawer' : 'Show My Cards below pack'}
         >
           {myCardsInline ? (

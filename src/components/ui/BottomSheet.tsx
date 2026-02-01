@@ -9,7 +9,7 @@ interface BottomSheetProps {
   children: ReactNode;
   /** Max height as viewport height percentage, default 85 */
   maxHeight?: number;
-  /** Z-index, default 100 */
+  /** Z-index, default 1000 (above footer and other UI) */
   zIndex?: number;
   /** Show handle bar at top, default true */
   showHandle?: boolean;
@@ -34,7 +34,7 @@ export function BottomSheet({
   titleBadge,
   children,
   maxHeight = 85,
-  zIndex = 100,
+  zIndex = 1000,
   showHandle = true,
   header,
   centerTitle = false,

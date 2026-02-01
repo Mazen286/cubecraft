@@ -45,7 +45,7 @@ export function SelectionActionBar({
   return (
     <div
       className={cn(
-        'fixed bottom-4 left-1/2 -translate-x-1/2 z-50',
+        'fixed bottom-24 md:bottom-4 left-1/2 -translate-x-1/2 z-50',
         'flex items-center gap-2 px-4 py-2',
         'bg-yugi-card/95 backdrop-blur-sm border border-yugi-border rounded-lg shadow-xl',
         'animate-in slide-in-from-bottom-4 duration-200',
