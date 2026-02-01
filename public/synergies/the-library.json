@@ -1957,26 +1957,6 @@
       "maxBonus": 8
     },
     {
-      "id": "dd-maliss-synergy",
-      "name": "D.D. Maliss Synergy",
-      "description": "D.D. cards can banish Maliss to trigger effects",
-      "trigger": { "archetype": "D.D." },
-      "boost": { "archetype": "Maliss" },
-      "bonus": 3,
-      "bonusType": "flat"
-    },
-    {
-      "id": "maliss-dd-synergy",
-      "name": "Maliss D.D. Synergy",
-      "description": "Maliss cards benefit from D.D. banishing",
-      "trigger": { "archetype": "Maliss" },
-      "boost": { "archetype": "D.D." },
-      "bonus": 3,
-      "bonusType": "flat",
-      "scaling": true,
-      "maxBonus": 8
-    },
-    {
       "id": "crush-card-virus-targets",
       "name": "Crush Card Virus Targets",
       "category": "virus",
