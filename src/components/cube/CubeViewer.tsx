@@ -4,7 +4,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { X, ChevronDown, Filter } from 'lucide-react';
 import { YuGiOhCard } from '../cards/YuGiOhCard';
 import { CardDetailSheet } from '../cards/CardDetailSheet';
-import { Button } from '../ui/Button';
 import { CardFilterBar } from '../filters/CardFilterBar';
 import { CubeStats } from './CubeStats';
 import { cubeService } from '../../services/cubeService';
@@ -639,11 +638,6 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
           isOpen={isSheetOpen}
           onClose={closeSheet}
         />
-
-        {/* Footer - compact on mobile */}
-        <div className="p-2 md:p-4 border-t border-yugi-border flex justify-end flex-shrink-0">
-          <Button onClick={onClose} size="sm" className="md:text-base">Close</Button>
-        </div>
       </div>
     </div>,
     document.body
