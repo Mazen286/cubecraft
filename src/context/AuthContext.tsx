@@ -2,34 +2,9 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { getSupabase } from '../lib/supabase';
 import type { AuthContextValue, UserProfile, AuthState, UserProfileRow } from '../types/auth';
 import type { Session } from '@supabase/supabase-js';
-import { getActiveGameConfig } from './GameContext';
+import { getUserId } from '../services/utils';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-/**
- * Get storage key prefix for the current game
- */
-function getStoragePrefix(): string {
-  try {
-    return getActiveGameConfig().storageKeyPrefix;
-  } catch {
-    return 'yugioh-draft';
-  }
-}
-
-/**
- * Get or create anonymous user ID from localStorage
- * This matches the pattern in draftService.ts for backward compatibility
- */
-function getAnonymousUserId(): string {
-  const key = `${getStoragePrefix()}-user-id`;
-  let userId = localStorage.getItem(key);
-  if (!userId) {
-    userId = crypto.randomUUID();
-    localStorage.setItem(key, userId);
-  }
-  return userId;
-}
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -52,7 +27,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     setState(prev => ({
       ...prev,
-      anonymousUserId: getAnonymousUserId(),
+      anonymousUserId: getUserId(),
     }));
   }, []);
 
@@ -374,5 +349,5 @@ export async function getEffectiveUserId(): Promise<string> {
   } catch {
     // Fall through to anonymous
   }
-  return getAnonymousUserId();
+  return getUserId();
 }

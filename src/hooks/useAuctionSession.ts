@@ -5,29 +5,9 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { isResumeCountdownActive } from './useResumeCountdown';
 import { auctionService } from '../services/auctionService';
 import { cubeService } from '../services/cubeService';
-import { getActiveGameConfig } from '../context/GameContext';
+import { getUserId } from '../services/utils';
 import type { DraftSessionRow, DraftPlayerRow, GridData, AuctionStateData } from '../lib/database.types';
 import type { YuGiOhCard, AuctionDraftPlayer, AuctionState } from '../types';
-
-// Helper to get storage prefix from active game config (matches auctionService)
-function getStoragePrefix(): string {
-  try {
-    return getActiveGameConfig().storageKeyPrefix;
-  } catch {
-    return 'yugioh-draft';
-  }
-}
-
-// Helper to get user ID from localStorage
-function getUserId(): string {
-  const key = `${getStoragePrefix()}-user-id`;
-  let userId = localStorage.getItem(key);
-  if (!userId) {
-    userId = crypto.randomUUID();
-    localStorage.setItem(key, userId);
-  }
-  return userId;
-}
 
 // Default bidding time per turn (seconds)
 const DEFAULT_BID_TIME = 20;
