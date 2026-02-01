@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
+import { Sparkles } from 'lucide-react';
 import { YuGiOhCard } from '../cards/YuGiOhCard';
 import type { YuGiOhCard as YuGiOhCardType } from '../../types';
+import type { SynergyResult } from '../../services/synergyService';
 import { cn } from '../../lib/utils';
 
 interface AuctionGridProps {
@@ -22,6 +24,8 @@ interface AuctionGridProps {
   isOpenMode?: boolean;
   /** Whether to show tier badges on cards */
   showTier?: boolean;
+  /** Synergy data for grid cards (card ID -> SynergyResult) */
+  synergies?: Map<number, SynergyResult>;
 }
 
 export function AuctionGrid({
@@ -34,6 +38,7 @@ export function AuctionGrid({
   keyboardSelectedCardId,
   isOpenMode = false,
   showTier = true,
+  synergies,
 }: AuctionGridProps) {
   // Create a set for O(1) lookup
   const remainingSet = useMemo(
@@ -55,6 +60,8 @@ export function AuctionGrid({
           const isCurrentAuction = card.id === currentAuctionCardId;
           const isKeyboardSelected = card.id === keyboardSelectedCardId && isRemaining;
           const isClickable = isRemaining; // Any remaining card is clickable to view
+          const synergy = synergies?.get(card.id);
+          const hasSynergyBonus = synergy && synergy.synergyBonus > 0;
 
           return (
             <div
@@ -74,6 +81,18 @@ export function AuctionGrid({
                 showTier={showTier}
                 flush
               />
+              {/* Synergy indicator */}
+              {isRemaining && hasSynergyBonus && (
+                <div
+                  className="absolute top-0 right-0 z-20 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-bl-lg px-1 py-0.5 shadow-lg"
+                  title={`+${synergy.synergyBonus} synergy with your cards`}
+                >
+                  <div className="flex items-center gap-0.5">
+                    <Sparkles className="w-3 h-3 text-white" />
+                    <span className="text-[10px] font-bold text-white">+{synergy.synergyBonus}</span>
+                  </div>
+                </div>
+              )}
               {!isRemaining && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-xs font-bold text-gray-500 bg-black/50 px-1 rounded">

@@ -22,6 +22,7 @@ import { CubeStats } from '../components/cube/CubeStats';
 import { DraftCanvasView } from '../components/canvas';
 import { draftService, clearLastSession } from '../services/draftService';
 import { cubeService } from '../services/cubeService';
+import { synergyService, type CubeSynergies, type SynergyResult } from '../services/synergyService';
 import { useGameConfig } from '../context/GameContext';
 import { useHostDisconnectPause } from '../hooks/useHostDisconnectPause';
 import { useConnectionPresence } from '../hooks/useConnectionPresence';
@@ -63,6 +64,19 @@ export function AuctionDraft() {
 
   // Check if this is Open Draft mode (no bidding)
   const isOpenMode = session?.mode === 'open';
+
+  // Synergy system - load synergies for the cube
+  const [cubeSynergies, setCubeSynergies] = useState<CubeSynergies | null>(null);
+  const [synergiesLoaded, setSynergiesLoaded] = useState(false);
+
+  useEffect(() => {
+    if (session?.cube_id && isCubeReady && !synergiesLoaded) {
+      synergyService.loadCubeSynergies(session.cube_id).then((synergies) => {
+        setCubeSynergies(synergies);
+        setSynergiesLoaded(true);
+      });
+    }
+  }, [session?.cube_id, isCubeReady, synergiesLoaded]);
 
   // UI state
   const [showMobileCards, setShowMobileCards] = useState(false);
@@ -183,6 +197,25 @@ export function AuctionDraft() {
   const availableCards = useMemo(() => {
     return sortedGridCards.filter(card => remainingCardIds.includes(card.id));
   }, [sortedGridCards, remainingCardIds]);
+
+  // Calculate synergy-adjusted scores for grid cards
+  // Only calculate if not in competitive mode and synergies are loaded
+  const gridSynergies = useMemo((): Map<number, SynergyResult> => {
+    if (!cubeSynergies || !showScores) return new Map();
+    if (gridCards.length === 0) return new Map();
+    return synergyService.calculatePackSynergies(gridCards, draftedCards, cubeSynergies);
+  }, [gridCards, draftedCards, cubeSynergies, showScores]);
+
+  // Calculate synergy for a specific card (used for card detail view)
+  const getCardSynergy = useCallback((card: YuGiOhCardType | null): SynergyResult | null => {
+    if (!card || !cubeSynergies || !showScores) return null;
+    // Check if it's a grid card (use pre-calculated)
+    const gridSynergy = gridSynergies.get(card.id);
+    if (gridSynergy) return gridSynergy;
+    // For drafted cards, calculate synergy against other drafted cards
+    const otherDraftedCards = draftedCards.filter(c => c.id !== card.id);
+    return synergyService.calculateCardSynergy(card, otherDraftedCards, cubeSynergies);
+  }, [cubeSynergies, showScores, gridSynergies, draftedCards]);
 
   // Helper to convert YuGiOhCard to Card format
   const toCardWithAttributes = useCallback((card: YuGiOhCardType) => ({
@@ -997,6 +1030,7 @@ export function AuctionDraft() {
               keyboardSelectedCardId={availableCards[selectedCardIndex]?.id ?? null}
               isOpenMode={isOpenMode}
               showTier={showScores}
+              synergies={gridSynergies}
             />
           </div>
 
@@ -1029,6 +1063,7 @@ export function AuctionDraft() {
           isOpen={showAuctionCardDetail}
           onClose={() => setShowAuctionCardDetail(false)}
           hideScores={session?.hide_scores}
+          synergy={getCardSynergy(currentAuctionCard)}
         />
 
         {/* Grid Card Preview Sheet (for viewing/selecting grid cards) */}
@@ -1037,6 +1072,7 @@ export function AuctionDraft() {
           isOpen={!!previewCard}
           onClose={() => setPreviewCard(null)}
           hideScores={session?.hide_scores}
+          synergy={getCardSynergy(previewCard)}
           footer={
             isSelector && auctionState?.phase === 'selecting' && previewCard && remainingCardIds.includes(previewCard.id) ? (
               <div className="space-y-2">
@@ -1080,6 +1116,7 @@ export function AuctionDraft() {
           isOpen={!!mobileViewCard}
           onClose={() => setMobileViewCard(null)}
           hideScores={session?.hide_scores}
+          synergy={getCardSynergy(mobileViewCard)}
         />
 
         {/* Footer actions */}
