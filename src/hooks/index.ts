@@ -14,3 +14,4 @@ export { useHostDisconnectPause } from './useHostDisconnectPause';
 
 // Utility hooks
 export { useResumeCountdown } from './useResumeCountdown';
+export { useIsMobile } from './useIsMobile';

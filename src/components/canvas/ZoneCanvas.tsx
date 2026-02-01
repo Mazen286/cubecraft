@@ -37,6 +37,8 @@ export interface ZoneCanvasProps {
   /** Sort configuration for cards within stacks */
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
+  /** Whether on mobile device */
+  isMobile?: boolean;
 
   // Card data resolver
   getCardData: (cardId: string | number) => Card | null;
@@ -74,6 +76,7 @@ export function ZoneCanvas({
   gridSize = 20,
   sortBy = 'none',
   sortDirection = 'desc',
+  isMobile = false,
   getCardData,
   onZoneCollapsedChange,
   onStackMove: _onStackMove, // Not used directly here - stack moves handled via drag
@@ -148,7 +151,7 @@ export function ZoneCanvas({
   useEffect(() => {
     if (zone.collapsed) return;
 
-    let maxY = 200; // Minimum height
+    let maxY = isMobile ? 150 : 200; // Smaller min on mobile
     for (const stack of zone.stacks) {
       const cards = resolveStackCards(stack);
       const visibleCards = stack.collapsed ? 0 : Math.min(cards.length, dims.maxVisibleCards);
@@ -162,9 +165,9 @@ export function ZoneCanvas({
       const stackBottom = stack.position.y + stackHeight;
       maxY = Math.max(maxY, stackBottom);
     }
-    // Add generous bottom padding for easier dragging
-    setCanvasHeight(maxY + 150);
-  }, [zone, cardSize, dims, cardDims, resolveStackCards]);
+    // Less padding on mobile
+    setCanvasHeight(maxY + (isMobile ? 80 : 150));
+  }, [zone, cardSize, dims, cardDims, resolveStackCards, isMobile]);
 
   // Total cards in zone
   const totalCards = zone.stacks.reduce((sum, s) => sum + s.cardIds.length, 0);
@@ -203,12 +206,13 @@ export function ZoneCanvas({
           className={cn(
             'relative overflow-y-auto overflow-x-hidden',
             'bg-yugi-dark/50 border border-yugi-border rounded-b-lg',
-            'transition-colors'
+            'transition-colors',
+            'touch-pan-y overscroll-contain'  // Better touch handling
           )}
           style={{
-            minHeight: 200,
+            minHeight: isMobile ? 150 : 200,
             height: canvasHeight * zoom,
-            maxHeight: 600,
+            maxHeight: isMobile ? 'calc(100vh - 200px)' : 600,  // Dynamic on mobile
           }}
         >
           {/* Grid overlay when snap is enabled - very subtle */}

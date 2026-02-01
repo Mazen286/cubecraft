@@ -19,6 +19,7 @@ import {
   CARD_DIMENSIONS,
 } from '../types';
 import { useCollisionDetection } from './useCollisionDetection';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 
 export interface UseCanvasStateOptions {
   /** Storage key for localStorage persistence */
@@ -138,8 +139,9 @@ export function useCanvasState({
   canvasWidth = 800,
   cardZoneAssignments,
 }: UseCanvasStateOptions): UseCanvasStateResult {
+  const isMobile = useIsMobile();
   const [zones, setZones] = useState<ZoneCanvas[]>(initialZones);
-  const [cardSize, setCardSizeState] = useState<CardSize>('normal');
+  const [cardSize, setCardSizeState] = useState<CardSize>(isMobile ? 'compact' : 'normal');
   const [history, setHistory] = useState<CanvasAction[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string | number>>(new Set());

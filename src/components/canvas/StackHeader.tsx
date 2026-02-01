@@ -105,7 +105,10 @@ export function StackHeader({
         'flex flex-col gap-0.5 px-1 py-1 rounded select-none',
         !isEditing && 'cursor-grab active:cursor-grabbing hover:bg-white/10',
       )}
-      style={{ width: dims.width }}
+      style={{
+        width: dims.width,
+        touchAction: isEditing ? 'auto' : 'none',  // Prevent browser taking over touch when dragging
+      }}
     >
       {/* Controls row - color, grip, count, menu, collapse, delete */}
       <div className="flex items-center justify-between gap-0.5">

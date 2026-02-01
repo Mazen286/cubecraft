@@ -24,8 +24,8 @@ import { cn } from '../../lib/utils';
 import { ZoneCanvas } from './ZoneCanvas';
 import { CanvasToolbar } from './CanvasToolbar';
 import { SelectionActionBar } from './SelectionActionBar';
-import { MiniMap } from './MiniMap';
 import { useCanvasState } from './hooks/useCanvasState';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { useCanvasKeyboardNavigation } from './hooks/useCanvasKeyboardNavigation';
 import type { ZoneCanvas as ZoneCanvasType, DragData } from './types';
 import { STACK_DIMENSIONS, CARD_DIMENSIONS } from './types';
@@ -84,6 +84,7 @@ export function CanvasMode({
   keyboardEnabled = true,
 }: CanvasModeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   // Main canvas state
   const {
@@ -127,60 +128,6 @@ export function CanvasMode({
     cardZoneAssignments,
   });
 
-  // MiniMap visibility
-  const [miniMapVisible, setMiniMapVisible] = useState(true);
-
-  // Track scroll and viewport for minimap
-  const [viewport, setViewport] = useState({
-    scrollLeft: 0,
-    scrollTop: 0,
-    clientWidth: 800,
-    clientHeight: 600,
-  });
-
-  // Calculate canvas bounds from zones
-  const canvasBounds = useCallback(() => {
-    let maxX = 800;
-    let maxY = 400;
-    for (const zone of zones) {
-      for (const stack of zone.stacks) {
-        maxX = Math.max(maxX, stack.position.x + 200);
-        maxY = Math.max(maxY, stack.position.y + 300);
-      }
-    }
-    return { width: maxX, height: maxY };
-  }, [zones]);
-
-  // Handle jump to position from minimap
-  const handleJumpTo = useCallback((x: number, y: number) => {
-    if (containerRef.current) {
-      containerRef.current.scrollTo({ left: x, top: y, behavior: 'smooth' });
-    }
-  }, []);
-
-  // Update viewport on scroll
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateViewport = () => {
-      setViewport({
-        scrollLeft: container.scrollLeft,
-        scrollTop: container.scrollTop,
-        clientWidth: container.clientWidth,
-        clientHeight: container.clientHeight,
-      });
-    };
-
-    updateViewport();
-    container.addEventListener('scroll', updateViewport);
-    window.addEventListener('resize', updateViewport);
-
-    return () => {
-      container.removeEventListener('scroll', updateViewport);
-      window.removeEventListener('resize', updateViewport);
-    };
-  }, []);
 
   // Reposition stacks on resize to keep them visible
   useEffect(() => {
@@ -272,13 +219,16 @@ export function CanvasMode({
   // Track pointer position during drag for accurate drop placement
   const pointerPositionRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Configure sensors - lower distance for more responsive drag start
+  // Configure sensors - more forgiving for mobile touch
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 3 },
+      activationConstraint: { distance: isMobile ? 8 : 3 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 100, tolerance: 5 },
+      activationConstraint: {
+        delay: 150,      // Longer to prevent accidental drags while scrolling
+        tolerance: 10,   // More forgiving for finger jitter
+      },
     })
   );
 
@@ -318,13 +268,29 @@ export function CanvasMode({
 
   // Handle drag move to track pointer position for accurate drop placement
   const handleDragMove = useCallback((event: DragMoveEvent) => {
-    // Get the pointer position from the activator event
     const activatorEvent = event.activatorEvent;
-    if (activatorEvent instanceof PointerEvent || activatorEvent instanceof MouseEvent) {
-      // Calculate current position: initial position + delta
+
+    let clientX: number | undefined;
+    let clientY: number | undefined;
+
+    // Handle TouchEvent (mobile)
+    if (activatorEvent instanceof TouchEvent) {
+      const touch = activatorEvent.touches[0] || activatorEvent.changedTouches[0];
+      if (touch) {
+        clientX = touch.clientX;
+        clientY = touch.clientY;
+      }
+    }
+    // Handle PointerEvent/MouseEvent (desktop)
+    else if (activatorEvent instanceof PointerEvent || activatorEvent instanceof MouseEvent) {
+      clientX = activatorEvent.clientX;
+      clientY = activatorEvent.clientY;
+    }
+
+    if (clientX !== undefined && clientY !== undefined) {
       pointerPositionRef.current = {
-        x: activatorEvent.clientX + event.delta.x,
-        y: activatorEvent.clientY + event.delta.y,
+        x: clientX + event.delta.x,
+        y: clientY + event.delta.y,
       };
     }
   }, []);
@@ -605,7 +571,14 @@ export function CanvasMode({
   }, [zones, moveSelectedToNewStack]);
 
   return (
-    <div ref={containerRef} className={cn('flex flex-col gap-4', className)}>
+    <div
+      ref={containerRef}
+      className={cn(
+        'flex flex-col gap-4',
+        'overflow-x-hidden overscroll-contain',  // Prevent horizontal scroll
+        className
+      )}
+    >
       {/* Toolbar */}
       <CanvasToolbar
         cardSize={cardSize}
@@ -622,6 +595,7 @@ export function CanvasMode({
         onZoomChange={setZoom}
         onExportLayout={exportLayout}
         onImportLayout={importLayout}
+        isMobile={isMobile}
       />
 
       {/* DnD Context */}
@@ -660,6 +634,7 @@ export function CanvasMode({
             onStackColorChange={setStackColor}
             onCardClick={handleCardClick}
             label={zoneLabels[zone.zoneId] || zone.zoneId}
+            isMobile={isMobile}
           />
         ))}
 
@@ -739,16 +714,6 @@ export function CanvasMode({
         onCreateNewStack={handleCreateNewStackFromSelection}
         onDeleteSelected={deleteSelectedCards}
         onClearSelection={clearSelection}
-      />
-
-      {/* MiniMap */}
-      <MiniMap
-        zones={zones}
-        viewport={viewport}
-        canvasBounds={canvasBounds()}
-        onJumpTo={handleJumpTo}
-        isVisible={miniMapVisible}
-        onToggleVisibility={() => setMiniMapVisible(!miniMapVisible)}
       />
     </div>
   );

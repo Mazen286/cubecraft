@@ -120,6 +120,7 @@ export function DraggableStack({
         minHeight: stackHeight + 4,
         padding: 2,
         transform: transformStyle,
+        touchAction: 'none',  // Prevent browser taking over touch
         // Add left border accent if stack has a color
         borderLeftColor: stack.color || undefined,
         borderLeftWidth: stack.color ? 3 : undefined,
