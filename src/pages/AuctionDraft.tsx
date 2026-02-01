@@ -1052,6 +1052,7 @@ export function AuctionDraft() {
                 totalBidTime={totalBidTime}
                 onViewCard={() => setShowAuctionCardDetail(true)}
                 showTier={showScores}
+                currentSelectorSeat={session?.current_selector_seat}
               />
             </div>
           )}

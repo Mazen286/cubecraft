@@ -35,6 +35,8 @@ interface BiddingPanelProps {
   onViewCard?: () => void;
   /** Whether to show tier badges on cards */
   showTier?: boolean;
+  /** Current selector's seat position (for selection phase display) */
+  currentSelectorSeat?: number | null;
 }
 
 export function BiddingPanel({
@@ -52,6 +54,7 @@ export function BiddingPanel({
   totalBidTime = 15,
   onViewCard,
   showTier = true,
+  currentSelectorSeat,
 }: BiddingPanelProps) {
   const [customBidAmount, setCustomBidAmount] = useState<string>('');
 
@@ -108,7 +111,7 @@ export function BiddingPanel({
               isCurrentBidder={false}
               hasPassed={false}
               isWinning={false}
-              isSelector={player.seatPosition === (auctionState?.nextBidderSeat ?? 0)}
+              isSelector={currentSelectorSeat != null && player.seatPosition === currentSelectorSeat}
               maxCardsPerGrid={maxCardsPerGrid}
             />
           ))}
