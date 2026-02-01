@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { X, ChevronDown, Filter } from 'lucide-react';
 import { YuGiOhCard } from '../cards/YuGiOhCard';
@@ -376,7 +377,8 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
 
   if (!isOpen) return null;
 
-  return (
+  // Use portal to render at body level, escaping any parent overflow/stacking contexts
+  return createPortal(
     <div className="fixed inset-0 z-[9999]">
       {/* Backdrop */}
       <div
@@ -384,8 +386,8 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
         onClick={onClose}
       />
 
-      {/* Modal - full screen on mobile, contained and centered on desktop */}
-      <div className="absolute inset-0 md:inset-4 md:top-8 md:bottom-8 md:left-1/2 md:-translate-x-1/2 md:max-w-6xl md:rounded-xl bg-yugi-darker md:border border-yugi-border shadow-2xl flex flex-col overflow-hidden">
+      {/* Modal - below header on mobile (top-[72px]), centered on desktop */}
+      <div className="absolute inset-0 top-[72px] md:inset-4 md:top-8 md:bottom-8 md:left-1/2 md:-translate-x-1/2 md:max-w-6xl md:rounded-xl bg-yugi-darker md:border border-yugi-border shadow-2xl flex flex-col overflow-hidden">
         {/* Header - compact on mobile */}
         <div className="flex items-center justify-between p-2 md:p-4 border-b border-yugi-border flex-shrink-0">
           <div className="min-w-0 flex-1">
@@ -643,6 +645,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
           <Button onClick={onClose} size="sm" className="md:text-base">Close</Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
