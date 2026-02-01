@@ -14,7 +14,7 @@ export function Layout({ children, className }: LayoutProps) {
   return (
     <div className={cn('min-h-screen flex flex-col', className)}>
       <Header />
-      <main className="relative z-10 flex-1 container mx-auto px-4 py-8 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
+      <main className="relative flex-1 container mx-auto px-4 py-8 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
         {children}
       </main>
       <Footer />
