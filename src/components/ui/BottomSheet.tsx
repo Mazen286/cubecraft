@@ -9,8 +9,6 @@ interface BottomSheetProps {
   children: ReactNode;
   /** Max height as viewport height percentage, default 85 */
   maxHeight?: number;
-  /** Z-index, default 9999 (above footer, header, and all other UI) */
-  zIndex?: number;
   /** Show handle bar at top, default true */
   showHandle?: boolean;
   /** Custom header content (replaces title) */
@@ -34,7 +32,6 @@ export function BottomSheet({
   titleBadge,
   children,
   maxHeight = 85,
-  zIndex = 9999,
   showHandle = true,
   header,
   centerTitle = false,
@@ -76,8 +73,7 @@ export function BottomSheet({
   return (
     <div
       ref={sheetRef}
-      className="fixed inset-0 flex items-end justify-center"
-      style={{ zIndex }}
+      className="fixed inset-0 flex items-end justify-center z-[9999]"
       tabIndex={-1}
       role="dialog"
       aria-modal="true"
