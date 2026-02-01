@@ -133,6 +133,7 @@ async function fetchCardsFromScryfall(cardNames: string[]): Promise<Map<string, 
 
 /**
  * Convert Scryfall card to our format
+ * Uses numeric IDs starting from 1 for compatibility with cubeService
  */
 function convertCard(scryfallCard: ScryfallCard, index: number): Card {
   // Get image URL (handle double-faced cards)
@@ -142,7 +143,7 @@ function convertCard(scryfallCard: ScryfallCard, index: number): Card {
   }
 
   return {
-    id: `${scryfallCard.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${index}`,
+    id: index + 1, // Numeric ID starting from 1
     name: scryfallCard.name,
     type: scryfallCard.type_line,
     description: scryfallCard.oracle_text || '',
@@ -185,21 +186,23 @@ async function main() {
   console.log('Fetching card data from Scryfall...');
   const scryfallCards = await fetchCardsFromScryfall(cardNames);
 
-  // Build card map
-  const cardMap: Record<string, Card> = {};
+  // Build card map with numeric keys
+  const cardMap: Record<number, Card> = {};
   let notFoundCount = 0;
+  let cardIndex = 0;
 
-  cardNames.forEach((cardName, index) => {
+  cardNames.forEach((cardName) => {
     const scryfallCard = scryfallCards.get(cardName.toLowerCase());
+    cardIndex++;
+
     if (scryfallCard) {
-      const card = convertCard(scryfallCard, index);
-      cardMap[String(card.id)] = card;
+      const card = convertCard(scryfallCard, cardIndex - 1);
+      cardMap[cardIndex] = card;
     } else {
       notFoundCount++;
-      // Create placeholder for not found cards
-      const id = `unknown-${index}`;
-      cardMap[id] = {
-        id,
+      // Create placeholder for not found cards with numeric ID
+      cardMap[cardIndex] = {
+        id: cardIndex,
         name: cardName,
         type: 'Unknown',
         description: 'Card not found in Scryfall',
