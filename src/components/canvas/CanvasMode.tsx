@@ -653,7 +653,8 @@ export function CanvasMode({
               />
             </div>
           )}
-          {activeDrag?.type === 'stack' && activeDrag.data.stackId && (() => {
+          {/* On mobile, don't show stack overlay - the actual stack moves via transform */}
+          {!isMobile && activeDrag?.type === 'stack' && activeDrag.data.stackId && (() => {
             const stackResult = findStackById(activeDrag.data.stackId);
             if (!stackResult) return null;
             const { stack } = stackResult;
