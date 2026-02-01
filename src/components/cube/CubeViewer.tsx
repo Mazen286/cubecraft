@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { X } from 'lucide-react';
+import { X, ChevronDown, Filter } from 'lucide-react';
 import { YuGiOhCard } from '../cards/YuGiOhCard';
 import { CardDetailSheet } from '../cards/CardDetailSheet';
 import { Button } from '../ui/Button';
@@ -36,6 +36,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasScores, setHasScores] = useState(true); // Whether cube has score data
+  const [filtersExpanded, setFiltersExpanded] = useState(false); // Collapsed by default on mobile
 
   // Card filters using the reusable hook
   const filters = useCardFilters({
@@ -376,20 +377,20 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pt-20 md:pt-4">
+    <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center md:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-6xl max-h-[90vh] bg-yugi-darker rounded-xl border border-yugi-border shadow-2xl flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-yugi-border">
-          <div>
-            <h2 className="text-xl font-bold text-white">{cubeName}</h2>
-            <p className="text-sm text-gray-400">
+      {/* Modal - full screen on mobile, contained on desktop */}
+      <div className="relative w-full md:max-w-6xl h-full md:h-auto md:max-h-[90vh] bg-yugi-darker md:rounded-xl border-t md:border border-yugi-border shadow-2xl flex flex-col overflow-hidden">
+        {/* Header - compact on mobile */}
+        <div className="flex items-center justify-between p-2 md:p-4 border-b border-yugi-border flex-shrink-0">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base md:text-xl font-bold text-white truncate">{cubeName}</h2>
+            <p className="text-xs md:text-sm text-gray-400">
               {stats.total} cards
               {gameConfig.filterOptions && gameConfig.filterOptions.slice(1, 4).map((option, i) => (
                 <span key={option.id}>
@@ -400,7 +401,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
               ))}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
             <button
               onClick={toggleShortcuts}
               className={cn(
@@ -415,9 +416,9 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              className="p-1.5 md:p-2 text-gray-400 hover:text-white transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 md:w-6 md:h-6" />
             </button>
           </div>
         </div>
@@ -471,30 +472,53 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
           </div>
         )}
 
-        {/* Filters & Sort */}
-        <div className="p-2 sm:p-4 border-b border-yugi-border bg-yugi-dark/50 space-y-2">
-          <CardFilterBar
-            filters={filters}
-            showSearch
-            showTypeFilter
-            showTierFilter
-            showAdvancedFilters
-            showSort
-            includeScoreSort
-            hasScores={hasScores}
-            tierCounts={tierCounts}
-            totalCount={cards.length}
-            filteredCount={filteredCards.length}
-            cards={cardsAsGeneric}
-            selectedArchetypes={statsFilters['archetype']}
-            onToggleArchetype={(archetype) => handleStatsFilterClick('archetype', archetype, true)}
-            onClearArchetypes={() => {
-              setStatsFilters(prev => {
-                const { archetype: _, ...rest } = prev;
-                return rest;
-              });
-            }}
-          />
+        {/* Filters & Sort - Collapsible on mobile */}
+        <div className="border-b border-yugi-border bg-yugi-dark/50 flex-shrink-0">
+          {/* Mobile: Compact toggle bar */}
+          <button
+            onClick={() => setFiltersExpanded(!filtersExpanded)}
+            className="md:hidden w-full flex items-center justify-between p-2 text-sm text-gray-300 hover:text-white"
+          >
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              <span>Filters & Search</span>
+              {(filters.searchQuery || filters.typeFilter !== 'all' || filters.selectedTiers.size > 0) && (
+                <span className="px-1.5 py-0.5 bg-gold-500/20 text-gold-400 text-xs rounded">
+                  Active
+                </span>
+              )}
+            </div>
+            <ChevronDown className={cn("w-4 h-4 transition-transform", filtersExpanded && "rotate-180")} />
+          </button>
+
+          {/* Filter content - always visible on desktop, collapsible on mobile */}
+          <div className={cn(
+            "p-2 sm:p-4 space-y-2",
+            "md:block", // Always show on desktop
+            filtersExpanded ? "block" : "hidden" // Toggle on mobile
+          )}>
+            <CardFilterBar
+              filters={filters}
+              showSearch
+              showTypeFilter
+              showTierFilter
+              showAdvancedFilters
+              showSort
+              includeScoreSort
+              hasScores={hasScores}
+              tierCounts={tierCounts}
+              totalCount={cards.length}
+              filteredCount={filteredCards.length}
+              cards={cardsAsGeneric}
+              selectedArchetypes={statsFilters['archetype']}
+              onToggleArchetype={(archetype) => handleStatsFilterClick('archetype', archetype, true)}
+              onClearArchetypes={() => {
+                setStatsFilters(prev => {
+                  const { archetype: _, ...rest } = prev;
+                  return rest;
+                });
+              }}
+            />
           {/* Stats filters row - active filter chips (excluding archetype which is in advanced filters) */}
           {Object.keys(statsFilters).some(k => k !== 'archetype' && statsFilters[k].size > 0) && cards.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
@@ -613,9 +637,9 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
           onClose={closeSheet}
         />
 
-        {/* Footer */}
-        <div className="p-4 border-t border-yugi-border flex justify-end">
-          <Button onClick={onClose}>Close</Button>
+        {/* Footer - compact on mobile */}
+        <div className="p-2 md:p-4 border-t border-yugi-border flex justify-end flex-shrink-0">
+          <Button onClick={onClose} size="sm" className="md:text-base">Close</Button>
         </div>
       </div>
     </div>
