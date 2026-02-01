@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer, Crown, Pause, X } from 'lucide-react';
+import { Layers, Gavel, Users, ChevronDown, ChevronUp, HelpCircle, MousePointer, Crown, Pause, X, PanelBottomOpen, PanelBottomClose } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -66,6 +66,7 @@ export function AuctionDraft() {
 
   // UI state
   const [showMobileCards, setShowMobileCards] = useState(false);
+  const [myCardsInline, setMyCardsInline] = useState(false); // Toggle between drawer and inline view
   const [isPausing, setIsPausing] = useState(false);
   const [mobileViewCard, setMobileViewCard] = useState<YuGiOhCardType | null>(null);
   const [showMyCardsStats, setShowMyCardsStats] = useState(false);
@@ -1103,14 +1104,114 @@ export function AuctionDraft() {
           </div>
         </div>
 
+        {/* Inline My Cards Section (when toggled) */}
+        {myCardsInline && (
+          <div className="glass-card mt-4 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+              <div className="flex items-center gap-4">
+                <h3 className="text-lg font-semibold text-white">
+                  My Cards ({draftedCards.length})
+                </h3>
+                <div className="flex items-center gap-3 text-sm text-gray-400">
+                  <span>Main: <span className="text-white font-medium">{myCardsStats.mainDeck}</span></span>
+                  <span>Extra: <span className="text-purple-400 font-medium">{myCardsStats.extraDeck}</span></span>
+                  {showScores && (
+                    <span>Avg: <span className="text-gold-400 font-medium">{myCardsStats.avgScore}</span></span>
+                  )}
+                </div>
+              </div>
+              {/* Toggle to drawer mode */}
+              <button
+                onClick={() => setMyCardsInline(false)}
+                className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-yugi-border rounded hover:bg-yugi-card transition-colors flex items-center gap-1"
+                title="Show as drawer"
+              >
+                <PanelBottomClose className="w-3 h-3" />
+                <span className="hidden sm:inline">Drawer</span>
+              </button>
+            </div>
+
+            {/* Filters */}
+            {draftedCards.length > 0 && (
+              <div className="px-4 py-3 border-b border-yugi-border">
+                <CardFilterBar
+                  filters={myCardsFilters}
+                  showSearch
+                  showTypeFilter
+                  showTierFilter
+                  showSort
+                  includeScoreSort
+                  hasScores={showScores}
+                  tierCounts={myCardsStats.tiers as Record<'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F', number>}
+                  totalCount={draftedCards.length}
+                  filteredCount={filteredDraftedCards.length}
+                  compact
+                  showViewToggle={!!gameConfig.pileViewConfig}
+                  viewMode={myCardsFilters.viewMode}
+                  onViewModeChange={myCardsFilters.setViewMode}
+                />
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="p-4">
+              {draftedCards.length > 0 ? (
+                filteredDraftedCards.length > 0 ? (
+                  myCardsFilters.viewMode === 'pile' ? (
+                    <DraftCanvasView
+                      sessionId={sessionId || 'auction-draft-inline'}
+                      draftedCards={draftedCards}
+                      pileGroups={gameConfig.pileViewConfig?.groups}
+                      showTier={showScores}
+                      onCardClick={(card) => setMobileViewCard(card)}
+                      selectedCardId={mobileViewCard?.id}
+                      searchQuery={myCardsFilters.filterState.search}
+                      sortBy={myCardsFilters.sortState.sortBy}
+                      sortDirection={myCardsFilters.sortState.sortDirection}
+                      keyboardEnabled={!mobileViewCard}
+                    />
+                  ) : (
+                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14">
+                      {filteredDraftedCards.map((card, index) => (
+                        <div
+                          key={card.id}
+                          onClick={() => setMobileViewCard(card)}
+                          className={`cursor-pointer hover:scale-105 transition-transform ${
+                            index === myCardsSelectedIndex
+                              ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-darker rounded-lg z-10'
+                              : ''
+                          }`}
+                        >
+                          <YuGiOhCard card={card} size="full" showTier={showScores} flush />
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  <div className="h-20 flex items-center justify-center text-gray-500">
+                    No cards match your filter
+                  </div>
+                )
+              ) : (
+                <div className="h-20 flex items-center justify-center text-gray-500">
+                  No cards drafted yet
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Floating button to view drafted cards */}
-        <button
-          onClick={() => setShowMobileCards(true)}
-          className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30 transition-all"
-        >
-          <Layers className="w-5 h-5" />
-          <span>My Cards ({draftedCards.length})</span>
-        </button>
+        {!myCardsInline && (
+          <button
+            onClick={() => setShowMobileCards(true)}
+            className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30 transition-all"
+          >
+            <Layers className="w-5 h-5" />
+            <span>My Cards ({draftedCards.length})</span>
+          </button>
+        )}
 
         {/* My Cards Drawer */}
         {showMobileCards && (
@@ -1133,12 +1234,26 @@ export function AuctionDraft() {
                 <h3 className="text-lg font-semibold text-white">
                   My Drafted Cards ({draftedCards.length})
                 </h3>
-                <button
-                  onClick={() => setShowMobileCards(false)}
-                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white text-xl"
-                >
-                  x
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Toggle to inline mode */}
+                  <button
+                    onClick={() => {
+                      setMyCardsInline(true);
+                      setShowMobileCards(false);
+                    }}
+                    className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-yugi-border rounded hover:bg-yugi-card transition-colors flex items-center gap-1"
+                    title="Show below grid"
+                  >
+                    <PanelBottomOpen className="w-3 h-3" />
+                    <span className="hidden sm:inline">Below</span>
+                  </button>
+                  <button
+                    onClick={() => setShowMobileCards(false)}
+                    className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white text-xl"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
 
               {/* Stats and Filters */}
