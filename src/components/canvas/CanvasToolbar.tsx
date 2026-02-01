@@ -4,8 +4,8 @@
  * Includes card size toggle, undo/redo, templates, snap-to-grid, zoom, and reset layout button.
  */
 
-import { Undo2, Redo2, RotateCcw, Grid3X3, Magnet, ZoomIn, ZoomOut, Maximize2, Download, Upload, LayoutGrid, ChevronDown } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Undo2, Redo2, RotateCcw, Grid3X3, Magnet, ZoomIn, ZoomOut, Maximize2, LayoutGrid, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { StackTemplates, type StackTemplate } from './StackTemplates';
 import type { CardSize } from './types';
@@ -28,10 +28,6 @@ export interface CanvasToolbarProps {
   /** Zoom level (0.5 - 1.5) */
   zoom?: number;
   onZoomChange?: (zoom: number) => void;
-  /** Export layout handler */
-  onExportLayout?: () => string;
-  /** Import layout handler */
-  onImportLayout?: (json: string) => boolean;
   /** Whether on mobile device */
   isMobile?: boolean;
   className?: string;
@@ -57,46 +53,11 @@ export function CanvasToolbar({
   onSnapToGridChange,
   zoom = 1,
   onZoomChange,
-  onExportLayout,
-  onImportLayout,
   isMobile = false,
   className,
 }: CanvasToolbarProps) {
   const zoomPercent = Math.round(zoom * 100);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [mobileExpanded, setMobileExpanded] = useState(false);
-
-  const handleExport = () => {
-    if (!onExportLayout) return;
-    const json = onExportLayout();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `canvas-layout-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !onImportLayout) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const json = event.target?.result as string;
-      const success = onImportLayout(json);
-      if (!success) {
-        alert('Failed to import layout. Please check the file format.');
-      }
-    };
-    reader.readAsText(file);
-
-    // Reset input so same file can be re-imported
-    e.target.value = '';
-  };
   return (
     <div
       className={cn(
@@ -253,48 +214,6 @@ export function CanvasToolbar({
             >
               <Maximize2 className="w-4 h-4" />
             </button>
-          </div>
-        </>
-      )}
-
-      {/* Export/Import - DESKTOP ONLY */}
-      {!isMobile && (onExportLayout || onImportLayout) && (
-        <>
-          <div className="w-px h-6 bg-yugi-border" />
-          <div className="flex items-center gap-1">
-            {onExportLayout && (
-              <button
-                onClick={handleExport}
-                className={cn(
-                  'p-1.5 rounded transition-colors',
-                  'text-gray-300 hover:text-white hover:bg-white/10'
-                )}
-                title="Export layout as JSON"
-              >
-                <Download className="w-4 h-4" />
-              </button>
-            )}
-            {onImportLayout && (
-              <>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className={cn(
-                    'p-1.5 rounded transition-colors',
-                    'text-gray-300 hover:text-white hover:bg-white/10'
-                  )}
-                  title="Import layout from JSON"
-                >
-                  <Upload className="w-4 h-4" />
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".json"
-                  onChange={handleImport}
-                  className="hidden"
-                />
-              </>
-            )}
           </div>
         </>
       )}

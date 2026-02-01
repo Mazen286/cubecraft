@@ -116,8 +116,6 @@ export function CanvasMode({
     undo,
     redo,
     resetLayout,
-    exportLayout,
-    importLayout,
     repositionOffscreenStacks,
     autoLayout,
     findStackById,
@@ -593,8 +591,6 @@ export function CanvasMode({
         onSnapToGridChange={setSnapToGrid}
         zoom={zoom}
         onZoomChange={setZoom}
-        onExportLayout={exportLayout}
-        onImportLayout={importLayout}
         isMobile={isMobile}
       />
 
