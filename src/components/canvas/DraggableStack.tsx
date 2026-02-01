@@ -28,8 +28,8 @@ export interface DraggableStackProps {
   multiSelectCardIds?: Set<string | number>;
   /** Whether this stack is focused for keyboard navigation */
   isFocused?: boolean;
-  /** Currently focused card index within this stack */
-  focusedCardIndex?: number;
+  /** Currently focused card ID within this stack */
+  focusedCardId?: string | number | null;
   isDropTarget?: boolean;
   onRename: (name: string) => void;
   onToggleCollapse: () => void;
@@ -50,7 +50,7 @@ export function DraggableStack({
   searchQuery,
   multiSelectCardIds,
   isFocused = false,
-  focusedCardIndex,
+  focusedCardId,
   isDropTarget = false,
   onRename,
   onToggleCollapse,
@@ -102,6 +102,7 @@ export function DraggableStack({
   return (
     <div
       ref={setNodeRef}
+      data-stack-id={stack.id}
       className={cn(
         'absolute flex flex-col rounded',
         'bg-yugi-card/50 backdrop-blur-sm',
@@ -152,7 +153,7 @@ export function DraggableStack({
         highlightedCardId={highlightedCardId}
         searchQuery={searchQuery}
         multiSelectCardIds={multiSelectCardIds}
-        focusedCardIndex={focusedCardIndex}
+        focusedCardId={focusedCardId}
         onCardClick={onCardClick}
       />
 

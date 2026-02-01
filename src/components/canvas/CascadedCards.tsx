@@ -26,8 +26,8 @@ export interface CascadedCardsProps {
   searchQuery?: string;
   /** Set of selected card IDs for multi-select */
   multiSelectCardIds?: Set<string | number>;
-  /** Currently focused card index for keyboard navigation */
-  focusedCardIndex?: number;
+  /** Currently focused card ID for keyboard navigation */
+  focusedCardId?: string | number | null;
   onCardClick?: (cardId: string | number, card: Card, e?: React.MouseEvent) => void;
 }
 
@@ -64,7 +64,7 @@ function DraggableCard({
   showTier,
   onClick,
 }: DraggableCardProps) {
-  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `card-${stackId}-${cardId}`,
     data: {
       type: 'card',
@@ -93,7 +93,7 @@ function DraggableCard({
         isMultiSelected && !isSelected && 'ring-2 ring-purple-400 shadow-md shadow-purple-400/30',
         isHighlighted && '-translate-y-1 z-45',
         isSearchMatch && !isSelected && !isMultiSelected && 'ring-2 ring-cyan-400 shadow-lg shadow-cyan-400/30',
-        isFocused && !isSelected && !isMultiSelected && 'ring-2 ring-blue-400 -translate-y-1',
+        isFocused && !isSelected && !isMultiSelected && 'border-2 border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.6)] -translate-y-1',
         // Hide original when dragging - DragOverlay shows the preview instead
         isDragging && 'opacity-40 ring-2 ring-gold-400/50',
       )}
@@ -124,7 +124,7 @@ export function CascadedCards({
   highlightedCardId,
   searchQuery,
   multiSelectCardIds,
-  focusedCardIndex,
+  focusedCardId,
   onCardClick,
 }: CascadedCardsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -171,25 +171,28 @@ export function CascadedCards({
       }}
     >
       {/* Visible cards */}
-      {visibleCards.map(({ id, card }, index) => (
-        <DraggableCard
-          key={`${stackId}-${id}`}
-          cardId={id}
-          card={card}
-          stackId={stackId}
-          zoneId={zoneId}
-          index={index}
-          cardSize={cardSize}
-          cardOffset={dims.cardOffset}
-          isSelected={selectedCardId === id}
-          isHighlighted={highlightedCardId === id}
-          isSearchMatch={matchesSearch(card)}
-          isMultiSelected={multiSelectCardIds?.has(id) ?? false}
-          isFocused={focusedCardIndex === index}
-          showTier={showTier}
-          onClick={(e) => onCardClick?.(id, card, e)}
-        />
-      ))}
+      {visibleCards.map(({ id, card }, index) => {
+        const isFocused = focusedCardId === id;
+        return (
+          <DraggableCard
+            key={`${stackId}-${id}`}
+            cardId={id}
+            card={card}
+            stackId={stackId}
+            zoneId={zoneId}
+            index={index}
+            cardSize={cardSize}
+            cardOffset={dims.cardOffset}
+            isSelected={selectedCardId === id}
+            isHighlighted={highlightedCardId === id}
+            isSearchMatch={matchesSearch(card)}
+            isMultiSelected={multiSelectCardIds?.has(id) ?? false}
+            isFocused={isFocused}
+            showTier={showTier}
+            onClick={(e) => onCardClick?.(id, card, e)}
+          />
+        );
+      })}
 
       {/* "+X more" badge */}
       {hiddenCount > 0 && (

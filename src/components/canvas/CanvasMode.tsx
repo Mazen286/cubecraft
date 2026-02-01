@@ -191,12 +191,59 @@ export function CanvasMode({
     return () => window.removeEventListener('resize', handleResize);
   }, [repositionOffscreenStacks]);
 
+  // Get sorted card IDs for a stack (matches visual order in ZoneCanvas.resolveStackCards)
+  // MUST filter and sort exactly the same way as ZoneCanvas to match displayed cards
+  const getSortedCardIds = useCallback((stack: { cardIds: (string | number)[] }): (string | number)[] => {
+    // First, filter to only cards that exist in data (same as resolveStackCards filter)
+    const validCardIds = stack.cardIds.filter(id => getCardData(id) !== null);
+
+    if (sortBy === 'none' || sortBy === 'pick') {
+      return validCardIds;
+    }
+
+    // Sort card IDs by the same criteria as ZoneCanvas.resolveStackCards
+    return [...validCardIds].sort((aId, bId) => {
+      const a = getCardData(aId);
+      const b = getCardData(bId);
+      if (!a || !b) return 0;
+
+      let comparison = 0;
+      const aAttrs = a.attributes || {};
+      const bAttrs = b.attributes || {};
+
+      if (sortBy === 'score') {
+        comparison = (b.score ?? 0) - (a.score ?? 0);
+      } else if (sortBy === 'name') {
+        comparison = (a.name || '').localeCompare(b.name || '');
+      } else if (sortBy === 'level') {
+        const aLevel = (aAttrs.level as number) ?? (aAttrs.cmc as number) ?? 0;
+        const bLevel = (bAttrs.level as number) ?? (bAttrs.cmc as number) ?? 0;
+        comparison = bLevel - aLevel;
+      } else if (sortBy === 'atk') {
+        const aAtk = (aAttrs.atk as number) ?? -1;
+        const bAtk = (bAttrs.atk as number) ?? -1;
+        comparison = bAtk - aAtk;
+      } else if (sortBy === 'def') {
+        const aDef = (aAttrs.def as number) ?? -1;
+        const bDef = (bAttrs.def as number) ?? -1;
+        comparison = bDef - aDef;
+      } else if (sortBy === 'type') {
+        comparison = (a.type || '').localeCompare(b.type || '');
+      }
+
+      return sortDirection === 'asc' ? -comparison : comparison;
+    });
+  }, [sortBy, sortDirection, getCardData]);
+
   // Keyboard navigation
   const {
     navState,
+    focusedCardId,
     setFocus,
   } = useCanvasKeyboardNavigation({
     zones,
+    cardSize,
+    containerWidth: containerRef.current?.clientWidth || 800,
     enabled: true,
     onCardSelect: (cardId, card) => {
       if (card) {
@@ -210,6 +257,7 @@ export function CanvasMode({
       clearSelection();
     },
     getCardData,
+    getSortedCardIds,
   });
 
   // Track active drag for drop handling
@@ -504,9 +552,11 @@ export function CanvasMode({
       if (stackResult && navState.focusedStackId) {
         const focusedStack = zones.flatMap(z => z.stacks).find(s => s.id === navState.focusedStackId);
         if (focusedStack && focusedStack.id === stackResult.id) {
-          const focusedCardId = focusedStack.cardIds[navState.focusedCardIndex];
-          if (focusedCardId !== undefined) {
-            selectCardRange(focusedCardId, cardId, stackResult.id);
+          // Use sorted order to get the focused card ID
+          const sortedIds = getSortedCardIds(focusedStack);
+          const currentFocusedCardId = sortedIds[navState.focusedCardIndex];
+          if (currentFocusedCardId !== undefined) {
+            selectCardRange(currentFocusedCardId, cardId, stackResult.id);
             return;
           }
         }
@@ -518,16 +568,17 @@ export function CanvasMode({
     } else {
       // Normal click: clear selection and select single
       clearSelection();
-      // Also set focus for keyboard navigation
+      // Also set focus for keyboard navigation - use sorted index
       const stack = zones.flatMap(z => z.stacks).find(s => s.cardIds.includes(cardId));
       if (stack) {
-        const cardIndex = stack.cardIds.indexOf(cardId);
-        setFocus(stack.id, cardIndex);
+        const sortedIds = getSortedCardIds(stack);
+        const cardIndex = sortedIds.indexOf(cardId);
+        setFocus(stack.id, cardIndex >= 0 ? cardIndex : 0);
       }
       // Call the external click handler
       onCardClick?.(cardId, card);
     }
-  }, [zones, navState, selectCard, selectCardRange, clearSelection, setFocus, onCardClick]);
+  }, [zones, navState, selectCard, selectCardRange, clearSelection, setFocus, onCardClick, getSortedCardIds]);
 
   // Get all stacks for selection action bar
   const allStacks = zones.flatMap(zone => zone.stacks);
@@ -591,7 +642,7 @@ export function CanvasMode({
             searchQuery={searchQuery}
             multiSelectCardIds={selectedCardIds}
             focusedStackId={navState.focusedStackId}
-            focusedCardIndex={navState.focusedCardIndex}
+            focusedCardId={focusedCardId}
             zoom={zoom}
             showGrid={snapToGrid}
             gridSize={20}

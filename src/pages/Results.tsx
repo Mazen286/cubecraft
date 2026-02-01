@@ -525,7 +525,7 @@ export function Results() {
   } = useCardKeyboardNavigation({
     cards: allZoneCards,
     columns: getDeckColumnCount,
-    enabled: allZoneCards.length > 0 && !showHandSimulator,
+    enabled: allZoneCards.length > 0 && !showHandSimulator && filters.viewMode !== 'pile',
     sortOptions: availableSortOptions,
     currentSortBy: filters.sortState.sortBy,
     onSortChange: filters.setSortBy,
@@ -533,8 +533,9 @@ export function Results() {
   });
 
   // Zone-aware up/down navigation (intercepts before the hook's handler)
+  // Only active in grid mode - pile/canvas mode has its own keyboard navigation
   useEffect(() => {
-    if (allZoneCards.length === 0 || showHandSimulator) return;
+    if (allZoneCards.length === 0 || showHandSimulator || filters.viewMode === 'pile') return;
 
     const handleZoneNavigation = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -628,7 +629,7 @@ export function Results() {
     // Use capture phase to intercept before the hook's handler
     window.addEventListener('keydown', handleZoneNavigation, true);
     return () => window.removeEventListener('keydown', handleZoneNavigation, true);
-  }, [allZoneCards.length, showHandSimulator, deckHighlightedIndex, isDeckSheetOpen, closeDeckSheet, setDeckHighlightedIndex, zoneBoundaries, getDeckColumnCount]);
+  }, [allZoneCards.length, showHandSimulator, filters.viewMode, deckHighlightedIndex, isDeckSheetOpen, closeDeckSheet, setDeckHighlightedIndex, zoneBoundaries, getDeckColumnCount]);
 
   // Sync keyboard navigation with card detail state
   const prevDeckSheetCardRef = useRef<typeof deckSheetCard>(null);

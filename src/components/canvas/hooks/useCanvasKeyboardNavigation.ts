@@ -1,13 +1,24 @@
 /**
  * useCanvasKeyboardNavigation - Keyboard navigation for canvas mode
  *
- * Provides arrow key navigation between stacks and cards,
- * Enter to select, Delete/Backspace to remove, Tab to cycle, Escape to clear.
+ * Provides grid-aware arrow key navigation between stacks and cards:
+ * - Left/Right: Move to adjacent stacks in the same row
+ * - Up/Down: Move within stack, or jump to stacks above/below
+ * - Tab: Linear cycle through all stacks (accessibility fallback)
+ * - Enter to select, Delete/Backspace to remove, Escape to clear
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import type { ZoneCanvas, CanvasStack } from '../types';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import type { ZoneCanvas, CanvasStack, CardSize } from '../types';
 import type { Card } from '../../../types/card';
+import {
+  buildGridMap,
+  findStackLeft,
+  findStackRight,
+  navigateUp,
+  navigateDown,
+  getFirstStack,
+} from '../utils/gridNavigation';
 
 export interface CanvasNavState {
   /** Currently focused stack ID */
@@ -19,6 +30,10 @@ export interface CanvasNavState {
 export interface UseCanvasKeyboardNavigationOptions {
   /** Current zones state */
   zones: ZoneCanvas[];
+  /** Card size for grid calculation */
+  cardSize: CardSize;
+  /** Container width for column count calculation */
+  containerWidth: number;
   /** Whether keyboard navigation is enabled */
   enabled?: boolean;
   /** Callback when a card is selected (Enter pressed) */
@@ -29,11 +44,15 @@ export interface UseCanvasKeyboardNavigationOptions {
   onClearSelection?: () => void;
   /** Function to get card data by ID */
   getCardData?: (cardId: string | number) => Card | null;
+  /** Function to get sorted card IDs for a stack (matches visual order) */
+  getSortedCardIds?: (stack: CanvasStack) => (string | number)[];
 }
 
 export interface UseCanvasKeyboardNavigationResult {
   /** Current navigation state */
   navState: CanvasNavState;
+  /** Currently focused card ID (resolved from sorted order) */
+  focusedCardId: string | number | null;
   /** Set focused stack and card */
   setFocus: (stackId: string | null, cardIndex?: number) => void;
   /** Clear focus */
@@ -48,11 +67,14 @@ export interface UseCanvasKeyboardNavigationResult {
 
 export function useCanvasKeyboardNavigation({
   zones,
+  cardSize,
+  containerWidth,
   enabled = true,
   onCardSelect,
   onStackDelete,
   onClearSelection,
   getCardData,
+  getSortedCardIds,
 }: UseCanvasKeyboardNavigationOptions): UseCanvasKeyboardNavigationResult {
   const [navState, setNavState] = useState<CanvasNavState>({
     focusedStackId: null,
@@ -63,7 +85,27 @@ export function useCanvasKeyboardNavigation({
   const zonesRef = useRef(zones);
   zonesRef.current = zones;
 
-  // Get all stacks in order (by zone, then by position)
+  // Ref to track cardSize and containerWidth for event handler
+  const cardSizeRef = useRef(cardSize);
+  cardSizeRef.current = cardSize;
+  const containerWidthRef = useRef(containerWidth);
+  containerWidthRef.current = containerWidth;
+
+  // Build grid map for navigation (memoized to avoid recalculating on every render)
+  const gridMap = useMemo(
+    () => buildGridMap(zones, cardSize, containerWidth),
+    [zones, cardSize, containerWidth]
+  );
+
+  // Ref for gridMap to use in event handlers
+  const gridMapRef = useRef(gridMap);
+  gridMapRef.current = gridMap;
+
+  // Ref for getSortedCardIds
+  const getSortedCardIdsRef = useRef(getSortedCardIds);
+  getSortedCardIdsRef.current = getSortedCardIds;
+
+  // Get all stacks in order (by zone, then by position) - used for Tab navigation
   const getAllStacks = useCallback((): { stack: CanvasStack; zoneId: string }[] => {
     const result: { stack: CanvasStack; zoneId: string }[] = [];
     for (const zone of zonesRef.current) {
@@ -110,14 +152,29 @@ export function useCanvasKeyboardNavigation({
     return navState.focusedStackId === stackId && navState.focusedCardIndex === cardIndex;
   }, [navState.focusedStackId, navState.focusedCardIndex]);
 
-  // Get focused card ID
+  // Get focused card ID (uses sorted order if available)
   const getFocusedCardId = useCallback((): string | number | null => {
     if (!navState.focusedStackId) return null;
     const stack = findStack(navState.focusedStackId);
     if (!stack || stack.cardIds.length === 0) return null;
-    const clampedIndex = Math.min(navState.focusedCardIndex, stack.cardIds.length - 1);
-    return stack.cardIds[clampedIndex];
+
+    // Use sorted card IDs if available, otherwise use raw order
+    const cardIds = getSortedCardIdsRef.current
+      ? getSortedCardIdsRef.current(stack)
+      : stack.cardIds;
+
+    const clampedIndex = Math.min(navState.focusedCardIndex, cardIds.length - 1);
+    return cardIds[clampedIndex];
   }, [navState.focusedStackId, navState.focusedCardIndex, findStack]);
+
+  // Scroll a stack into view when navigating to it
+  const scrollStackIntoView = useCallback((stackId: string) => {
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      const element = document.querySelector(`[data-stack-id="${stackId}"]`);
+      element?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    });
+  }, []);
 
   // Keyboard event handler
   useEffect(() => {
@@ -133,38 +190,109 @@ export function useCanvasKeyboardNavigation({
       if (allStacks.length === 0) return;
 
       switch (e.key) {
-        case 'ArrowLeft':
-        case 'ArrowRight': {
+        case 'ArrowLeft': {
           e.preventDefault();
-          const currentIndex = allStacks.findIndex(s => s.stack.id === navState.focusedStackId);
+          const currentGridMap = gridMapRef.current;
 
-          if (currentIndex === -1) {
-            // No stack focused, focus first
-            setFocus(allStacks[0].stack.id, 0);
+          if (!navState.focusedStackId) {
+            // No stack focused, focus first stack in grid
+            const firstStackId = getFirstStack(currentGridMap);
+            if (firstStackId) {
+              setFocus(firstStackId, 0);
+              scrollStackIntoView(firstStackId);
+            }
           } else {
-            const direction = e.key === 'ArrowLeft' ? -1 : 1;
-            const newIndex = (currentIndex + direction + allStacks.length) % allStacks.length;
-            setFocus(allStacks[newIndex].stack.id, 0);
+            // Find stack to the left in same row
+            const leftStackId = findStackLeft(currentGridMap, navState.focusedStackId);
+            if (leftStackId) {
+              setFocus(leftStackId, 0);
+              scrollStackIntoView(leftStackId);
+            }
+            // If no stack to left, stay at current position (edge behavior)
           }
           break;
         }
 
-        case 'ArrowUp':
-        case 'ArrowDown': {
+        case 'ArrowRight': {
           e.preventDefault();
+          const currentGridMap = gridMapRef.current;
+
           if (!navState.focusedStackId) {
-            // No stack focused, focus first
-            if (allStacks.length > 0) {
-              setFocus(allStacks[0].stack.id, 0);
+            // No stack focused, focus first stack in grid
+            const firstStackId = getFirstStack(currentGridMap);
+            if (firstStackId) {
+              setFocus(firstStackId, 0);
+              scrollStackIntoView(firstStackId);
             }
           } else {
-            const stack = findStack(navState.focusedStackId);
-            if (stack && stack.cardIds.length > 0) {
-              const direction = e.key === 'ArrowUp' ? -1 : 1;
-              const newIndex = navState.focusedCardIndex + direction;
-              // Clamp to valid range
-              const clampedIndex = Math.max(0, Math.min(newIndex, stack.cardIds.length - 1));
-              setNavState(prev => ({ ...prev, focusedCardIndex: clampedIndex }));
+            // Find stack to the right in same row
+            const rightStackId = findStackRight(currentGridMap, navState.focusedStackId);
+            if (rightStackId) {
+              setFocus(rightStackId, 0);
+              scrollStackIntoView(rightStackId);
+            }
+            // If no stack to right, stay at current position (edge behavior)
+          }
+          break;
+        }
+
+        case 'ArrowUp': {
+          e.preventDefault();
+          const currentGridMap = gridMapRef.current;
+
+          if (!navState.focusedStackId) {
+            // No stack focused, focus first stack in grid
+            const firstStackId = getFirstStack(currentGridMap);
+            if (firstStackId) {
+              setFocus(firstStackId, 0);
+              scrollStackIntoView(firstStackId);
+            }
+          } else {
+            // Navigate up: within stack or to stack above
+            // Use getSortedCardIds to get accurate visible card count
+            const getVisibleCount = (stack: CanvasStack) =>
+              getSortedCardIdsRef.current ? getSortedCardIdsRef.current(stack).length : stack.cardIds.length;
+            const result = navigateUp(
+              currentGridMap,
+              navState.focusedStackId,
+              navState.focusedCardIndex,
+              findStack,
+              getVisibleCount
+            );
+            setFocus(result.stackId, result.cardIndex);
+            if (result.stackId !== navState.focusedStackId) {
+              scrollStackIntoView(result.stackId);
+            }
+          }
+          break;
+        }
+
+        case 'ArrowDown': {
+          e.preventDefault();
+          const currentGridMap = gridMapRef.current;
+
+          if (!navState.focusedStackId) {
+            // No stack focused, focus first stack in grid
+            const firstStackId = getFirstStack(currentGridMap);
+            if (firstStackId) {
+              setFocus(firstStackId, 0);
+              scrollStackIntoView(firstStackId);
+            }
+          } else {
+            // Navigate down: within stack or to stack below
+            // Use getSortedCardIds to get accurate visible card count
+            const getVisibleCount = (stack: CanvasStack) =>
+              getSortedCardIdsRef.current ? getSortedCardIdsRef.current(stack).length : stack.cardIds.length;
+            const result = navigateDown(
+              currentGridMap,
+              navState.focusedStackId,
+              navState.focusedCardIndex,
+              findStack,
+              getVisibleCount
+            );
+            setFocus(result.stackId, result.cardIndex);
+            if (result.stackId !== navState.focusedStackId) {
+              scrollStackIntoView(result.stackId);
             }
           }
           break;
@@ -239,14 +367,19 @@ export function useCanvasKeyboardNavigation({
     setFocus,
     clearFocus,
     getFocusedCardId,
+    scrollStackIntoView,
     onCardSelect,
     onStackDelete,
     onClearSelection,
     getCardData,
   ]);
 
+  // Compute focused card ID once
+  const focusedCardId = getFocusedCardId();
+
   return {
     navState,
+    focusedCardId,
     setFocus,
     clearFocus,
     isStackFocused,

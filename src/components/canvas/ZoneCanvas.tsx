@@ -26,8 +26,8 @@ export interface ZoneCanvasProps {
   multiSelectCardIds?: Set<string | number>;
   /** Currently focused stack ID for keyboard navigation */
   focusedStackId?: string | null;
-  /** Currently focused card index within the focused stack */
-  focusedCardIndex?: number;
+  /** Currently focused card ID for keyboard navigation */
+  focusedCardId?: string | number | null;
   /** Zoom level (0.5 - 1.5) */
   zoom?: number;
   /** Whether snap-to-grid is enabled (for visual grid overlay) */
@@ -68,7 +68,7 @@ export function ZoneCanvas({
   searchQuery,
   multiSelectCardIds,
   focusedStackId,
-  focusedCardIndex,
+  focusedCardId,
   zoom = 1,
   showGrid = false,
   gridSize = 20,
@@ -250,7 +250,7 @@ export function ZoneCanvas({
                   searchQuery={searchQuery}
                   multiSelectCardIds={multiSelectCardIds}
                   isFocused={focusedStackId === stack.id}
-                  focusedCardIndex={focusedStackId === stack.id ? focusedCardIndex : undefined}
+                  focusedCardId={focusedStackId === stack.id ? focusedCardId : undefined}
                   onRename={(name) => onStackRename(stack.id, name)}
                   onToggleCollapse={() => onStackCollapsedChange(stack.id, !stack.collapsed)}
                   onDelete={() => onStackDelete(stack.id)}
