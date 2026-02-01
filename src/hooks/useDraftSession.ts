@@ -33,6 +33,7 @@ interface UseDraftSessionReturn {
   checkTimeouts: () => Promise<{ autoPickedCount: number; autoPickedNames: string[] }>;
   clearError: () => void;
   leaveExistingSession: () => Promise<void>;
+  refreshPlayers: () => Promise<void>; // Manually refresh players list
 }
 
 export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
@@ -360,6 +361,17 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     setError(null);
   }, []);
 
+  // Manually refresh players list (useful when real-time updates don't work)
+  const refreshPlayers = useCallback(async () => {
+    if (!sessionId) return;
+    try {
+      const playersData = await draftService.getPlayers(sessionId);
+      setPlayers(playersData);
+    } catch (err) {
+      console.error('Failed to refresh players:', err);
+    }
+  }, [sessionId]);
+
   // Toggle pause (host only) - pass current time remaining when pausing
   const togglePause = useCallback(async (currentTimeRemaining?: number): Promise<void> => {
     if (!session) return;
@@ -427,5 +439,6 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     checkTimeouts,
     clearError,
     leaveExistingSession,
+    refreshPlayers,
   };
 }

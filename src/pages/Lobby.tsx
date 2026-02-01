@@ -28,6 +28,7 @@ export function Lobby() {
     isLoading,
     error,
     startDraft,
+    refreshPlayers,
   } = useDraftSession(sessionId);
 
   // Redirect to draft when session starts (use correct route based on mode)
@@ -93,6 +94,8 @@ export function Lobby() {
     setIsAddingBot(true);
     try {
       await draftService.addBotToSession(sessionId);
+      // Manually refresh players since real-time may not update immediately
+      await refreshPlayers();
     } catch (err) {
       console.error('Failed to add bot:', err);
       setBotError(err instanceof Error ? err.message : 'Failed to add bot');
@@ -107,6 +110,8 @@ export function Lobby() {
     setRemovingBotId(botPlayerId);
     try {
       await draftService.removeBotFromSession(sessionId, botPlayerId);
+      // Manually refresh players since real-time may not update immediately
+      await refreshPlayers();
     } catch (err) {
       console.error('Failed to remove bot:', err);
       setBotError(err instanceof Error ? err.message : 'Failed to remove bot');
