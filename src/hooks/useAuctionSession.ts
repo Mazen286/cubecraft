@@ -194,13 +194,47 @@ export function useAuctionSession(
     return currentPlayer.seat_position === session?.current_selector_seat;
   }, [currentPlayer, session?.current_selector_seat]);
 
-  const isMyBidTurn = useMemo(() => {
+  // Raw calculation of whether it's my bid turn
+  const isMyBidTurnRaw = useMemo(() => {
     if (!currentPlayer || !auctionState) return false;
     if (auctionState.phase !== 'bidding') return false;
     if (auctionState.passedPlayerIds.includes(currentPlayer.id)) return false;
     if (hasMaxCards) return false; // Can't bid if already at max cards
     return currentPlayer.seat_position === auctionState.nextBidderSeat;
   }, [currentPlayer, auctionState, hasMaxCards]);
+
+  // Debounced "my turn" state to prevent false positives from race conditions
+  // When realtime updates arrive, auctionState and players can be temporarily out of sync
+  // This delay lets both states settle before showing "Your turn"
+  const [isMyBidTurnSettled, setIsMyBidTurnSettled] = useState(false);
+  const bidTurnSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Clear any pending settle timer
+    if (bidTurnSettleTimerRef.current) {
+      clearTimeout(bidTurnSettleTimerRef.current);
+      bidTurnSettleTimerRef.current = null;
+    }
+
+    if (isMyBidTurnRaw) {
+      // Delay showing "Your turn" by 300ms to let state settle
+      bidTurnSettleTimerRef.current = setTimeout(() => {
+        setIsMyBidTurnSettled(true);
+      }, 300);
+    } else {
+      // Immediately hide "Your turn" when it's not our turn
+      setIsMyBidTurnSettled(false);
+    }
+
+    return () => {
+      if (bidTurnSettleTimerRef.current) {
+        clearTimeout(bidTurnSettleTimerRef.current);
+      }
+    };
+  }, [isMyBidTurnRaw]);
+
+  // Use the settled state for UI display, but raw state for auto-pass logic
+  const isMyBidTurn = isMyBidTurnSettled;
 
   // Initial data fetch
   useEffect(() => {
@@ -461,14 +495,15 @@ export function useAuctionSession(
   }, [auctionState?.phase, auctionStateData?.bidStartedAt, configuredBidTime, session?.paused, session?.time_remaining_at_pause, session?.resume_at, internalResumeCount, resumeCount]);
 
   // Auto-pass when bid time runs out (only for current player, not when paused)
+  // Uses raw state (not debounced) so auto-pass triggers immediately
   useEffect(() => {
-    if (bidTimeRemaining === 0 && isMyBidTurn && sessionId && currentPlayer && !session?.paused) {
+    if (bidTimeRemaining === 0 && isMyBidTurnRaw && sessionId && currentPlayer && !session?.paused) {
       // Auto-pass
       auctionService.passBid(sessionId, currentPlayer.id).catch(err => {
         console.error('[useAuctionSession] Auto-pass failed:', err);
       });
     }
-  }, [bidTimeRemaining, isMyBidTurn, sessionId, currentPlayer, session?.paused]);
+  }, [bidTimeRemaining, isMyBidTurnRaw, sessionId, currentPlayer, session?.paused]);
 
   // Server-side timeout check (fallback for stuck auctions, especially with bots)
   useEffect(() => {
