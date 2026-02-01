@@ -1908,19 +1908,28 @@ export function Draft() {
             >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-yugi-border">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2 whitespace-nowrap">
                   <Layers className="w-5 h-5 text-gold-400" />
-                  My Drafted Cards ({draftedCards.length})
-                  {isDragOver && <span className="text-gold-400 text-sm ml-2">Drop to pick!</span>}
+                  My Cards ({draftedCards.length})
+                  {isDragOver && <span className="text-gold-400 text-sm ml-2">Drop!</span>}
                 </h3>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs text-gray-400">
                     <span>Main: <span className="text-white font-medium">{myCardsStats.mainDeck}</span></span>
                     <span>Extra: <span className="text-purple-400 font-medium">{myCardsStats.extraDeck}</span></span>
                     {!session?.hide_scores && (
                       <span>Avg: <span className="text-gold-400 font-medium">{myCardsStats.avgScore}</span></span>
                     )}
                   </div>
+                  {/* Toggle to drawer mode */}
+                  <button
+                    onClick={() => setMyCardsInline(false)}
+                    className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-yugi-border rounded hover:bg-yugi-card transition-colors flex items-center gap-1"
+                    title="Show as drawer"
+                  >
+                    <PanelBottomClose className="w-3 h-3" />
+                    <span className="hidden sm:inline">Drawer</span>
+                  </button>
                 </div>
               </div>
 
@@ -2074,7 +2083,7 @@ export function Draft() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
+            className={`fixed bottom-4 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
               isDragOver
                 ? 'bg-green-500 text-white scale-110 shadow-green-500/50 shadow-2xl ring-4 ring-green-400/50 ring-offset-2 ring-offset-yugi-darker'
                 : isDragging
@@ -2086,30 +2095,6 @@ export function Draft() {
             <span>{isDragOver ? 'Drop to Pick!' : isDragging ? 'Drag Here!' : `My Cards (${draftedCards.length})`}</span>
           </button>
         )}
-
-        {/* Toggle button for inline/drawer mode - positioned next to My Cards button */}
-        <button
-          onClick={() => {
-            setMyCardsInline(!myCardsInline);
-            if (!myCardsInline) {
-              setShowMobileCards(false); // Close drawer when switching to inline
-            }
-          }}
-          className="fixed bottom-20 md:bottom-6 right-44 md:right-52 z-40 flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-full shadow-lg transition-all bg-yugi-card hover:bg-yugi-dark border border-yugi-border text-gray-300 hover:text-white"
-          title={myCardsInline ? 'Show My Cards in drawer' : 'Show My Cards below pack'}
-        >
-          {myCardsInline ? (
-            <>
-              <PanelBottomClose className="w-4 h-4" />
-              <span className="hidden sm:inline">Drawer</span>
-            </>
-          ) : (
-            <>
-              <PanelBottomOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">Below</span>
-            </>
-          )}
-        </button>
 
         {/* Drawer for viewing drafted cards */}
         {showMobileCards && (
@@ -2132,18 +2117,32 @@ export function Draft() {
 
               {/* Header */}
               <div className="flex items-center justify-between px-4 pb-3 border-b border-yugi-border flex-shrink-0">
-                <h3 className="text-lg font-semibold text-white">
-                  My Drafted Cards ({draftedCards.length})
+                <h3 className="text-lg font-semibold text-white whitespace-nowrap">
+                  My Cards ({draftedCards.length})
                 </h3>
-                <button
-                  onClick={() => {
-                    setShowMobileCards(false);
-                    setMobileViewCard(null);
-                  }}
-                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white text-xl"
-                >
-                  ✕
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Toggle to inline mode */}
+                  <button
+                    onClick={() => {
+                      setMyCardsInline(true);
+                      setShowMobileCards(false);
+                    }}
+                    className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-yugi-border rounded hover:bg-yugi-card transition-colors flex items-center gap-1"
+                    title="Show below pack"
+                  >
+                    <PanelBottomOpen className="w-3 h-3" />
+                    <span className="hidden sm:inline">Below</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMobileCards(false);
+                      setMobileViewCard(null);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white text-xl"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
               {/* Stats and Filters - Collapsible Section */}
