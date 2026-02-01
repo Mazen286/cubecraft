@@ -411,28 +411,30 @@ function calculateBotBid(
   }
 
   // Base willingness as percentage of total points, based on tier
-  const basePercentage = score >= 95 ? 0.18  // S-tier
-    : score >= 90 ? 0.14                      // A-tier
-    : score >= 75 ? 0.10                      // B-tier
-    : score >= 60 ? 0.06                      // C-tier
-    : score >= 50 ? 0.03                      // E-tier
-    : 0.02;                                   // F-tier
+  // Keep these low so bots don't run out of points halfway through
+  const basePercentage = score >= 95 ? 0.08  // S-tier (was 0.18)
+    : score >= 90 ? 0.06                      // A-tier (was 0.14)
+    : score >= 75 ? 0.04                      // B-tier (was 0.10)
+    : score >= 60 ? 0.025                     // C-tier (was 0.06)
+    : score >= 50 ? 0.015                     // E-tier (was 0.03)
+    : 0.01;                                   // F-tier (was 0.02)
 
   // Calculate base willingness scaled by total points and interest
   const baseWillingness = Math.floor(totalPoints * basePercentage * interest.interestMultiplier);
 
   // Adjust based on remaining grids (save more points for later)
-  const gridMultiplier = 1 - (gridNumber - 1) * 0.05; // 1.0 to 0.75
+  // More aggressive decay: 1.0 down to 0.55 by grid 10
+  const gridMultiplier = 1 - (gridNumber - 1) * 0.05;
 
-  // Increase urgency if we haven't acquired many cards yet
-  const urgency = cardsAcquiredThisGrid < 5 ? 1.1 : 1.0;
+  // Only increase urgency if we have very few cards
+  const urgency = cardsAcquiredThisGrid < 2 ? 1.15 : 1.0;
 
   // Calculate maximum bid we're willing to make
   let maxBid = Math.floor(baseWillingness * gridMultiplier * urgency);
 
   // Bluffs have a hard cap to avoid wasting too many points
   if (interest.isBluff) {
-    maxBid = Math.min(maxBid, Math.floor(totalPoints * 0.05)); // Max 5% of total on bluffs
+    maxBid = Math.min(maxBid, Math.floor(totalPoints * 0.02)); // Max 2% of total on bluffs
   }
 
   // Calculate the minimum bid required
