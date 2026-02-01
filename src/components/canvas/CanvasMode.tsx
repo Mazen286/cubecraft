@@ -61,6 +61,8 @@ export interface CanvasModeProps {
   cardZoneAssignments?: Map<string | number, string>;
   /** Additional class name */
   className?: string;
+  /** Whether keyboard navigation is enabled (disable when bottom sheet is open) */
+  keyboardEnabled?: boolean;
 }
 
 export function CanvasMode({
@@ -79,6 +81,7 @@ export function CanvasMode({
   validateZoneMove,
   cardZoneAssignments,
   className,
+  keyboardEnabled = true,
 }: CanvasModeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -244,7 +247,7 @@ export function CanvasMode({
     zones,
     cardSize,
     containerWidth: containerRef.current?.clientWidth || 800,
-    enabled: true,
+    enabled: keyboardEnabled,
     onCardSelect: (cardId, card) => {
       if (card) {
         onCardClick?.(cardId, card);

@@ -2070,6 +2070,7 @@ ${sideDeck}
                 searchQuery={filters.filterState.search}
                 sortBy={filters.sortState.sortBy}
                 sortDirection={filters.sortState.sortDirection}
+                keyboardEnabled={!showCardDetail}
               />
             ) : (
               /* Grid view - organized by deck zones */

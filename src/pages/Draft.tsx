@@ -1974,6 +1974,7 @@ export function Draft() {
                         searchQuery={myCardsFilters.filterState.search}
                         sortBy={myCardsFilters.sortState.sortBy}
                         sortDirection={myCardsFilters.sortState.sortDirection}
+                        keyboardEnabled={!mobileViewCard}
                       />
                     ) : (
                       <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16">
@@ -2375,6 +2376,7 @@ export function Draft() {
                         searchQuery={myCardsFilters.filterState.search}
                         sortBy={myCardsFilters.sortState.sortBy}
                         sortDirection={myCardsFilters.sortState.sortDirection}
+                        keyboardEnabled={!mobileViewCard}
                       />
                     ) : (
                       /* Grid view - smaller cards for more visibility */

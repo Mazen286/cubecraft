@@ -36,6 +36,8 @@ export interface DraftCanvasViewProps {
   sortDirection?: 'asc' | 'desc';
   /** Additional class name */
   className?: string;
+  /** Whether keyboard navigation is enabled (disable when bottom sheet is open) */
+  keyboardEnabled?: boolean;
 }
 
 export function DraftCanvasView({
@@ -50,6 +52,7 @@ export function DraftCanvasView({
   sortBy = 'none',
   sortDirection = 'desc',
   className,
+  keyboardEnabled = true,
 }: DraftCanvasViewProps) {
   // Convert YuGiOhCard[] to Card[] with IDs
   const cardsWithIds = useMemo<CardWithId[]>(() => {
@@ -139,6 +142,7 @@ export function DraftCanvasView({
       sortDirection={sortDirection}
       onCardClick={handleCardClick}
       className={className}
+      keyboardEnabled={keyboardEnabled}
     />
   );
 }

@@ -112,8 +112,8 @@ export function BottomSheet({
 
         {/* Content */}
         <div
-          className="overflow-y-auto custom-scrollbar"
-          style={{ maxHeight: `calc(${maxHeight}vh - 60px)` }}
+          className="overflow-y-auto custom-scrollbar pb-6"
+          style={{ maxHeight: `calc(${maxHeight}vh - 70px)` }}
         >
           {children}
         </div>

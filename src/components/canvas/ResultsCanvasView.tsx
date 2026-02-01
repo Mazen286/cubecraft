@@ -50,6 +50,8 @@ export interface ResultsCanvasViewProps {
   sortDirection?: 'asc' | 'desc';
   /** Additional class name */
   className?: string;
+  /** Whether keyboard navigation is enabled (disable when bottom sheet is open) */
+  keyboardEnabled?: boolean;
 }
 
 export function ResultsCanvasView({
@@ -70,6 +72,7 @@ export function ResultsCanvasView({
   sortBy = 'none',
   sortDirection = 'desc',
   className,
+  keyboardEnabled = true,
 }: ResultsCanvasViewProps) {
   // Track previous zones for detecting cross-zone movements
   const prevZonesRef = useRef<ZoneCanvas[]>([]);
@@ -264,6 +267,7 @@ export function ResultsCanvasView({
       validateZoneMove={handleValidateZoneMove}
       cardZoneAssignments={zoneAssignments}
       className={className}
+      keyboardEnabled={keyboardEnabled}
     />
   );
 }
