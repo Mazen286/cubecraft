@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { DndContext, useDraggable, useDroppable, useSensor, useSensors, PointerSensor, TouchSensor, type DragEndEvent } from '@dnd-kit/core';
 import { Layers, Pause, ChevronDown, ChevronUp, ChevronRight, ArrowRight, X, SortAsc, SortDesc, PanelBottomOpen, PanelBottomClose, Lightbulb, Sparkles } from 'lucide-react';
 import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
@@ -165,22 +164,6 @@ export function Draft() {
       cubeStats: true, // Collapsed by default to save space
     };
   });
-
-  // dnd-kit drag card state
-  const [draggedCard, setDraggedCard] = useState<YuGiOhCardType | null>(null);
-
-  // Configure dnd-kit sensors for both mouse and touch
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 200,      // Long enough to distinguish from scroll
-        tolerance: 10,   // Forgiving for finger movement
-      },
-    })
-  );
 
   // Refs for cross-section highlight management (to avoid closure issues)
   const clearPackHighlightRef = useRef<() => void>(() => {});
@@ -1008,31 +991,6 @@ export function Draft() {
     [isPicking, currentPlayer?.pick_made, makePick, session, sessionId]
   );
 
-  // dnd-kit drag end handler (for touch drag)
-  const handleDndDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setDraggedCard(null);
-    setIsDragging(false);
-    setIsDragOver(false);
-
-    // If dropped on the my-cards drop zone
-    if (over?.id === 'my-cards-drop' && active.data.current?.card) {
-      const card = active.data.current.card as YuGiOhCardType;
-      if (!hasPicked && !isPicking) {
-        await handlePickCard(card);
-      }
-    }
-  }, [hasPicked, isPicking, handlePickCard]);
-
-  // dnd-kit drag start handler
-  const handleDndDragStart = useCallback((event: { active: { data: { current?: { card?: YuGiOhCardType } } } }) => {
-    const card = event.active.data.current?.card;
-    if (card) {
-      setDraggedCard(card);
-      setIsDragging(true);
-    }
-  }, []);
-
   // Keep autoPickRef updated with current values (avoids stale closure in timer)
   useEffect(() => {
     autoPickRef.current = () => {
@@ -1388,46 +1346,10 @@ export function Draft() {
     );
   }
 
-  // Draggable card wrapper component for dnd-kit touch support
-  const DraggableCard = ({ card, children }: { card: YuGiOhCardType; index?: number; children: React.ReactNode }) => {
-    const { attributes, listeners, setNodeRef, transform, isDragging: isDraggingThis } = useDraggable({
-      id: `card-${card.id}`,
-      data: { card },
-      disabled: hasPicked,
-    });
-
-    const style = transform ? {
-      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      zIndex: isDraggingThis ? 1000 : undefined,
-      opacity: isDraggingThis ? 0.8 : 1,
-    } : undefined;
-
-    return (
-      <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-        {children}
-      </div>
-    );
-  };
-
-  // Droppable My Cards zone
-  const MyCardsDropZone = ({ children }: { children: React.ReactNode }) => {
-    const { setNodeRef, isOver } = useDroppable({
-      id: 'my-cards-drop',
-    });
-
-    return (
-      <div ref={setNodeRef} className={isOver ? 'scale-110' : ''}>
-        {children}
-      </div>
-    );
-  };
-
   return (
     <Layout>
       {/* Toast notifications */}
       <ToastContainer />
-
-      <DndContext sensors={sensors} onDragStart={handleDndDragStart} onDragEnd={handleDndDragEnd}>
       <div className={`flex flex-col min-h-[calc(100vh-200px)] ${myCardsInline ? '' : 'lg:h-[calc(100vh-200px)] lg:max-h-[calc(100vh-200px)]'}`}>
         {/* Header with timer and stats */}
         <div className="flex items-center justify-between mb-6">
@@ -1750,8 +1672,8 @@ export function Draft() {
                   const isRecommended = showRecommendation && recommendedCard?.card.id === card.id;
 
                   return (
-                    <DraggableCard key={card.id} card={card} index={index}>
                     <div
+                      key={card.id}
                       className={cn("relative", isRecommended && "ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-dark rounded-lg")}
                       data-card-index={index}
                     >
@@ -1829,7 +1751,6 @@ export function Draft() {
                         </div>
                       )}
                     </div>
-                    </DraggableCard>
                   );
                 })}
               </div>
@@ -2154,26 +2075,24 @@ export function Draft() {
           </div>
         )}
 
-        {/* Floating button to view drafted cards (also a drop zone for touch + desktop drag) */}
+        {/* Floating button to view drafted cards (also a drop zone for desktop drag) */}
         {!myCardsInline && (
-          <MyCardsDropZone>
-            <button
-              onClick={() => setShowMobileCards(true)}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`fixed bottom-4 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
-                isDragOver || draggedCard
-                  ? 'bg-green-500 text-white scale-110 shadow-green-500/50 shadow-2xl ring-4 ring-green-400/50 ring-offset-2 ring-offset-yugi-darker'
-                  : isDragging
-                    ? 'bg-gold-400 text-black scale-105 shadow-gold-400/50 shadow-xl ring-2 ring-gold-300/50 animate-pulse'
-                    : 'bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30'
-              }`}
-            >
-              <Layers className={`w-5 h-5 ${isDragOver || draggedCard ? 'animate-bounce' : ''}`} />
-              <span>{isDragOver || draggedCard ? 'Drop to Pick!' : isDragging ? 'Drag Here!' : `My Cards (${draftedCards.length})`}</span>
-            </button>
-          </MyCardsDropZone>
+          <button
+            onClick={() => setShowMobileCards(true)}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`fixed bottom-4 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
+              isDragOver
+                ? 'bg-green-500 text-white scale-110 shadow-green-500/50 shadow-2xl ring-4 ring-green-400/50 ring-offset-2 ring-offset-yugi-darker'
+                : isDragging
+                  ? 'bg-gold-400 text-black scale-105 shadow-gold-400/50 shadow-xl ring-2 ring-gold-300/50 animate-pulse'
+                  : 'bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30'
+            }`}
+          >
+            <Layers className={`w-5 h-5 ${isDragOver ? 'animate-bounce' : ''}`} />
+            <span>{isDragOver ? 'Drop to Pick!' : isDragging ? 'Drag Here!' : `My Cards (${draftedCards.length})`}</span>
+          </button>
         )}
 
         {/* Drawer for viewing drafted cards */}
@@ -2569,7 +2488,6 @@ export function Draft() {
           isLoading={isCancelling}
         />
       </div>
-      </DndContext>
     </Layout>
   );
 }
