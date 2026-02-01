@@ -48,26 +48,18 @@ export function BottomSheet({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Keys that should NOT dismiss the sheet (navigation/interaction keys)
-      const navigationKeys = ['Enter', ' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+      // Keys that SHOULD dismiss the sheet (navigation/interaction keys)
+      const dismissKeys = ['Escape', 'Enter', ' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
-      // Always close on Escape
-      if (e.key === 'Escape') {
+      // Close on Escape, or navigation keys if dismissOnAnyKey is enabled
+      if (e.key === 'Escape' || (dismissOnAnyKey && dismissKeys.includes(e.key))) {
         e.stopPropagation();
         e.preventDefault();
         onClose();
         return;
       }
 
-      // If dismissOnAnyKey is enabled, close on any key except navigation keys
-      if (dismissOnAnyKey && !navigationKeys.includes(e.key)) {
-        e.stopPropagation();
-        e.preventDefault();
-        onClose();
-        return;
-      }
-
-      // For non-dismiss keys, still stop propagation to prevent background handlers
+      // For other keys, still stop propagation to prevent background handlers
       e.stopPropagation();
     };
 
