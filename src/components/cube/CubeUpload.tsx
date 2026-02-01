@@ -164,7 +164,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.json"
+              accept=".csv,.json,.txt,.dck"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -173,7 +173,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
               Drag & drop a file or click to browse
             </p>
             <p className="text-sm text-gray-500">
-              Supports CSV and JSON formats
+              Supports CSV, JSON, TXT (card names, MTGO, Arena), and DCK (Forge, XMage)
             </p>
           </div>
 
@@ -302,9 +302,19 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
             <p className="text-yellow-500/80 text-xs mt-1">
               Tip: If card names contain commas, wrap them in quotes: "Card, Name"
             </p>
-            <div className="bg-yugi-darker rounded p-3 font-mono text-xs">
-              <p className="text-gray-400 mb-1">JSON format also supported:</p>
-              <p className="text-white">{'[{ "name": "...", "type": "...", "score": 85 }, ...]'}</p>
+            <div className="bg-yugi-darker rounded p-3 font-mono text-xs space-y-2">
+              <div>
+                <p className="text-gray-400 mb-1">JSON format:</p>
+                <p className="text-white">{'[{ "name": "...", "type": "...", "score": 85 }, ...]'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-1">Card names (one per line):</p>
+                <p className="text-white">Lightning Bolt<br/>Counterspell<br/>Sol Ring</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-1">MTGO/Arena format:</p>
+                <p className="text-white">4 Lightning Bolt<br/>2 Counterspell<br/>1 Sol Ring</p>
+              </div>
             </div>
           </div>
 

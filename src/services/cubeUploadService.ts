@@ -1,5 +1,5 @@
 // Cube Upload Service - handles parsing and validating user-uploaded cubes
-// Supports CSV and JSON formats
+// Supports CSV, JSON, TXT (card names, MTGO, Arena), and DCK (Forge, XMage) formats
 
 import type { Card } from '../types/card';
 import { getGameConfig } from '../config/games';
@@ -272,6 +272,425 @@ export function parseJsonCube(
 }
 
 /**
+ * Detect text file format (card names, MTGO, Arena)
+ */
+function detectTextFormat(content: string): 'cardnames' | 'mtgo' | 'arena' {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//'));
+
+  // Check for Arena format: "count name (SET) collector#" or "count name"
+  // Arena often has set codes in parentheses
+  const hasArenaFormat = lines.some(line => /^\d+\s+.+\s+\([A-Z0-9]+\)\s+\d+/.test(line));
+  if (hasArenaFormat) return 'arena';
+
+  // Check for MTGO/count format: lines start with a number
+  const hasCountFormat = lines.filter(l => !l.toLowerCase().startsWith('sideboard')).every(line => /^\d+\s+/.test(line));
+  if (hasCountFormat && lines.length > 0) return 'mtgo';
+
+  // Default to simple card names
+  return 'cardnames';
+}
+
+/**
+ * Parse simple card names list (.txt)
+ * One card name per line, optionally with count prefix
+ */
+export function parseCardNamesList(
+  content: string,
+  gameId: string
+): ParsedCube {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//') && !l.startsWith('#'));
+  const cards: Card[] = [];
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    // Skip section headers
+    if (line.toLowerCase() === 'sideboard' || line.toLowerCase() === 'maybeboard') {
+      continue;
+    }
+
+    // Try to parse "count name" format first
+    const countMatch = line.match(/^(\d+)x?\s+(.+)$/i);
+    let name: string;
+    let count = 1;
+
+    if (countMatch) {
+      count = parseInt(countMatch[1], 10);
+      name = countMatch[2].trim();
+    } else {
+      name = line;
+    }
+
+    if (!name) {
+      warnings.push(`Line ${lineNum}: Empty card name, skipped`);
+      continue;
+    }
+
+    // Add card(s) based on count
+    for (let c = 0; c < count; c++) {
+      cards.push({
+        id: generateCardId(name + c),
+        name,
+        type: 'Unknown',
+        description: '',
+        attributes: {},
+      });
+    }
+  }
+
+  if (cards.length === 0) {
+    errors.push('No valid cards found in the file');
+  }
+
+  return {
+    name: 'Uploaded Cube',
+    description: 'Custom cube uploaded by user',
+    gameId,
+    cards,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Parse MTGO format (.txt)
+ * Format: "count cardname" with optional "Sideboard" section
+ */
+export function parseMTGOFormat(
+  content: string,
+  gameId: string
+): ParsedCube {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  const cards: Card[] = [];
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  let inSideboard = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    // Check for section headers
+    if (line.toLowerCase() === 'sideboard' || line.toLowerCase().startsWith('sideboard:')) {
+      inSideboard = true;
+      continue;
+    }
+
+    // Skip comments
+    if (line.startsWith('//') || line.startsWith('#')) {
+      continue;
+    }
+
+    // Parse "count name" format
+    const match = line.match(/^(\d+)\s+(.+)$/);
+    if (!match) {
+      warnings.push(`Line ${lineNum}: Invalid format "${line}", skipped`);
+      continue;
+    }
+
+    const count = parseInt(match[1], 10);
+    const name = match[2].trim();
+
+    if (!name) {
+      warnings.push(`Line ${lineNum}: Empty card name, skipped`);
+      continue;
+    }
+
+    // Add card(s) based on count (for cube, we add each copy)
+    for (let c = 0; c < count; c++) {
+      cards.push({
+        id: generateCardId(name + c + (inSideboard ? '_sb' : '')),
+        name,
+        type: 'Unknown',
+        description: '',
+        attributes: { _zone: inSideboard ? 'sideboard' : 'main' },
+      });
+    }
+  }
+
+  if (cards.length === 0) {
+    errors.push('No valid cards found in the file');
+  }
+
+  return {
+    name: 'Uploaded Cube',
+    description: 'Custom cube uploaded by user',
+    gameId,
+    cards,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Parse MTG Arena format (.txt)
+ * Format: "count cardname" or "count cardname (SET) collector#"
+ */
+export function parseArenaFormat(
+  content: string,
+  gameId: string
+): ParsedCube {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  const cards: Card[] = [];
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  let inSideboard = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    // Check for section headers
+    if (line.toLowerCase() === 'sideboard' || line.toLowerCase().startsWith('sideboard:')) {
+      inSideboard = true;
+      continue;
+    }
+
+    // Skip comments and empty lines
+    if (line.startsWith('//') || line.startsWith('#') || !line) {
+      continue;
+    }
+
+    // Parse Arena format: "count name (SET) collector#" or just "count name"
+    const arenaMatch = line.match(/^(\d+)\s+(.+?)(?:\s+\(([A-Z0-9]+)\)\s+(\d+))?$/);
+    if (!arenaMatch) {
+      warnings.push(`Line ${lineNum}: Invalid format "${line}", skipped`);
+      continue;
+    }
+
+    const count = parseInt(arenaMatch[1], 10);
+    const name = arenaMatch[2].trim();
+    const setCode = arenaMatch[3] || undefined;
+
+    if (!name) {
+      warnings.push(`Line ${lineNum}: Empty card name, skipped`);
+      continue;
+    }
+
+    // Add card(s) based on count
+    for (let c = 0; c < count; c++) {
+      cards.push({
+        id: generateCardId(name + c + (inSideboard ? '_sb' : '')),
+        name,
+        type: 'Unknown',
+        description: '',
+        attributes: {
+          setCode,
+          _zone: inSideboard ? 'sideboard' : 'main',
+        },
+      });
+    }
+  }
+
+  if (cards.length === 0) {
+    errors.push('No valid cards found in the file');
+  }
+
+  return {
+    name: 'Uploaded Cube',
+    description: 'Custom cube uploaded by user',
+    gameId,
+    cards,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Parse Forge deck format (.dck)
+ * Format: [sections] with "count cardname|SET" entries
+ */
+export function parseForgeFormat(
+  content: string,
+  gameId: string
+): ParsedCube {
+  const lines = content.split('\n').map(l => l.trim());
+  const cards: Card[] = [];
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  let currentSection = 'main';
+  let cubeName = 'Uploaded Cube';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    // Skip empty lines and comments
+    if (!line || line.startsWith('#') || line.startsWith('//')) {
+      continue;
+    }
+
+    // Check for section headers [Main], [Sideboard], [metadata], etc.
+    const sectionMatch = line.match(/^\[(.+)\]$/);
+    if (sectionMatch) {
+      currentSection = sectionMatch[1].toLowerCase();
+      continue;
+    }
+
+    // In metadata section, look for Name=
+    if (currentSection === 'metadata') {
+      const nameMatch = line.match(/^Name=(.+)$/i);
+      if (nameMatch) {
+        cubeName = nameMatch[1].trim();
+      }
+      continue;
+    }
+
+    // Skip non-card sections
+    if (currentSection !== 'main' && currentSection !== 'sideboard' && currentSection !== 'commander') {
+      continue;
+    }
+
+    // Parse "count cardname|SET" or "count cardname"
+    const cardMatch = line.match(/^(\d+)\s+(.+?)(?:\|([A-Z0-9]+))?$/);
+    if (!cardMatch) {
+      warnings.push(`Line ${lineNum}: Invalid format "${line}", skipped`);
+      continue;
+    }
+
+    const count = parseInt(cardMatch[1], 10);
+    const name = cardMatch[2].trim();
+    const setCode = cardMatch[3] || undefined;
+
+    if (!name) {
+      warnings.push(`Line ${lineNum}: Empty card name, skipped`);
+      continue;
+    }
+
+    // Add card(s) based on count
+    for (let c = 0; c < count; c++) {
+      cards.push({
+        id: generateCardId(name + c + currentSection),
+        name,
+        type: 'Unknown',
+        description: '',
+        attributes: {
+          setCode,
+          _zone: currentSection,
+        },
+      });
+    }
+  }
+
+  if (cards.length === 0) {
+    errors.push('No valid cards found in the file');
+  }
+
+  return {
+    name: cubeName,
+    description: 'Custom cube uploaded by user',
+    gameId,
+    cards,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Parse XMage deck format (.dck)
+ * Format: "count [SET:num] cardname" or "SB: count [SET:num] cardname"
+ */
+export function parseXMageFormat(
+  content: string,
+  gameId: string
+): ParsedCube {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  const cards: Card[] = [];
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    // Skip comments
+    if (line.startsWith('#') || line.startsWith('//')) {
+      continue;
+    }
+
+    // Check for sideboard prefix
+    const isSideboard = line.startsWith('SB:');
+    const cardLine = isSideboard ? line.substring(3).trim() : line;
+
+    // Parse "count [SET:num] cardname" format
+    const xmageMatch = cardLine.match(/^(\d+)\s+\[([A-Z0-9]+):(\d+)\]\s+(.+)$/);
+    if (xmageMatch) {
+      const count = parseInt(xmageMatch[1], 10);
+      const setCode = xmageMatch[2];
+      const name = xmageMatch[4].trim();
+
+      for (let c = 0; c < count; c++) {
+        cards.push({
+          id: generateCardId(name + c + (isSideboard ? '_sb' : '')),
+          name,
+          type: 'Unknown',
+          description: '',
+          attributes: {
+            setCode,
+            _zone: isSideboard ? 'sideboard' : 'main',
+          },
+        });
+      }
+      continue;
+    }
+
+    // Also try simple "count name" format
+    const simpleMatch = cardLine.match(/^(\d+)\s+(.+)$/);
+    if (simpleMatch) {
+      const count = parseInt(simpleMatch[1], 10);
+      const name = simpleMatch[2].trim();
+
+      for (let c = 0; c < count; c++) {
+        cards.push({
+          id: generateCardId(name + c + (isSideboard ? '_sb' : '')),
+          name,
+          type: 'Unknown',
+          description: '',
+          attributes: {
+            _zone: isSideboard ? 'sideboard' : 'main',
+          },
+        });
+      }
+      continue;
+    }
+
+    warnings.push(`Line ${lineNum}: Invalid format "${line}", skipped`);
+  }
+
+  if (cards.length === 0) {
+    errors.push('No valid cards found in the file');
+  }
+
+  return {
+    name: 'Uploaded Cube',
+    description: 'Custom cube uploaded by user',
+    gameId,
+    cards,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Detect DCK file format (Forge vs XMage)
+ */
+function detectDckFormat(content: string): 'forge' | 'xmage' {
+  // XMage uses [SET:num] format
+  if (/\[[A-Z0-9]+:\d+\]/.test(content)) {
+    return 'xmage';
+  }
+  // Forge uses [Section] headers and cardname|SET format
+  if (/^\[.+\]$/m.test(content) || /\|[A-Z0-9]+$/.test(content)) {
+    return 'forge';
+  }
+  // Default to Forge
+  return 'forge';
+}
+
+/**
  * Parse a card object from JSON
  */
 function parseCardObject(
@@ -434,7 +853,7 @@ export function cubeToCardMap(cards: Card[]): Record<string, unknown> {
 }
 
 /**
- * Read and parse a file (CSV or JSON)
+ * Read and parse a file (CSV, JSON, TXT, or DCK)
  */
 export async function parseUploadedFile(
   file: File,
@@ -447,13 +866,41 @@ export async function parseUploadedFile(
     return parseJsonCube(content, gameId);
   } else if (extension === 'csv') {
     return parseCsvCube(content, { gameId });
+  } else if (extension === 'dck') {
+    // Forge or XMage deck format
+    const format = detectDckFormat(content);
+    if (format === 'xmage') {
+      return parseXMageFormat(content, gameId);
+    } else {
+      return parseForgeFormat(content, gameId);
+    }
+  } else if (extension === 'txt') {
+    // Text format - could be card names, MTGO, or Arena
+    const format = detectTextFormat(content);
+    if (format === 'arena') {
+      return parseArenaFormat(content, gameId);
+    } else if (format === 'mtgo') {
+      return parseMTGOFormat(content, gameId);
+    } else {
+      return parseCardNamesList(content, gameId);
+    }
   } else {
-    // Try to detect format
+    // Try to detect format from content
     const trimmed = content.trim();
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
       return parseJsonCube(content, gameId);
-    } else {
+    } else if (trimmed.includes(',') && !trimmed.match(/^\d+\s+/m)) {
       return parseCsvCube(content, { gameId });
+    } else {
+      // Default to text format detection
+      const format = detectTextFormat(content);
+      if (format === 'arena') {
+        return parseArenaFormat(content, gameId);
+      } else if (format === 'mtgo') {
+        return parseMTGOFormat(content, gameId);
+      } else {
+        return parseCardNamesList(content, gameId);
+      }
     }
   }
 }
