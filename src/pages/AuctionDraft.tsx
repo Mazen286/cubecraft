@@ -19,6 +19,7 @@ import { useCards } from '../hooks/useCards';
 import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { CubeStats } from '../components/cube/CubeStats';
+import { DraftCanvasView } from '../components/canvas';
 import { draftService, clearLastSession } from '../services/draftService';
 import { cubeService } from '../services/cubeService';
 import { useGameConfig } from '../context/GameContext';
@@ -1260,6 +1261,9 @@ export function AuctionDraft() {
                         return rest;
                       });
                     }}
+                    showViewToggle={!!gameConfig.pileViewConfig}
+                    viewMode={myCardsFilters.viewMode}
+                    onViewModeChange={myCardsFilters.setViewMode}
                   />
 
                   {/* Stats filters row - show active non-archetype filters */}
@@ -1307,23 +1311,39 @@ export function AuctionDraft() {
               {/* Content */}
               <div className="flex-1 overflow-y-auto overscroll-contain p-2 pb-8 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {draftedCards.length > 0 ? (
-                  /* Cards grid - smaller cards for more visibility */
                   filteredDraftedCards.length > 0 ? (
-                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14">
-                      {filteredDraftedCards.map((card, index) => (
-                        <div
-                          key={card.id}
-                          onClick={() => setMobileViewCard(card)}
-                          className={`cursor-pointer active:scale-95 transition-all ${
-                            index === myCardsSelectedIndex
-                              ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-darker rounded-lg z-10'
-                              : ''
-                          }`}
-                        >
-                          <YuGiOhCard card={card} size="full" showTier={showScores} flush />
-                        </div>
-                      ))}
-                    </div>
+                    myCardsFilters.viewMode === 'pile' ? (
+                      /* Canvas view - freeform drag-and-drop organization */
+                      <DraftCanvasView
+                        sessionId={sessionId || 'auction-draft'}
+                        draftedCards={draftedCards}
+                        pileGroups={gameConfig.pileViewConfig?.groups}
+                        showTier={showScores}
+                        onCardClick={(card) => setMobileViewCard(card)}
+                        selectedCardId={mobileViewCard?.id}
+                        searchQuery={myCardsFilters.filterState.search}
+                        sortBy={myCardsFilters.sortState.sortBy}
+                        sortDirection={myCardsFilters.sortState.sortDirection}
+                        keyboardEnabled={!mobileViewCard}
+                      />
+                    ) : (
+                      /* Cards grid - smaller cards for more visibility */
+                      <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14">
+                        {filteredDraftedCards.map((card, index) => (
+                          <div
+                            key={card.id}
+                            onClick={() => setMobileViewCard(card)}
+                            className={`cursor-pointer active:scale-95 transition-all ${
+                              index === myCardsSelectedIndex
+                                ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-darker rounded-lg z-10'
+                                : ''
+                            }`}
+                          >
+                            <YuGiOhCard card={card} size="full" showTier={showScores} flush />
+                          </div>
+                        ))}
+                      </div>
+                    )
                   ) : (
                     <div className="h-40 flex items-center justify-center text-gray-500">
                       No cards match your filter
