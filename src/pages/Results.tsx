@@ -458,6 +458,28 @@ export function Results() {
     return [...cardsWithSynergy, ...basicCards];
   }, [mainDeckCardsWithoutBasics, basicResourceCards, allCardSynergiesForFilter]);
 
+  // Expanded basic resources for canvas view - each count becomes a separate card
+  // Uses unique IDs like "plains-1", "plains-2" to distinguish copies
+  const expandedBasicResourceCards = useMemo(() => {
+    if (!gameConfig.basicResources) return [];
+
+    const cards: YuGiOhCardType[] = [];
+    gameConfig.basicResources.forEach(resource => {
+      const count = basicResourceCounts.get(resource.id) || 0;
+      for (let i = 0; i < count; i++) {
+        cards.push({
+          id: `${resource.id}-${i}` as unknown as number, // Unique ID for each copy
+          name: resource.name,
+          type: resource.type,
+          desc: resource.description,
+          imageUrl: resource.imageUrl,
+          attributes: resource.attributes || {},
+        } as YuGiOhCardType);
+      }
+    });
+    return cards;
+  }, [gameConfig.basicResources, basicResourceCounts]);
+
   // Combined array of all zone cards for keyboard navigation
   const allZoneCards = useMemo(() => {
     return [
@@ -2051,7 +2073,7 @@ ${sideDeck}
                 key={canvasVersion}
                 sessionId={sessionId || 'results'}
                 gameConfig={gameConfig}
-                mainDeckCards={mainDeckCards.filter(c => !c.isBasicResource).map(c => c.card)}
+                mainDeckCards={[...mainDeckCards.filter(c => !c.isBasicResource).map(c => c.card), ...expandedBasicResourceCards]}
                 extraDeckCards={extraDeckCards.map(c => c.card)}
                 sideDeckCards={sideDeckCards.map(c => c.card)}
                 poolCards={poolCards.map(c => c.card)}
