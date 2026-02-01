@@ -93,7 +93,6 @@ export function DraftCanvasView({
       cardSize: isMobile ? 'compact' : 'normal',
       canvasWidth: 800,
       zoneIds: ['main'],
-      isMobile,
     });
   }, [cardsWithIds, pileGroups, isMobile]);
 

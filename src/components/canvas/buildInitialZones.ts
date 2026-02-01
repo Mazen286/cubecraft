@@ -28,8 +28,6 @@ export interface BuildInitialZonesOptions {
   canvasWidth?: number;
   /** Zones to create */
   zoneIds?: string[];
-  /** Whether on mobile (tighter spacing) */
-  isMobile?: boolean;
 }
 
 /**
@@ -56,8 +54,7 @@ function calculateStackHeight(cardCount: number, cardSize: CardSize): number {
 function calculateGridPositions(
   cardCounts: number[],
   cardSize: CardSize,
-  canvasWidth: number,
-  isMobile: boolean = false
+  canvasWidth: number
 ): Array<{ x: number; y: number }> {
   const dims = STACK_DIMENSIONS[cardSize];
   // No spacing - stacks are directly adjacent
@@ -111,7 +108,6 @@ export function buildInitialZones({
   cardSize = 'normal',
   canvasWidth = 800,
   zoneIds = ['main', 'extra', 'side'],
-  isMobile = false,
 }: BuildInitialZonesOptions): ZoneCanvas[] {
   // Create zone structures
   const zones = new Map<string, ZoneCanvas>();
@@ -216,7 +212,7 @@ export function buildInitialZones({
     for (const [zoneId, stacks] of stacksPerZone) {
       // Get card counts for each stack to calculate proper heights
       const cardCounts = stacks.map(s => s.cardIds.length);
-      const positions = calculateGridPositions(cardCounts, cardSize, canvasWidth, isMobile);
+      const positions = calculateGridPositions(cardCounts, cardSize, canvasWidth);
       for (let i = 0; i < stacks.length; i++) {
         stacks[i].position = positions[i] || { x: 0, y: 0 };
       }
@@ -265,7 +261,6 @@ export function buildYuGiOhZones({
   pileGroups,
   cardSize = 'normal',
   canvasWidth = 800,
-  isMobile = false,
 }: {
   mainDeckCards: CardWithId[];
   extraDeckCards: CardWithId[];
@@ -273,7 +268,6 @@ export function buildYuGiOhZones({
   pileGroups?: PileGroup[];
   cardSize?: CardSize;
   canvasWidth?: number;
-  isMobile?: boolean;
 }): ZoneCanvas[] {
   // Create zone assignments
   const zoneAssignments = new Map<string | number, string>();
@@ -290,6 +284,5 @@ export function buildYuGiOhZones({
     cardSize,
     canvasWidth,
     zoneIds: ['main', 'extra', 'side'],
-    isMobile,
   });
 }

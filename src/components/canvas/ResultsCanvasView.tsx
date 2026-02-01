@@ -143,7 +143,6 @@ export function ResultsCanvasView({
       cardSize: isMobile ? 'compact' : 'normal',
       canvasWidth: 800,
       zoneIds: availableZoneIds,
-      isMobile,
     });
   }, [cardsWithIds, zoneAssignments, pileGroups, allCards.length, availableZoneIds, isMobile]);
 
