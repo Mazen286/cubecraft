@@ -1,0 +1,703 @@
+/**
+ * CanvasMode - Main container for the freeform canvas card organization
+ *
+ * Replaces StackablePileView with a true freeform canvas where stacks
+ * can be positioned anywhere with collision detection.
+ */
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  TouchSensor,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragMoveEvent,
+  pointerWithin,
+} from '@dnd-kit/core';
+import { GameCard } from '../cards/GameCard';
+import { cn } from '../../lib/utils';
+import { ZoneCanvas } from './ZoneCanvas';
+import { CanvasToolbar } from './CanvasToolbar';
+import { SelectionActionBar } from './SelectionActionBar';
+import { MiniMap } from './MiniMap';
+import { useCanvasState } from './hooks/useCanvasState';
+import { useCanvasKeyboardNavigation } from './hooks/useCanvasKeyboardNavigation';
+import type { ZoneCanvas as ZoneCanvasType, DragData } from './types';
+import { STACK_DIMENSIONS, CARD_DIMENSIONS } from './types';
+import type { Card } from '../../types/card';
+
+export interface CanvasModeProps {
+  /** Storage key for persistence */
+  storageKey: string;
+  /** Initial zones configuration */
+  initialZones: ZoneCanvasType[];
+  /** Function to get card data by ID */
+  getCardData: (cardId: string | number) => Card | null;
+  /** Labels for zones */
+  zoneLabels: Record<string, string>;
+  /** Whether to show tier badges on cards */
+  showTier?: boolean;
+  /** Currently selected card ID */
+  selectedCardId?: string | number;
+  /** Highlighted card ID (from search/filter) */
+  highlightedCardId?: string | number;
+  /** Search query for highlighting matching cards */
+  searchQuery?: string;
+  /** Sort configuration for cards within stacks */
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  /** Called when a card is clicked */
+  onCardClick?: (cardId: string | number, card: Card) => void;
+  /** Called when layout changes (for external sync) */
+  onLayoutChange?: (zones: ZoneCanvasType[]) => void;
+  /** Validates/redirects zone moves. Return the zone to use, or false to block entirely. */
+  validateZoneMove?: (cardId: string | number, fromZone: string, toZone: string) => string | false;
+  /** External card-to-zone assignments - source of truth for zone membership */
+  cardZoneAssignments?: Map<string | number, string>;
+  /** Additional class name */
+  className?: string;
+}
+
+export function CanvasMode({
+  storageKey,
+  initialZones,
+  getCardData,
+  zoneLabels,
+  showTier = true,
+  selectedCardId,
+  highlightedCardId,
+  searchQuery,
+  sortBy = 'none',
+  sortDirection = 'desc',
+  onCardClick,
+  onLayoutChange,
+  validateZoneMove,
+  cardZoneAssignments,
+  className,
+}: CanvasModeProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Main canvas state
+  const {
+    zones,
+    cardSize,
+    canUndo,
+    canRedo,
+    snapToGrid,
+    zoom,
+    setSnapToGrid,
+    setZoom,
+    selectedCardIds,
+    selectCard,
+    selectCardRange,
+    clearSelection,
+    setZoneCollapsed,
+    moveStack,
+    deleteStack,
+    renameStack,
+    mergeStacks,
+    setStackCollapsed,
+    moveCardToStack,
+    moveCardToNewStack,
+    moveSelectedToStack,
+    moveSelectedToNewStack,
+    deleteSelectedCards,
+    setStackColor,
+    setCardSize,
+    undo,
+    redo,
+    resetLayout,
+    exportLayout,
+    importLayout,
+    repositionOffscreenStacks,
+    autoLayout,
+    findStackById,
+  } = useCanvasState({
+    storageKey,
+    initialZones,
+    canvasWidth: containerRef.current?.clientWidth || 800,
+    cardZoneAssignments,
+  });
+
+  // MiniMap visibility
+  const [miniMapVisible, setMiniMapVisible] = useState(true);
+
+  // Track scroll and viewport for minimap
+  const [viewport, setViewport] = useState({
+    scrollLeft: 0,
+    scrollTop: 0,
+    clientWidth: 800,
+    clientHeight: 600,
+  });
+
+  // Calculate canvas bounds from zones
+  const canvasBounds = useCallback(() => {
+    let maxX = 800;
+    let maxY = 400;
+    for (const zone of zones) {
+      for (const stack of zone.stacks) {
+        maxX = Math.max(maxX, stack.position.x + 200);
+        maxY = Math.max(maxY, stack.position.y + 300);
+      }
+    }
+    return { width: maxX, height: maxY };
+  }, [zones]);
+
+  // Handle jump to position from minimap
+  const handleJumpTo = useCallback((x: number, y: number) => {
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ left: x, top: y, behavior: 'smooth' });
+    }
+  }, []);
+
+  // Update viewport on scroll
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateViewport = () => {
+      setViewport({
+        scrollLeft: container.scrollLeft,
+        scrollTop: container.scrollTop,
+        clientWidth: container.clientWidth,
+        clientHeight: container.clientHeight,
+      });
+    };
+
+    updateViewport();
+    container.addEventListener('scroll', updateViewport);
+    window.addEventListener('resize', updateViewport);
+
+    return () => {
+      container.removeEventListener('scroll', updateViewport);
+      window.removeEventListener('resize', updateViewport);
+    };
+  }, []);
+
+  // Reposition stacks on resize to keep them visible
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        repositionOffscreenStacks(containerRef.current.clientWidth);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [repositionOffscreenStacks]);
+
+  // Keyboard navigation
+  const {
+    navState,
+    setFocus,
+  } = useCanvasKeyboardNavigation({
+    zones,
+    enabled: true,
+    onCardSelect: (cardId, card) => {
+      if (card) {
+        onCardClick?.(cardId, card);
+      }
+    },
+    onStackDelete: (stackId) => {
+      deleteStack(stackId);
+    },
+    onClearSelection: () => {
+      clearSelection();
+    },
+    getCardData,
+  });
+
+  // Track active drag for drop handling
+  const [activeDrag, setActiveDrag] = useState<{
+    type: 'stack' | 'card';
+    data: DragData;
+  } | null>(null);
+
+  // Track pointer position during drag for accurate drop placement
+  const pointerPositionRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Configure sensors - lower distance for more responsive drag start
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 3 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 100, tolerance: 5 },
+    })
+  );
+
+
+
+
+  // Notify parent of layout changes
+  useEffect(() => {
+    onLayoutChange?.(zones);
+  }, [zones, onLayoutChange]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  // Handle drag start
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    const data = active.data.current as DragData;
+    setActiveDrag({ type: data.type as 'stack' | 'card', data });
+    // Reset pointer position at drag start
+    pointerPositionRef.current = null;
+  }, []);
+
+  // Handle drag move to track pointer position for accurate drop placement
+  const handleDragMove = useCallback((event: DragMoveEvent) => {
+    // Get the pointer position from the activator event
+    const activatorEvent = event.activatorEvent;
+    if (activatorEvent instanceof PointerEvent || activatorEvent instanceof MouseEvent) {
+      // Calculate current position: initial position + delta
+      pointerPositionRef.current = {
+        x: activatorEvent.clientX + event.delta.x,
+        y: activatorEvent.clientY + event.delta.y,
+      };
+    }
+  }, []);
+
+  // Handle drag over (for hover effects)
+  const handleDragOver = useCallback((_event: DragOverEvent) => {
+    // Could track hover state here for ghost preview
+  }, []);
+
+  // Helper to find zone for a stack
+  const findZoneForStack = useCallback((stackId: string): string | null => {
+    for (const zone of zones) {
+      if (zone.stacks.some(s => s.id === stackId)) {
+        return zone.zoneId;
+      }
+    }
+    return null;
+  }, [zones]);
+
+  // Helper to get validated zone (handles redirects)
+  const getValidatedZone = useCallback((cardId: string | number, fromZone: string, toZone: string): string | false => {
+    if (fromZone === toZone) return toZone;
+    if (!validateZoneMove) return toZone;
+    return validateZoneMove(cardId, fromZone, toZone);
+  }, [validateZoneMove]);
+
+  // Handle drag end
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over, delta } = event;
+
+    if (!activeDrag) return;
+
+    const activeData = active.data.current as DragData;
+
+    // Stack drag
+    if (activeData.type === 'stack' && activeData.stackId) {
+      const stackResult = findStackById(activeData.stackId);
+      if (!stackResult) return;
+
+      // Check if dropped on another stack (merge)
+      if (over?.data.current?.type === 'stack') {
+        const targetStackId = over.data.current.stackId as string;
+        if (targetStackId !== activeData.stackId) {
+          // Validate zone move if merging into a stack in a different zone
+          const targetZone = findZoneForStack(targetStackId);
+          if (targetZone && targetZone !== activeData.zoneId) {
+            // For stacks, all cards must be able to go to the same zone (no mixed redirects)
+            const validatedZones = stackResult.stack.cardIds.map(cardId =>
+              getValidatedZone(cardId, activeData.zoneId, targetZone)
+            );
+            // Block if any card is blocked or would redirect differently
+            if (validatedZones.some(z => z === false) ||
+                validatedZones.some(z => z !== targetZone)) {
+              setActiveDrag(null);
+              pointerPositionRef.current = null;
+              return;
+            }
+          }
+          mergeStacks(activeData.stackId, targetStackId);
+        }
+      } else {
+        // Determine target zone
+        let targetZoneId = over?.data.current?.zoneId || activeData.zoneId;
+
+        // Validate zone move if moving to a different zone
+        const isMovingToNewZone = targetZoneId !== activeData.zoneId;
+        if (isMovingToNewZone) {
+          const validatedZones = stackResult.stack.cardIds.map(cardId =>
+            getValidatedZone(cardId, activeData.zoneId, targetZoneId)
+          );
+          // Block if any card is blocked or would redirect differently
+          if (validatedZones.some(z => z === false) ||
+              new Set(validatedZones).size > 1) {
+            setActiveDrag(null);
+            pointerPositionRef.current = null;
+            return;
+          }
+          // Use the validated zone (all cards redirect to same zone)
+          if (validatedZones[0] && validatedZones[0] !== targetZoneId) {
+            targetZoneId = validatedZones[0];
+          }
+        }
+
+        // Calculate new position
+        let newPosition: { x: number; y: number };
+
+        if (isMovingToNewZone) {
+          // Cross-zone drop: use pointer position relative to target zone
+          const zoneElement = document.getElementById(`zone-${targetZoneId}`);
+          const pointerPos = pointerPositionRef.current;
+
+          if (pointerPos && zoneElement) {
+            const zoneRect = zoneElement.getBoundingClientRect();
+            // Account for zoom level - positions inside zone are in unscaled coordinates
+            newPosition = {
+              x: Math.max(8, (pointerPos.x - zoneRect.left) / zoom - STACK_DIMENSIONS[cardSize].width / 2),
+              y: Math.max(8, (pointerPos.y - zoneRect.top) / zoom - STACK_DIMENSIONS[cardSize].headerHeight / 2),
+            };
+          } else {
+            // Fallback: place at default position
+            newPosition = { x: 8, y: 8 };
+          }
+        } else {
+          // Same-zone move: use original position + drag delta
+          newPosition = {
+            x: Math.max(0, stackResult.stack.position.x + delta.x),
+            y: Math.max(0, stackResult.stack.position.y + delta.y),
+          };
+        }
+
+        moveStack(activeData.stackId, targetZoneId, newPosition);
+      }
+    }
+
+    // Card drag
+    if (activeData.type === 'card' && activeData.cardId !== undefined && activeData.stackId) {
+      if (!over) {
+        // Dropped in whitespace - create new stack at drop position (same zone)
+        const sourceStack = findStackById(activeData.stackId);
+        const cardIndex = sourceStack?.stack.cardIds.indexOf(activeData.cardId) ?? 0;
+
+        const startX = sourceStack?.stack.position.x ?? 0;
+        const startY = (sourceStack?.stack.position.y ?? 0) +
+          STACK_DIMENSIONS[cardSize].headerHeight +
+          cardIndex * STACK_DIMENSIONS[cardSize].cardOffset;
+
+        moveCardToNewStack(
+          activeData.cardId,
+          activeData.stackId,
+          activeData.zoneId,
+          { x: Math.max(0, startX + delta.x), y: Math.max(0, startY + delta.y) }
+        );
+      } else if (over.data.current?.type === 'stack') {
+        // Dropped on a stack - move to that stack
+        const targetStackId = over.data.current.stackId as string;
+        if (targetStackId !== activeData.stackId) {
+          // Validate zone move if dropping into a stack in a different zone
+          const targetZone = findZoneForStack(targetStackId);
+          if (targetZone && targetZone !== activeData.zoneId) {
+            const validatedZone = getValidatedZone(activeData.cardId, activeData.zoneId, targetZone);
+            if (validatedZone === false) {
+              setActiveDrag(null);
+              pointerPositionRef.current = null;
+              return;
+            }
+            // If redirected to a different zone, create new stack there instead
+            if (validatedZone !== targetZone) {
+              moveCardToNewStack(
+                activeData.cardId,
+                activeData.stackId,
+                validatedZone,
+                { x: 8, y: 8 }
+              );
+              setActiveDrag(null);
+              pointerPositionRef.current = null;
+              return;
+            }
+          }
+          moveCardToStack(activeData.cardId, activeData.stackId, targetStackId);
+        }
+      } else if (over.data.current?.type === 'zone-whitespace') {
+        // Dropped on zone whitespace - create new stack
+        let finalZoneId = over.data.current.zoneId as string;
+
+        // Validate and potentially redirect zone move
+        if (finalZoneId !== activeData.zoneId) {
+          const validatedZone = getValidatedZone(activeData.cardId, activeData.zoneId, finalZoneId);
+          if (validatedZone === false) {
+            setActiveDrag(null);
+            pointerPositionRef.current = null;
+            return;
+          }
+          finalZoneId = validatedZone;
+        }
+
+        // Get the zone element to calculate position relative to it
+        const zoneElement = document.getElementById(`zone-${finalZoneId}`);
+        const pointerPos = pointerPositionRef.current;
+
+        let dropPosition: { x: number; y: number };
+
+        if (pointerPos && zoneElement) {
+          // Use actual pointer position relative to the target zone
+          const zoneRect = zoneElement.getBoundingClientRect();
+          // Account for zoom level - positions inside zone are in unscaled coordinates
+          dropPosition = {
+            x: Math.max(8, (pointerPos.x - zoneRect.left) / zoom - CARD_DIMENSIONS[cardSize].width / 2),
+            y: Math.max(8, (pointerPos.y - zoneRect.top) / zoom - CARD_DIMENSIONS[cardSize].height / 2),
+          };
+        } else {
+          // Fallback: use original position + delta method
+          const sourceStack = findStackById(activeData.stackId);
+          const cardIndex = sourceStack?.stack.cardIds.indexOf(activeData.cardId) ?? 0;
+          const startX = sourceStack?.stack.position.x ?? 0;
+          const startY = (sourceStack?.stack.position.y ?? 0) +
+            STACK_DIMENSIONS[cardSize].headerHeight +
+            cardIndex * STACK_DIMENSIONS[cardSize].cardOffset;
+          dropPosition = {
+            x: Math.max(0, startX + delta.x),
+            y: Math.max(0, startY + delta.y),
+          };
+        }
+
+        moveCardToNewStack(
+          activeData.cardId,
+          activeData.stackId,
+          finalZoneId,
+          dropPosition
+        );
+      }
+    }
+
+    setActiveDrag(null);
+    pointerPositionRef.current = null;
+  }, [activeDrag, findStackById, findZoneForStack, getValidatedZone, moveStack, mergeStacks, moveCardToStack, moveCardToNewStack, cardSize, zoom]);
+
+  // Handle reset layout
+  const handleResetLayout = useCallback(() => {
+    resetLayout(initialZones);
+  }, [resetLayout, initialZones]);
+
+  // Handle card click with selection support
+  const handleCardClick = useCallback((cardId: string | number, card: Card, e?: React.MouseEvent) => {
+    // Handle multi-select with modifier keys
+    if (e?.shiftKey) {
+      // Shift+click: range select within current stack
+      const stackResult = zones.flatMap(z => z.stacks).find(s => s.cardIds.includes(cardId));
+      if (stackResult && navState.focusedStackId) {
+        const focusedStack = zones.flatMap(z => z.stacks).find(s => s.id === navState.focusedStackId);
+        if (focusedStack && focusedStack.id === stackResult.id) {
+          const focusedCardId = focusedStack.cardIds[navState.focusedCardIndex];
+          if (focusedCardId !== undefined) {
+            selectCardRange(focusedCardId, cardId, stackResult.id);
+            return;
+          }
+        }
+      }
+      selectCard(cardId, 'add');
+    } else if (e?.ctrlKey || e?.metaKey) {
+      // Ctrl/Cmd+click: toggle individual selection
+      selectCard(cardId, 'toggle');
+    } else {
+      // Normal click: clear selection and select single
+      clearSelection();
+      // Also set focus for keyboard navigation
+      const stack = zones.flatMap(z => z.stacks).find(s => s.cardIds.includes(cardId));
+      if (stack) {
+        const cardIndex = stack.cardIds.indexOf(cardId);
+        setFocus(stack.id, cardIndex);
+      }
+      // Call the external click handler
+      onCardClick?.(cardId, card);
+    }
+  }, [zones, navState, selectCard, selectCardRange, clearSelection, setFocus, onCardClick]);
+
+  // Get all stacks for selection action bar
+  const allStacks = zones.flatMap(zone => zone.stacks);
+
+  // Handle move to stack from selection bar
+  const handleMoveSelectedToStack = useCallback((stackId: string) => {
+    moveSelectedToStack(stackId);
+  }, [moveSelectedToStack]);
+
+  // Handle create new stack from selection
+  const handleCreateNewStackFromSelection = useCallback(() => {
+    const firstZone = zones[0];
+    if (firstZone) {
+      // Calculate a reasonable position for the new stack
+      const existingStacks = firstZone.stacks;
+      const maxX = existingStacks.length > 0
+        ? Math.max(...existingStacks.map(s => s.position.x)) + 150
+        : 8;
+      moveSelectedToNewStack(firstZone.zoneId, { x: maxX, y: 8 });
+    }
+  }, [zones, moveSelectedToNewStack]);
+
+  return (
+    <div ref={containerRef} className={cn('flex flex-col gap-4', className)}>
+      {/* Toolbar */}
+      <CanvasToolbar
+        cardSize={cardSize}
+        onCardSizeChange={setCardSize}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+        onResetLayout={handleResetLayout}
+        onAutoLayout={() => autoLayout(containerRef.current?.clientWidth || 800)}
+        snapToGrid={snapToGrid}
+        onSnapToGridChange={setSnapToGrid}
+        zoom={zoom}
+        onZoomChange={setZoom}
+        onExportLayout={exportLayout}
+        onImportLayout={importLayout}
+      />
+
+      {/* DnD Context */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        {/* Zones */}
+        {zones.map(zone => (
+          <ZoneCanvas
+            key={zone.zoneId}
+            zone={zone}
+            cardSize={cardSize}
+            showTier={showTier}
+            selectedCardId={selectedCardId}
+            highlightedCardId={highlightedCardId}
+            searchQuery={searchQuery}
+            multiSelectCardIds={selectedCardIds}
+            focusedStackId={navState.focusedStackId}
+            focusedCardIndex={navState.focusedCardIndex}
+            zoom={zoom}
+            showGrid={snapToGrid}
+            gridSize={20}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            getCardData={getCardData}
+            onZoneCollapsedChange={(collapsed) => setZoneCollapsed(zone.zoneId, collapsed)}
+            onStackMove={(stackId, position) => moveStack(stackId, zone.zoneId, position)}
+            onStackRename={renameStack}
+            onStackCollapsedChange={setStackCollapsed}
+            onStackDelete={deleteStack}
+            onStackColorChange={setStackColor}
+            onCardClick={handleCardClick}
+            label={zoneLabels[zone.zoneId] || zone.zoneId}
+          />
+        ))}
+
+        {/* DragOverlay shows a preview of the dragged item floating above everything */}
+        <DragOverlay dropAnimation={null}>
+          {activeDrag?.type === 'card' && activeDrag.data.card && (
+            <div
+              className="pointer-events-none opacity-90 shadow-2xl ring-2 ring-gold-400 rounded-lg"
+              style={{
+                width: CARD_DIMENSIONS[cardSize].width,
+                height: CARD_DIMENSIONS[cardSize].height,
+              }}
+            >
+              <GameCard
+                card={activeDrag.data.card}
+                size="full"
+                showTier={showTier}
+                flush
+              />
+            </div>
+          )}
+          {activeDrag?.type === 'stack' && activeDrag.data.stackId && (() => {
+            const stackResult = findStackById(activeDrag.data.stackId);
+            if (!stackResult) return null;
+            const { stack } = stackResult;
+            const maxCardsToShow = 5;
+            const cardIds = stack.cardIds.slice(0, maxCardsToShow);
+            const remainingCount = stack.cardIds.length - maxCardsToShow;
+
+            return (
+              <div
+                className="pointer-events-none opacity-90 shadow-2xl"
+                style={{ width: STACK_DIMENSIONS[cardSize].width }}
+              >
+                {/* Stack header */}
+                <div className="bg-yugi-card border border-yugi-border rounded-t-lg px-2 py-1 flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-300 truncate">
+                    {stack.name || 'Stack'}
+                  </span>
+                  <span className="text-xs text-gray-500">{stack.cardIds.length}</span>
+                </div>
+                {/* Cards preview */}
+                <div className="relative bg-yugi-darker/50 rounded-b-lg overflow-hidden border-x border-b border-yugi-border">
+                  {cardIds.map((cardId, idx) => {
+                    const card = getCardData(cardId);
+                    if (!card) return null;
+                    return (
+                      <div
+                        key={cardId}
+                        className="relative"
+                        style={{
+                          marginTop: idx === 0 ? 0 : -CARD_DIMENSIONS[cardSize].height + STACK_DIMENSIONS[cardSize].cardOffset,
+                          zIndex: idx,
+                        }}
+                      >
+                        <GameCard card={card} size="full" showTier={showTier} flush />
+                      </div>
+                    );
+                  })}
+                  {remainingCount > 0 && (
+                    <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                      +{remainingCount} more
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Selection Action Bar */}
+      <SelectionActionBar
+        selectedCount={selectedCardIds.size}
+        availableStacks={allStacks}
+        onMoveToStack={handleMoveSelectedToStack}
+        onCreateNewStack={handleCreateNewStackFromSelection}
+        onDeleteSelected={deleteSelectedCards}
+        onClearSelection={clearSelection}
+      />
+
+      {/* MiniMap */}
+      <MiniMap
+        zones={zones}
+        viewport={viewport}
+        canvasBounds={canvasBounds()}
+        onJumpTo={handleJumpTo}
+        isVisible={miniMapVisible}
+        onToggleVisibility={() => setMiniMapVisible(!miniMapVisible)}
+      />
+    </div>
+  );
+}
+
+export default CanvasMode;

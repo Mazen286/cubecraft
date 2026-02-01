@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layers, Pause, ChevronDown, ChevronUp, ArrowRight, X, SortAsc, SortDesc, PanelBottomOpen, PanelBottomClose, Lightbulb, Sparkles } from 'lucide-react';
+import { Layers, Pause, ChevronDown, ChevronUp, ChevronRight, ArrowRight, X, SortAsc, SortDesc, PanelBottomOpen, PanelBottomClose, Lightbulb, Sparkles } from 'lucide-react';
 import { useCardFilters } from '../hooks/useCardFilters';
 import { CardFilterBar } from '../components/filters/CardFilterBar';
 import { CubeStats } from '../components/cube/CubeStats';
@@ -10,7 +10,8 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useToast } from '../components/ui/Toast';
 import { YuGiOhCard } from '../components/cards/YuGiOhCard';
 import { CardDetailSheet } from '../components/cards/CardDetailSheet';
-import { StackablePileView } from '../components/cards/StackablePileView';
+// StackablePileView replaced by DraftCanvasView
+import { DraftCanvasView } from '../components/canvas';
 import { type YuGiOhCard as YuGiOhCardType, type CubeSynergies, type SynergyResult, toCardWithAttributes } from '../types';
 import { formatTime, getTierFromScore, cn } from '../lib/utils';
 import { useDraftSession } from '../hooks/useDraftSession';
@@ -155,6 +156,12 @@ export function Draft() {
   const [myCardsInline, setMyCardsInline] = useState(false); // Toggle between drawer and inline view
   const [focusedSection, setFocusedSection] = useState<'pack' | 'myCards'>('pack'); // Which section has keyboard focus when inline
 
+  // Collapsible drawer sections state
+  const [drawerSectionsCollapsed, setDrawerSectionsCollapsed] = useState({
+    filters: false,
+    cubeStats: true, // Collapsed by default to save space
+  });
+
   // Refs for cross-section highlight management (to avoid closure issues)
   const clearPackHighlightRef = useRef<() => void>(() => {});
   const clearMyCardsHighlightRef = useRef<() => void>(() => {});
@@ -230,65 +237,7 @@ export function Draft() {
     }
   }, [sessionId, customStacks]);
 
-  // Custom stack management functions
-  const deleteCustomStack = useCallback((stackId: string) => {
-    setCustomStacks(prev => prev.filter(s => s.id !== stackId));
-  }, []);
-
-  const renameCustomStack = useCallback((stackId: string, newName: string) => {
-    setCustomStacks(prev => prev.map(s => s.id === stackId ? { ...s, name: newName } : s));
-  }, []);
-
-  const moveCardToStack = useCallback((cardIndex: number, stackId: string) => {
-    setCustomStacks(prev => prev.map(s => ({
-      ...s,
-      cardIndices: s.id === stackId
-        ? [...s.cardIndices.filter(i => i !== cardIndex), cardIndex]
-        : s.cardIndices.filter(i => i !== cardIndex),
-    })));
-  }, []);
-
-  const mergeStacks = useCallback((sourceStackId: string, targetStackId: string) => {
-    setCustomStacks(prev => {
-      const sourceStack = prev.find(s => s.id === sourceStackId);
-      if (!sourceStack) return prev;
-      return prev
-        .map(s => s.id === targetStackId
-          ? { ...s, cardIndices: [...s.cardIndices, ...sourceStack.cardIndices] }
-          : s
-        )
-        .filter(s => s.id !== sourceStackId);
-    });
-  }, []);
-
-  // Create a new stack at a specific position (for insertion between stacks)
-  const createStackAtPosition = useCallback((name: string, cardIndex: number, position: number): string => {
-    const id = `stack-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    setCustomStacks(prev => {
-      // Remove card from any existing stack
-      let cleanedStacks = prev.map(s => ({
-        ...s,
-        cardIndices: s.cardIndices.filter(i => i !== cardIndex),
-      }));
-
-      // Insert new stack at position
-      const newStack = { id, name, cardIndices: [cardIndex] };
-      cleanedStacks.splice(position, 0, newStack);
-
-      return cleanedStacks;
-    });
-
-    return id;
-  }, []);
-
-  // Convert drafted cards to the format expected by StackablePileView
-  const stackableCards = useMemo(() => {
-    return draftedCards.map((card, index) => ({
-      card: toCardWithAttributes(card),
-      index,
-    }));
-  }, [draftedCards]);
+  // Note: Custom stack management moved to useCanvasState in CanvasMode
 
 
   // Initialize custom stacks from default pile groups
@@ -2010,26 +1959,21 @@ export function Draft() {
                 {draftedCards.length > 0 ? (
                   filteredDraftedCards.length > 0 ? (
                     myCardsFilters.viewMode === 'pile' ? (
-                      /* Pile view - uses shared StackablePileView component */
-                      <StackablePileView
-                        stacks={customStacks}
-                        cards={stackableCards}
-                        onDeleteStack={deleteCustomStack}
-                        onRenameStack={renameCustomStack}
-                        onMoveCardToStack={moveCardToStack}
-                        onMergeStacks={mergeStacks}
-                        onCreateStackAtPosition={createStackAtPosition}
-                        onCardClick={(_card, index) => {
-                          if (myCardsInline) setFocusedSection('myCards');
-                          handleMyCardsCardClick(draftedCards[index], index);
-                        }}
-                        selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
-                        highlightedIndex={myCardsHighlightedIndex}
+                      /* Canvas view - freeform drag-and-drop organization */
+                      <DraftCanvasView
+                        sessionId={sessionId || 'draft'}
+                        draftedCards={draftedCards}
+                        pileGroups={gameConfig.pileViewConfig?.groups}
                         showTier={showScores}
-                        showInsertionIndicators={true}
-                        onDragStartCard={() => {}}
-                        zoneId="my-cards"
-                        className="flex flex-wrap gap-4 items-start"
+                        onCardClick={(card, index) => {
+                          if (myCardsInline) setFocusedSection('myCards');
+                          handleMyCardsCardClick(card, index);
+                        }}
+                        selectedCardId={mobileViewCard?.id}
+                        highlightedIndex={myCardsHighlightedIndex}
+                        searchQuery={myCardsFilters.filterState.search}
+                        sortBy={myCardsFilters.sortState.sortBy}
+                        sortDirection={myCardsFilters.sortState.sortDirection}
                       />
                     ) : (
                       <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16">
@@ -2147,7 +2091,7 @@ export function Draft() {
               setShowMobileCards(false); // Close drawer when switching to inline
             }
           }}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-full shadow-lg transition-all bg-yugi-card hover:bg-yugi-dark border border-yugi-border text-gray-300 hover:text-white"
+          className="fixed bottom-20 right-52 z-40 flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-full shadow-lg transition-all bg-yugi-card hover:bg-yugi-dark border border-yugi-border text-gray-300 hover:text-white"
           title={myCardsInline ? 'Show My Cards in drawer' : 'Show My Cards below pack'}
         >
           {myCardsInline ? (
@@ -2198,19 +2142,17 @@ export function Draft() {
                 </button>
               </div>
 
-              {/* Stats and Filters */}
+              {/* Stats and Filters - Collapsible Section */}
               {draftedCards.length > 0 && (
-                <div className="px-4 py-3 border-b border-yugi-border flex-shrink-0 space-y-3">
-                  {/* Stats Toggle & Summary */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => setShowMyCardsStats(!showMyCardsStats)}
-                        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-                      >
-                        {showMyCardsStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        <span>Build Stats</span>
-                      </button>
+                <div className="border-b border-yugi-border flex-shrink-0">
+                  {/* Section Header - Always visible */}
+                  <button
+                    onClick={() => setDrawerSectionsCollapsed(prev => ({ ...prev, filters: !prev.filters }))}
+                    className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                      {drawerSectionsCollapsed.filters ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      <span>Stats & Filters</span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
                       <span>Main: <span className="text-white font-medium">{myCardsStats.mainDeck}</span></span>
@@ -2218,6 +2160,22 @@ export function Draft() {
                       {!session?.hide_scores && (
                         <span>Avg: <span className="text-gold-400 font-medium">{myCardsStats.avgScore}</span></span>
                       )}
+                    </div>
+                  </button>
+
+                  {/* Collapsible Content */}
+                  {!drawerSectionsCollapsed.filters && (
+                    <div className="px-4 pb-3 space-y-3">
+                  {/* Stats Toggle & Summary */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMyCardsStats(!showMyCardsStats); }}
+                        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                      >
+                        {showMyCardsStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        <span>Build Stats</span>
+                      </button>
                     </div>
                   </div>
 
@@ -2366,17 +2324,38 @@ export function Draft() {
                       </button>
                     </div>
                   )}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Cube Statistics Dashboard */}
+              {/* Cube Statistics Dashboard - Collapsible Section */}
               {draftedCards.length > 0 && (
-                <CubeStats
-                  cards={draftedCardsAsGeneric}
-                  filteredCards={filteredDraftedCardsAsGeneric}
-                  onFilterClick={handleMyCardsStatsFilterClick}
-                  activeFilters={myCardsStatsFilters}
-                />
+                <div className="border-b border-yugi-border flex-shrink-0">
+                  {/* Section Header */}
+                  <button
+                    onClick={() => setDrawerSectionsCollapsed(prev => ({ ...prev, cubeStats: !prev.cubeStats }))}
+                    className="w-full flex items-center justify-between px-4 py-2 hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                      {drawerSectionsCollapsed.cubeStats ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      <span>Cube Statistics</span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {draftedCards.length} cards analyzed
+                    </span>
+                  </button>
+
+                  {/* Collapsible Content */}
+                  {!drawerSectionsCollapsed.cubeStats && (
+                    <CubeStats
+                      cards={draftedCardsAsGeneric}
+                      filteredCards={filteredDraftedCardsAsGeneric}
+                      onFilterClick={handleMyCardsStatsFilterClick}
+                      activeFilters={myCardsStatsFilters}
+                    />
+                  )}
+                </div>
               )}
 
               {/* Content - with proper touch scrolling */}
@@ -2384,23 +2363,18 @@ export function Draft() {
                 {draftedCards.length > 0 ? (
                   filteredDraftedCards.length > 0 ? (
                     myCardsFilters.viewMode === 'pile' ? (
-                      /* Pile view - uses shared StackablePileView component */
-                      <StackablePileView
-                        stacks={customStacks}
-                        cards={stackableCards}
-                        onDeleteStack={deleteCustomStack}
-                        onRenameStack={renameCustomStack}
-                        onMoveCardToStack={moveCardToStack}
-                        onMergeStacks={mergeStacks}
-                        onCreateStackAtPosition={createStackAtPosition}
-                        onCardClick={(_card, index) => handleMyCardsCardClick(draftedCards[index], index)}
-                        selectedIndex={mobileViewCard ? draftedCards.findIndex(c => c.id === mobileViewCard.id) : undefined}
-                        highlightedIndex={myCardsHighlightedIndex}
+                      /* Canvas view - freeform drag-and-drop organization */
+                      <DraftCanvasView
+                        sessionId={sessionId || 'draft'}
+                        draftedCards={draftedCards}
+                        pileGroups={gameConfig.pileViewConfig?.groups}
                         showTier={showScores}
-                        showInsertionIndicators={true}
-                        onDragStartCard={() => {}}
-                        zoneId="my-cards-drawer"
-                        className="flex flex-wrap gap-4 items-start"
+                        onCardClick={(card, index) => handleMyCardsCardClick(card, index)}
+                        selectedCardId={mobileViewCard?.id}
+                        highlightedIndex={myCardsHighlightedIndex}
+                        searchQuery={myCardsFilters.filterState.search}
+                        sortBy={myCardsFilters.sortState.sortBy}
+                        sortDirection={myCardsFilters.sortState.sortDirection}
                       />
                     ) : (
                       /* Grid view - smaller cards for more visibility */

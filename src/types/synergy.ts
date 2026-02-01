@@ -23,6 +23,8 @@ export interface SynergyTrigger {
   maxLevel?: number;
   /** Card type category (e.g., "Spell Card", "Trap Card") */
   cardType?: string;
+  /** Exclude cards containing this in their type (e.g., "Spirit" to exclude Spirit monsters) */
+  notCardType?: string;
   /** Maximum ATK value (for recruiters like Giant Rat) */
   maxAtk?: number;
   /** Minimum ATK value (for Deck Devastation Virus, etc.) */
@@ -61,6 +63,8 @@ export interface SynergyBoost {
   maxLevel?: number;
   /** Boost all cards of this card type category */
   cardType?: string;
+  /** Exclude cards containing this in their type (e.g., "Spirit" to exclude Spirit monsters) */
+  notCardType?: string;
   /** Maximum ATK value (for recruiters) */
   maxAtk?: number;
   /** Minimum ATK value (for Deck Devastation Virus tribute, etc.) */

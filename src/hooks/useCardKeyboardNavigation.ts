@@ -177,7 +177,6 @@ export function useCardKeyboardNavigation<T>({
           e.preventDefault();
           if (isSheetOpen) {
             closeSheet();
-            return; // Just close sheet, don't navigate
           }
 
           if (pileNavigation && pileNavigation.piles.length > 0) {
@@ -208,7 +207,6 @@ export function useCardKeyboardNavigation<T>({
           e.preventDefault();
           if (isSheetOpen) {
             closeSheet();
-            return; // Just close sheet, don't navigate
           }
 
           if (pileNavigation && pileNavigation.piles.length > 0) {
@@ -240,7 +238,6 @@ export function useCardKeyboardNavigation<T>({
           e.preventDefault();
           if (isSheetOpen) {
             closeSheet();
-            return; // Just close sheet, don't navigate
           }
 
           if (pileNavigation && pileNavigation.piles.length > 0) {
@@ -282,7 +279,6 @@ export function useCardKeyboardNavigation<T>({
           e.preventDefault();
           if (isSheetOpen) {
             closeSheet();
-            return; // Just close sheet, don't navigate
           }
 
           if (pileNavigation && pileNavigation.piles.length > 0) {

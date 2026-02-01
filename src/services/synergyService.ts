@@ -100,6 +100,9 @@ function cardMatchesTrigger(card: YuGiOhCard, trigger: SynergyTrigger): boolean 
   if (trigger.cardType && !card.type.toLowerCase().includes(trigger.cardType.toLowerCase())) {
     return false;
   }
+  if (trigger.notCardType && card.type.toLowerCase().includes(trigger.notCardType.toLowerCase())) {
+    return false;
+  }
   if (trigger.maxAtk !== undefined && (card.atk === undefined || card.atk > trigger.maxAtk)) {
     return false;
   }
@@ -169,6 +172,10 @@ function cardMatchesBoost(card: YuGiOhCard, boost: SynergyBoost): boolean {
   if (boost.cardType !== undefined) {
     hasCondition = true;
     if (!card.type.toLowerCase().includes(boost.cardType.toLowerCase())) matches = false;
+  }
+  if (boost.notCardType !== undefined) {
+    hasCondition = true;
+    if (card.type.toLowerCase().includes(boost.notCardType.toLowerCase())) matches = false;
   }
   if (boost.maxAtk !== undefined) {
     hasCondition = true;
