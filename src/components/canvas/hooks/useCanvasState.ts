@@ -866,8 +866,8 @@ export function useCanvasState({
   const autoLayout = useCallback((containerWidth: number = 800) => {
     const stackDims = STACK_DIMENSIONS[cardSize];
     const cardDims = CARD_DIMENSIONS[cardSize];
-    // Minimal spacing on mobile (4px), normal spacing on desktop (24px)
-    const stackPadding = isMobile ? 4 : 24;
+    // No spacing on mobile, normal spacing on desktop (24px)
+    const stackPadding = isMobile ? 0 : 24;
     const stackWidth = stackDims.width + stackPadding;
 
     const columns = Math.max(1, Math.floor(containerWidth / stackWidth) || 1);
