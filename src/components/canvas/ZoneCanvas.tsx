@@ -151,7 +151,9 @@ export function ZoneCanvas({
   useEffect(() => {
     if (zone.collapsed) return;
 
-    let maxY = isMobile ? 150 : 200; // Smaller min on mobile
+    // Start with viewport-filling height on desktop (matches minHeight in style)
+    const viewportBasedHeight = typeof window !== 'undefined' ? window.innerHeight - 350 : 600;
+    let maxY = isMobile ? 150 : Math.max(viewportBasedHeight, 400);
     for (const stack of zone.stacks) {
       const cards = resolveStackCards(stack);
       const visibleCards = stack.collapsed ? 0 : Math.min(cards.length, dims.maxVisibleCards);
@@ -204,15 +206,14 @@ export function ZoneCanvas({
             setNodeRef(node);
           }}
           className={cn(
-            'relative overflow-y-auto overflow-x-hidden',
+            'relative overflow-x-hidden',
             'bg-yugi-dark/50 border border-yugi-border rounded-b-lg',
-            'transition-colors',
-            'touch-pan-y overscroll-contain'  // Better touch handling
+            'transition-colors'
           )}
           style={{
-            minHeight: isMobile ? 150 : 200,
+            // No scroll - canvas expands naturally and page scrolls
+            minHeight: isMobile ? 150 : 'calc(100vh - 350px)',
             height: canvasHeight * zoom,
-            maxHeight: isMobile ? 'calc(100vh - 200px)' : 600,  // Dynamic on mobile
           }}
         >
           {/* Grid overlay when snap is enabled - very subtle */}

@@ -920,6 +920,9 @@ export function Draft() {
       startTime = pickStartedAt;
     }
 
+    // Track when we first hit zero to detect stuck state
+    let hitZeroAt: number | null = null;
+
     // Timer function that calculates remaining time from server timestamp
     // This keeps all clients in sync regardless of when they joined or local clock differences
     const updateTimer = () => {
@@ -933,10 +936,24 @@ export function Draft() {
 
       setTimeRemaining(remaining);
 
-      // NOTE: Client-side auto-pick has been DISABLED to fix race conditions.
-      // The server-side checkAndAutoPickTimedOut (called every 5 seconds) handles
-      // auto-picks with fresh database data, avoiding stale React state issues.
-      // See: auto-pick-race-condition fix
+      // When timer hits 0, trigger immediate timeout check and set up failsafe refresh
+      if (remaining === 0) {
+        if (!hitZeroAt) {
+          hitZeroAt = Date.now();
+          // Immediately trigger server-side timeout check
+          checkTimeouts().catch(() => {});
+        } else {
+          // If we've been at 0 for more than 8 seconds, force refresh as failsafe
+          // (gives time for server auto-pick + realtime update)
+          const stuckDuration = Date.now() - hitZeroAt;
+          if (stuckDuration > 8000) {
+            console.log('[Draft] Timer stuck at 0 for 8+ seconds, forcing refresh');
+            window.location.reload();
+          }
+        }
+      } else {
+        hitZeroAt = null; // Reset if timer is no longer at 0
+      }
     };
 
     // Initial update
@@ -950,7 +967,7 @@ export function Draft() {
         clearInterval(timerRef.current);
       }
     };
-  }, [session?.status, session?.timer_seconds, session?.current_pack, session?.current_pick, session?.paused, session?.pick_started_at, session?.resume_at, session?.time_remaining_at_pause, packReady, resumeCountdown]);
+  }, [session?.status, session?.timer_seconds, session?.current_pack, session?.current_pick, session?.paused, session?.pick_started_at, session?.resume_at, session?.time_remaining_at_pause, packReady, resumeCountdown, checkTimeouts]);
 
   const handlePickCard = useCallback(
     async (card: YuGiOhCardType, wasAutoPick = false) => {
@@ -1165,15 +1182,27 @@ export function Draft() {
     setPackHighlightedIndex(Math.min(lastRowStart, sortedPackCards.length - 1));
   };
 
-  // Get column count for My Cards drawer (responsive)
+  // Get column count for My Cards grid (responsive) - must match grid-cols-* classes
+  // Drawer and inline have different column counts
   const getMyCardsColumnCount = useCallback(() => {
     const width = window.innerWidth;
-    if (width >= 1280) return 12; // xl
-    if (width >= 1024) return 10; // lg
-    if (width >= 768) return 8;   // md
-    if (width >= 640) return 6;   // sm
-    return 5;                      // default
-  }, []);
+    if (showMobileCards) {
+      // Drawer: grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12
+      if (width >= 1280) return 12; // xl
+      if (width >= 1024) return 10; // lg
+      if (width >= 768) return 8;   // md
+      if (width >= 640) return 6;   // sm
+      return 5;                      // default
+    } else {
+      // Inline: grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16
+      if (width >= 1536) return 16; // 2xl
+      if (width >= 1280) return 14; // xl
+      if (width >= 1024) return 12; // lg
+      if (width >= 768) return 10;  // md
+      if (width >= 640) return 8;   // sm
+      return 6;                      // default
+    }
+  }, [showMobileCards]);
 
   // Callback to close My Cards drawer
   const closeMyCardsDrawer = useCallback(() => {
@@ -1195,7 +1224,7 @@ export function Draft() {
   } = useCardKeyboardNavigation({
     cards: myCardsForNavigation,
     columns: getMyCardsColumnCount,
-    enabled: showMobileCards || (myCardsInline && focusedSection === 'myCards'),
+    enabled: (showMobileCards || (myCardsInline && focusedSection === 'myCards')) && myCardsFilters.viewMode !== 'pile',
     // Space/Enter with sheet open closes the drawer (only if drawer mode)
     onSelect: () => {
       if (showMobileCards) {
@@ -1682,7 +1711,10 @@ export function Draft() {
                         size="full"
                         isSelected={selectedCard?.id === card.id}
                         isHighlighted={highlightedIndex === index}
-                        onClick={() => handleCardClick(card, index)}
+                        onClick={() => {
+                          if (myCardsInline) setFocusedSection('pack');
+                          handleCardClick(card, index);
+                        }}
                         showTier={showScores}
                         flush
                         draggable={!hasPicked}
@@ -1966,7 +1998,7 @@ export function Draft() {
               )}
 
               {/* Cards Grid/Pile/Custom Stacks */}
-              <div className="p-4 max-h-[40vh] overflow-y-auto custom-scrollbar">
+              <div className="p-4">
                 {draftedCards.length > 0 ? (
                   filteredDraftedCards.length > 0 ? (
                     myCardsFilters.viewMode === 'pile' ? (
@@ -1985,7 +2017,7 @@ export function Draft() {
                         searchQuery={myCardsFilters.filterState.search}
                         sortBy={myCardsFilters.sortState.sortBy}
                         sortDirection={myCardsFilters.sortState.sortDirection}
-                        keyboardEnabled={!mobileViewCard}
+                        keyboardEnabled={focusedSection === 'myCards' && !mobileViewCard}
                       />
                     ) : (
                       <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16">

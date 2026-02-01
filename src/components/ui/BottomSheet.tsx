@@ -45,14 +45,20 @@ export function BottomSheet({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Keys that SHOULD dismiss the sheet (navigation/interaction keys)
-      const dismissKeys = ['Escape', 'Enter', ' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+      // Keys that SHOULD dismiss the sheet (navigation keys only)
+      // Note: Space/Enter are NOT included - they're selection keys handled by parent
+      const dismissKeys = ['Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
       // Close on Escape, or navigation keys if dismissOnAnyKey is enabled
       if (e.key === 'Escape' || (dismissOnAnyKey && dismissKeys.includes(e.key))) {
         e.stopPropagation();
         e.preventDefault();
         onClose();
+        return;
+      }
+
+      // Let Space/Enter propagate to parent handlers (for card selection)
+      if (e.key === ' ' || e.key === 'Enter') {
         return;
       }
 

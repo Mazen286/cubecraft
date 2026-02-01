@@ -106,9 +106,9 @@ export type DropTargetType = 'stack' | 'zone-whitespace' | 'zone';
  * Dimensions for card sizes
  */
 export const CARD_DIMENSIONS: Record<CardSize, { width: number; height: number }> = {
-  compact: { width: 60, height: 88 },
-  normal: { width: 80, height: 117 },
-  large: { width: 100, height: 146 },
+  compact: { width: 90, height: 132 },
+  normal: { width: 120, height: 176 },
+  large: { width: 150, height: 219 },
 };
 
 /**
@@ -120,9 +120,9 @@ export const STACK_DIMENSIONS: Record<CardSize, {
   cardOffset: number;
   maxVisibleCards: number;
 }> = {
-  compact: { width: 70, headerHeight: 24, cardOffset: 20, maxVisibleCards: 6 },
-  normal: { width: 90, headerHeight: 28, cardOffset: 24, maxVisibleCards: 5 },
-  large: { width: 110, headerHeight: 32, cardOffset: 28, maxVisibleCards: 4 },
+  compact: { width: 105, headerHeight: 36, cardOffset: 30, maxVisibleCards: 6 },
+  normal: { width: 135, headerHeight: 42, cardOffset: 36, maxVisibleCards: 5 },
+  large: { width: 165, headerHeight: 48, cardOffset: 42, maxVisibleCards: 4 },
 };
 
 /**

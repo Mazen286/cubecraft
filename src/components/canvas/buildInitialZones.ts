@@ -45,7 +45,7 @@ function calculateStackHeight(cardCount: number, cardSize: CardSize): number {
   const cardsHeight = cardDims.height + (visibleCards - 1) * stackDims.cardOffset;
   const hasMoreBadge = cardCount > stackDims.maxVisibleCards ? 24 : 0;
 
-  return stackDims.headerHeight + cardsHeight + hasMoreBadge + 24; // Extra padding between rows
+  return stackDims.headerHeight + cardsHeight + hasMoreBadge + 56; // Extra padding to show next row's header/expand button
 }
 
 /**
@@ -60,7 +60,8 @@ function calculateGridPositions(
   // No spacing - stacks are directly adjacent
   const stackWidth = dims.width;
 
-  const columns = Math.floor(canvasWidth / stackWidth) || 1;
+  // Account for padding (8px on each side) when calculating columns
+  const columns = Math.floor((canvasWidth - 16) / stackWidth) || 1;
   const positions: Array<{ x: number; y: number }> = [];
 
   // Group stacks into rows

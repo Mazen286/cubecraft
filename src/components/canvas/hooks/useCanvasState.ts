@@ -213,6 +213,92 @@ export function useCanvasState({
     }, 100);
   }, [storageKey, cardZoneAssignments, initialZones]);
 
+  // Detect and add new cards that aren't in current zones (optimistic updates)
+  // This runs when initialZones changes (e.g., new card picked) and merges new cards
+  // without disrupting existing layout
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    if (initialZones.length === 0) return;
+
+    // Get all card IDs that should be in zones (from initialZones)
+    const expectedCardIds: (string | number)[] = [];
+    for (const zone of initialZones) {
+      for (const stack of zone.stacks) {
+        for (const cardId of stack.cardIds) {
+          expectedCardIds.push(cardId);
+        }
+      }
+    }
+
+    if (expectedCardIds.length === 0) return;
+
+    // Use setZones callback to get current state and avoid stale closure
+    setZones(prev => {
+      // Get all card IDs currently in zones
+      const existingCardIds = new Set<string | number>();
+      for (const zone of prev) {
+        for (const stack of zone.stacks) {
+          for (const cardId of stack.cardIds) {
+            existingCardIds.add(cardId);
+          }
+        }
+      }
+
+      // Find new cards that need to be added
+      const newCardIds = expectedCardIds.filter(id => !existingCardIds.has(id));
+
+      if (newCardIds.length === 0) return prev; // No changes needed
+
+      console.log('[CanvasState] Adding new cards to canvas:', newCardIds);
+
+      if (prev.length === 0) return initialZones;
+
+      const firstZone = prev[0];
+
+      // Find or create "Unsorted" stack
+      const unsortedStack = firstZone.stacks.find(s => s.name === 'Unsorted');
+
+      if (unsortedStack) {
+        // Add to existing Unsorted stack
+        return prev.map((zone, idx) => {
+          if (idx !== 0) return zone;
+          return {
+            ...zone,
+            stacks: zone.stacks.map(stack => {
+              if (stack.name === 'Unsorted') {
+                return { ...stack, cardIds: [...stack.cardIds, ...newCardIds] };
+              }
+              return stack;
+            }),
+          };
+        });
+      } else {
+        // Create new Unsorted stack at the end
+        const existingStacks = firstZone.stacks;
+        const lastStack = existingStacks[existingStacks.length - 1];
+        const newX = lastStack
+          ? lastStack.position.x + STACK_DIMENSIONS[cardSize].width + 8
+          : 8;
+
+        const newStack: CanvasStack = {
+          id: generateStackId(),
+          name: 'Unsorted',
+          cardIds: newCardIds,
+          position: { x: newX, y: 8 },
+          collapsed: false,
+        };
+
+        return prev.map((zone, idx) => {
+          if (idx !== 0) return zone;
+          return {
+            ...zone,
+            stacks: [...zone.stacks, newStack],
+          };
+        });
+      }
+    });
+  }, [initialZones, cardSize]);
+
   // Save to localStorage on changes - include zone signature for validation
   useEffect(() => {
     if (zones.length === 0) return;
@@ -869,7 +955,8 @@ export function useCanvasState({
     // No spacing - stacks are directly adjacent
     const stackWidth = stackDims.width;
 
-    const columns = Math.max(1, Math.floor(containerWidth / stackWidth) || 1);
+    // Account for padding (8px on each side) when calculating columns
+    const columns = Math.max(1, Math.floor((containerWidth - 16) / stackWidth) || 1);
 
     // Calculate stack height based on card count (same as buildInitialZones)
     const calculateStackHeight = (cardCount: number): number => {
@@ -879,7 +966,7 @@ export function useCanvasState({
       const visibleCards = Math.min(cardCount, stackDims.maxVisibleCards);
       const cardsHeight = cardDims.height + (visibleCards - 1) * stackDims.cardOffset;
       const hasMoreBadge = cardCount > stackDims.maxVisibleCards ? 24 : 0;
-      return stackDims.headerHeight + cardsHeight + hasMoreBadge + 24; // Extra padding between rows
+      return stackDims.headerHeight + cardsHeight + hasMoreBadge + 56; // Extra padding to show next row's header/expand button
     };
 
     setZones(prev => {

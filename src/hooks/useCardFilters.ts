@@ -1,5 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useGameConfig } from '../context/GameContext';
+import { useIsMobile } from './useIsMobile';
 import type { Card } from '../types/card';
 import { getTierFromScore } from '../lib/utils';
 
@@ -113,6 +114,14 @@ export function useCardFilters(options: UseCardFiltersOptions = {}): UseCardFilt
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
+
+  // Auto-switch to grid mode on mobile (canvas mode doesn't work well on small screens)
+  const isMobile = useIsMobile();
+  useEffect(() => {
+    if (isMobile && viewMode === 'pile') {
+      setViewMode('grid');
+    }
+  }, [isMobile, viewMode]);
 
   // Toggle tier in filter
   const toggleTier = useCallback((tier: Tier) => {

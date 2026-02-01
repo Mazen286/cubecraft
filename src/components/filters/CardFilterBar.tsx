@@ -6,6 +6,7 @@ import type { Card } from '../../types/card';
 import { cn } from '../../lib/utils';
 import { ArchetypeFilter } from './ArchetypeFilter';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 /**
  * Tier colors for filter pills (matches utils.ts TIER_COLORS)
@@ -118,6 +119,7 @@ export function CardFilterBar({
 }: CardFilterBarProps) {
   const { gameConfig } = useGameConfig();
   const [showAdvancedPanel, setShowAdvancedPanel] = useState(false);
+  const isMobile = useIsMobile();
 
   const {
     filterState,
@@ -248,8 +250,8 @@ export function CardFilterBar({
 
         {/* View Toggle and Sort */}
         <div className="flex items-center gap-2 ml-auto">
-          {/* View Mode Toggle - only show if game has pile view config and showViewToggle is true */}
-          {showViewToggle && gameConfig.pileViewConfig && onViewModeChange && (
+          {/* View Mode Toggle - only show if game has pile view config, showViewToggle is true, and not on mobile */}
+          {showViewToggle && !isMobile && gameConfig.pileViewConfig && onViewModeChange && (
             <div className="flex items-center border border-yugi-border rounded-lg overflow-hidden">
               <button
                 onClick={() => onViewModeChange('grid')}

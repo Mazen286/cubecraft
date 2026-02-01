@@ -574,7 +574,7 @@ export function CanvasMode({
       ref={containerRef}
       className={cn(
         'flex flex-col gap-4',
-        'overflow-x-hidden overscroll-contain',  // Prevent horizontal scroll
+        'overflow-x-hidden',  // Prevent horizontal scroll only
         className
       )}
     >

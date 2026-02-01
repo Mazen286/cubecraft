@@ -390,28 +390,6 @@
       "maxBonus": 12
     },
     {
-      "id": "mathematician-targets",
-      "name": "Mathematician Targets",
-      "category": "combo",
-      "description": "Mathematician can send Level 4 or lower monsters to the GY",
-      "trigger": { "cardName": "Mathematician" },
-      "boost": { "and": [{ "maxLevel": 4 }, { "mainDeckOnly": true }, { "excludeCards": ["Mathematician"] }] },
-      "bonus": 3,
-      "bonusType": "flat"
-    },
-    {
-      "id": "mathematician-enabler",
-      "name": "Mathematician",
-      "category": "combo",
-      "description": "Level 4 or lower monsters make Mathematician valuable",
-      "trigger": { "and": [{ "maxLevel": 4 }, { "mainDeckOnly": true }, { "excludeCards": ["Mathematician"] }] },
-      "boost": { "cardName": "Mathematician" },
-      "bonus": 2,
-      "bonusType": "flat",
-      "scaling": true,
-      "maxBonus": 8
-    },
-    {
       "id": "rota-targets",
       "name": "Reinforcement of the Army Targets",
       "category": "recruiter",

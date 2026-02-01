@@ -334,7 +334,7 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
     }
   }, [session]);
 
-  // Make a pick
+  // Make a pick (optimistic update - card appears immediately, DB confirms in background)
   const makePick = useCallback(
     async (cardId: number, pickTimeSeconds: number = 0, wasAutoPick: boolean = false): Promise<void> => {
       if (!session || !currentPlayer) return;
@@ -342,11 +342,15 @@ export function useDraftSession(sessionId?: string): UseDraftSessionReturn {
       setIsLoading(true);
       setError(null);
 
+      // Optimistic update - add card immediately before DB call
+      setDraftedCardIds((prev) => prev.includes(cardId) ? prev : [...prev, cardId]);
+
       try {
         await draftService.makePick(session.id, currentPlayer.id, cardId, pickTimeSeconds, wasAutoPick);
-        // Add card to drafted list, ensuring no duplicates
-        setDraftedCardIds((prev) => prev.includes(cardId) ? prev : [...prev, cardId]);
+        // DB confirmed - card is already in the list
       } catch (err) {
+        // Rollback optimistic update on failure
+        setDraftedCardIds((prev) => prev.filter(id => id !== cardId));
         const message = err instanceof Error ? err.message : 'Failed to make pick';
         setError(message);
         throw err;
