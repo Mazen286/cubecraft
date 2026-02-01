@@ -168,14 +168,15 @@ const AVAILABLE_CUBES: CubeInfo[] = [
     gameId: 'mtg',
     source: 'local',
   },
-  {
-    id: 'mtg-starter',
-    name: 'Planeswalker\'s Vault',
-    description: 'Powered cube with the complete Power Nine and iconic Magic cards across all colors.',
-    cardCount: 367,
-    gameId: 'mtg',
-    source: 'local',
-  },
+  // Disabled for now - keeping code in place
+  // {
+  //   id: 'mtg-starter',
+  //   name: 'Planeswalker\'s Vault',
+  //   description: 'Powered cube with the complete Power Nine and iconic Magic cards across all colors.',
+  //   cardCount: 367,
+  //   gameId: 'mtg',
+  //   source: 'local',
+  // },
   // Pokemon Cubes
   {
     id: 'pokemon-starter',
