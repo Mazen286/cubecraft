@@ -199,43 +199,41 @@ export function CanvasToolbar({
         </>
       )}
 
-      {/* Auto Layout (Tidy) - DESKTOP ONLY */}
-      {!isMobile && onAutoLayout && (
+      {/* Auto Layout (Tidy) */}
+      {onAutoLayout && (
         <>
           <div className="w-px h-6 bg-yugi-border" />
           <button
             onClick={onAutoLayout}
             className={cn(
-              'flex items-center gap-1.5 px-2 py-1 rounded',
+              'flex items-center gap-1.5 rounded',
+              isMobile ? 'p-1.5' : 'px-2 py-1',
               'text-xs text-gray-300 hover:text-white',
               'hover:bg-white/10 transition-colors'
             )}
             title="Auto-arrange stacks in a neat grid"
           >
             <LayoutGrid className="w-3.5 h-3.5" />
-            Tidy
+            {!isMobile && 'Tidy'}
           </button>
         </>
       )}
 
-      {/* Reset Layout - DESKTOP ONLY */}
-      {!isMobile && (
-        <>
-          <div className="w-px h-6 bg-yugi-border" />
-          <button
-            onClick={onResetLayout}
-            className={cn(
-              'flex items-center gap-1.5 px-2 py-1 rounded',
-              'text-xs text-gray-300 hover:text-white',
-              'hover:bg-white/10 transition-colors'
-            )}
-            title="Reset to auto-categorized layout"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset
-          </button>
-        </>
-      )}
+      {/* Reset Layout */}
+      <div className="w-px h-6 bg-yugi-border" />
+      <button
+        onClick={onResetLayout}
+        className={cn(
+          'flex items-center gap-1.5 rounded',
+          isMobile ? 'p-1.5' : 'px-2 py-1',
+          'text-xs text-gray-300 hover:text-white',
+          'hover:bg-white/10 transition-colors'
+        )}
+        title="Reset to auto-categorized layout"
+      >
+        <RotateCcw className="w-3.5 h-3.5" />
+        {!isMobile && 'Reset'}
+      </button>
     </div>
   );
 }
