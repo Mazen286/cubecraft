@@ -377,15 +377,15 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center md:p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center md:p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/90 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal - full screen on mobile, contained on desktop */}
-      <div className="relative w-full md:max-w-6xl h-full md:h-auto md:max-h-[90vh] bg-yugi-darker md:rounded-xl border-t md:border border-yugi-border shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative w-full md:max-w-6xl h-full md:h-auto md:max-h-[90vh] bg-yugi-darker md:rounded-xl md:border border-yugi-border shadow-2xl flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] md:pt-0">
         {/* Header - compact on mobile */}
         <div className="flex items-center justify-between p-2 md:p-4 border-b border-yugi-border flex-shrink-0">
           <div className="min-w-0 flex-1">
@@ -482,7 +482,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4" />
               <span>Filters & Search</span>
-              {(filters.searchQuery || filters.typeFilter !== 'all' || filters.selectedTiers.size > 0) && (
+              {(filters.filterState.search || filters.filterState.typeFilter !== 'all' || filters.filterState.tierFilter.length > 0) && (
                 <span className="px-1.5 py-0.5 bg-gold-500/20 text-gold-400 text-xs rounded">
                   Active
                 </span>
@@ -554,6 +554,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
               </button>
             </div>
           )}
+          </div>
         </div>
 
         {/* Cube Statistics Dashboard */}
