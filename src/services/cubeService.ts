@@ -19,6 +19,7 @@ export interface CubeInfo {
   source: 'local' | 'database';  // Where the cube is stored
   creatorId?: string;  // User who created the cube (for database cubes)
   isPublic?: boolean;  // Whether the cube is publicly visible
+  featuredCardIds?: number[];  // Card IDs to show as featured preview (up to 4)
 }
 
 /**
@@ -150,6 +151,8 @@ const AVAILABLE_CUBES: CubeInfo[] = [
     cardCount: 1020,
     gameId: 'yugioh',
     source: 'local',
+    // Featured: Time Thief Redoer, Maliss White Rabbit, Dark Magician of Chaos, Tempest Magician
+    featuredCardIds: [55285840, 69272449, 40737112, 63101919],
   },
   // MTG Cubes
   {
@@ -159,6 +162,8 @@ const AVAILABLE_CUBES: CubeInfo[] = [
     cardCount: 540,
     gameId: 'mtg',
     source: 'local',
+    // Featured: Black Lotus, Ancestral Recall, Time Walk, Mox Sapphire
+    featuredCardIds: [336, 88, 115, 349],
   },
   {
     id: 'arena-powered-cube',
@@ -167,6 +172,8 @@ const AVAILABLE_CUBES: CubeInfo[] = [
     cardCount: 540,
     gameId: 'mtg',
     source: 'local',
+    // Featured: Black Lotus, Ancestral Recall, Time Walk, Jace the Mind Sculptor
+    featuredCardIds: [332, 91, 117, 89],
   },
   // Disabled for now - keeping code in place
   // {
@@ -185,6 +192,8 @@ const AVAILABLE_CUBES: CubeInfo[] = [
     cardCount: 180,
     gameId: 'pokemon',
     source: 'local',
+    // Featured: Charizard, Pikachu, Mewtwo, Blastoise
+    featuredCardIds: [3, 36, 32, 6],
   },
 ];
 

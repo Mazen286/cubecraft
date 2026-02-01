@@ -34,21 +34,35 @@ export function CubePreviewCard({ cube }: CubePreviewCardProps) {
         const cubeData = await cubeService.loadAnyCube(cube.id);
         if (cancelled) return;
 
-        // Get top 4 cards by score, or random 4 if no scores
         const cards = [...cubeData.cards];
-        const hasScores = cards.some(c => c.score !== undefined);
-
         let topCards: YuGiOhCard[];
-        if (hasScores) {
-          // Sort by score descending and take top 4
-          topCards = cards
-            .filter(c => c.score !== undefined)
-            .sort((a, b) => (b.score || 0) - (a.score || 0))
+
+        // Use manually specified featured cards if provided
+        if (cube.featuredCardIds && cube.featuredCardIds.length > 0) {
+          topCards = cube.featuredCardIds
+            .map(id => cards.find(c => c.id === id))
+            .filter((c): c is YuGiOhCard => c !== undefined)
             .slice(0, 4);
         } else {
-          // Random 4 cards
-          const shuffled = cards.sort(() => Math.random() - 0.5);
-          topCards = shuffled.slice(0, 4);
+          // Fallback: Get top 4 cards by score, or random 4 if no scores
+          const hasScores = cards.some(c => c.score !== undefined);
+
+          if (hasScores) {
+            // Sort by score descending and take top 4
+            topCards = cards
+              .filter(c => c.score !== undefined)
+              .sort((a, b) => (b.score || 0) - (a.score || 0))
+              .slice(0, 4);
+          } else {
+            // Random 4 cards (use seeded random based on cube id for consistency)
+            const seed = cube.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+            const shuffled = [...cards].sort((a, b) => {
+              const hashA = (a.id * seed) % 1000;
+              const hashB = (b.id * seed) % 1000;
+              return hashA - hashB;
+            });
+            topCards = shuffled.slice(0, 4);
+          }
         }
 
         setPreviewCards(topCards);
@@ -63,7 +77,7 @@ export function CubePreviewCard({ cube }: CubePreviewCardProps) {
 
     loadPreviewCards();
     return () => { cancelled = true; };
-  }, [cube.id]);
+  }, [cube.id, cube.featuredCardIds]);
 
   const handleDraftNow = () => {
     navigate(`/setup?cube=${cube.id}`);
