@@ -150,10 +150,21 @@
     },
     "8": {
       "id": 8,
-      "name": "Ajani, Nacatl Pariah",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Ajani, Nacatl Pariah // Ajani, Nacatl Avenger",
+      "type": "Legendary Creature — Cat Warrior // Legendary Planeswalker — Ajani",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/0/d/0d16e8e0-31b2-4389-afd6-783c501f6fa0.jpg?1738269605",
+      "attributes": {
+        "cmc": 2,
+        "colorIdentity": [
+          "R",
+          "W"
+        ],
+        "rarity": "mythic",
+        "setCode": "mh3",
+        "collectorNumber": "237",
+        "scryfallId": "0d16e8e0-31b2-4389-afd6-783c501f6fa0"
+      }
     },
     "9": {
       "id": 9,
@@ -601,10 +612,20 @@
     },
     "29": {
       "id": 29,
-      "name": "Dion, Bahamut's Dominant",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Dion, Bahamut's Dominant // Bahamut, Warden of Light",
+      "type": "Legendary Creature — Human Noble Knight // Legendary Enchantment Creature — Saga Dragon",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/8/c/8c0f9306-2058-476d-a711-bd37a6e15e42.jpg?1748707801",
+      "attributes": {
+        "cmc": 4,
+        "colorIdentity": [
+          "W"
+        ],
+        "rarity": "rare",
+        "setCode": "fin",
+        "collectorNumber": "16",
+        "scryfallId": "8c0f9306-2058-476d-a711-bd37a6e15e42"
+      }
     },
     "30": {
       "id": 30,
@@ -1294,17 +1315,41 @@
     },
     "62": {
       "id": 62,
-      "name": "The Legend of Yangchen",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "The Legend of Yangchen // Avatar Yangchen",
+      "type": "Enchantment — Saga // Legendary Creature — Avatar",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/a/6/a60e8f23-90b2-4bc6-bd54-a95055556389.jpg?1764120067",
+      "attributes": {
+        "cmc": 5,
+        "colorIdentity": [
+          "W"
+        ],
+        "rarity": "mythic",
+        "setCode": "tla",
+        "collectorNumber": "27",
+        "scryfallId": "a60e8f23-90b2-4bc6-bd54-a95055556389"
+      }
     },
     "63": {
       "id": 63,
-      "name": "Virtue of Loyalty",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Virtue of Loyalty // Ardenvale Fealty",
+      "type": "Enchantment // Instant — Adventure",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/e/a/ea7e7daf-7c06-4c74-8bcf-e42c1f611861.jpg?1692936837",
+      "attributes": {
+        "manaCost": "{3}{W}{W} // {1}{W}",
+        "cmc": 5,
+        "colors": [
+          "W"
+        ],
+        "colorIdentity": [
+          "W"
+        ],
+        "rarity": "mythic",
+        "setCode": "woe",
+        "collectorNumber": "38",
+        "scryfallId": "ea7e7daf-7c06-4c74-8bcf-e42c1f611861"
+      }
     },
     "64": {
       "id": 64,
@@ -1329,10 +1374,21 @@
     },
     "65": {
       "id": 65,
-      "name": "Tamiyo, Inquisitive Student",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar",
+      "type": "Legendary Creature — Moonfolk Wizard // Legendary Planeswalker — Tamiyo",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/2/a/2a717b98-cdac-416d-bf6c-f6b6638e65d1.jpg?1748260594",
+      "attributes": {
+        "cmc": 1,
+        "colorIdentity": [
+          "G",
+          "U"
+        ],
+        "rarity": "mythic",
+        "setCode": "mh3",
+        "collectorNumber": "242",
+        "scryfallId": "2a717b98-cdac-416d-bf6c-f6b6638e65d1"
+      }
     },
     "66": {
       "id": 66,
@@ -1366,10 +1422,20 @@
     },
     "68": {
       "id": 68,
-      "name": "Jace, Vryn's Prodigy",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Jace, Vryn's Prodigy // Jace, Telepath Unbound",
+      "type": "Legendary Creature — Human Wizard // Legendary Planeswalker — Jace",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1651492800",
+      "attributes": {
+        "cmc": 2,
+        "colorIdentity": [
+          "U"
+        ],
+        "rarity": "mythic",
+        "setCode": "ori",
+        "collectorNumber": "60",
+        "scryfallId": "02d6d693-f1f3-4317-bcc0-c21fa8490d38"
+      }
     },
     "69": {
       "id": 69,
@@ -1534,10 +1600,26 @@
     },
     "76": {
       "id": 76,
-      "name": "Brazen Borrower",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Brazen Borrower // Petty Theft",
+      "type": "Creature — Faerie Rogue // Instant — Adventure",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/c/2/c2089ec9-0665-448f-bfe9-d181de127814.jpg?1616182088",
+      "attributes": {
+        "manaCost": "{1}{U}{U} // {1}{U}",
+        "cmc": 3,
+        "colors": [
+          "U"
+        ],
+        "colorIdentity": [
+          "U"
+        ],
+        "power": "3",
+        "toughness": "1",
+        "rarity": "mythic",
+        "setCode": "eld",
+        "collectorNumber": "39",
+        "scryfallId": "c2089ec9-0665-448f-bfe9-d181de127814"
+      }
     },
     "77": {
       "id": 77,
@@ -2719,10 +2801,20 @@
     },
     "132": {
       "id": 132,
-      "name": "Concealing Curtains",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Concealing Curtains // Revealing Eye",
+      "type": "Creature — Wall // Creature — Eye Horror",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/6/1/612b2e6e-fe8d-49ad-b845-6fa7fa59ffd1.jpg?1643596119",
+      "attributes": {
+        "cmc": 1,
+        "colorIdentity": [
+          "B"
+        ],
+        "rarity": "rare",
+        "setCode": "vow",
+        "collectorNumber": "101",
+        "scryfallId": "612b2e6e-fe8d-49ad-b845-6fa7fa59ffd1"
+      }
     },
     "133": {
       "id": 133,
@@ -2910,10 +3002,21 @@
     },
     "141": {
       "id": 141,
-      "name": "Sorin of House Markov",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Sorin of House Markov // Sorin, Ravenous Neonate",
+      "type": "Legendary Creature — Human Noble // Legendary Planeswalker — Sorin",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/1/d/1d7474fc-0042-4be9-81f3-5f66f4b16740.jpg?1748260683",
+      "attributes": {
+        "cmc": 2,
+        "colorIdentity": [
+          "B",
+          "W"
+        ],
+        "rarity": "mythic",
+        "setCode": "mh3",
+        "collectorNumber": "245",
+        "scryfallId": "1d7474fc-0042-4be9-81f3-5f66f4b16740"
+      }
     },
     "142": {
       "id": 142,
@@ -2963,10 +3066,20 @@
     },
     "144": {
       "id": 144,
-      "name": "Graveyard Trespasser",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Graveyard Trespasser // Graveyard Glutton",
+      "type": "Creature — Human Werewolf // Creature — Werewolf",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/d/a/daa2a273-488f-4285-a069-ad159ad2d393.jpg?1634347903",
+      "attributes": {
+        "cmc": 3,
+        "colorIdentity": [
+          "B"
+        ],
+        "rarity": "rare",
+        "setCode": "mid",
+        "collectorNumber": "104",
+        "scryfallId": "daa2a273-488f-4285-a069-ad159ad2d393"
+      }
     },
     "145": {
       "id": 145,
@@ -2993,10 +3106,20 @@
     },
     "146": {
       "id": 146,
-      "name": "Sephiroth, Fabled SOLDIER",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Sephiroth, Fabled SOLDIER // Sephiroth, One-Winged Angel",
+      "type": "Legendary Creature — Human Avatar Soldier // Legendary Creature — Angel Nightmare Avatar",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/8/5/85eaf5e7-77dc-4842-a70c-ce4ac7f724df.jpg?1748707811",
+      "attributes": {
+        "cmc": 3,
+        "colorIdentity": [
+          "B"
+        ],
+        "rarity": "mythic",
+        "setCode": "fin",
+        "collectorNumber": "115",
+        "scryfallId": "85eaf5e7-77dc-4842-a70c-ce4ac7f724df"
+      }
     },
     "147": {
       "id": 147,
@@ -4054,10 +4177,24 @@
     },
     "196": {
       "id": 196,
-      "name": "Virtue of Persistence",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Virtue of Persistence // Locthwain Scorn",
+      "type": "Enchantment // Sorcery — Adventure",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/f/1/f1e5cafb-b0e6-4ee5-8c58-6f8e5ef2b9da.jpg?1692937996",
+      "attributes": {
+        "manaCost": "{5}{B}{B} // {1}{B}",
+        "cmc": 7,
+        "colors": [
+          "B"
+        ],
+        "colorIdentity": [
+          "B"
+        ],
+        "rarity": "mythic",
+        "setCode": "woe",
+        "collectorNumber": "115",
+        "scryfallId": "f1e5cafb-b0e6-4ee5-8c58-6f8e5ef2b9da"
+      }
     },
     "197": {
       "id": 197,
@@ -4243,10 +4380,26 @@
     },
     "205": {
       "id": 205,
-      "name": "Embereth Shieldbreaker",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Embereth Shieldbreaker // Battle Display",
+      "type": "Creature — Human Knight // Sorcery — Adventure",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/e/2/e2f789b3-3274-4a93-b44b-fabc44c1833c.jpg?1674141983",
+      "attributes": {
+        "manaCost": "{1}{R} // {R}",
+        "cmc": 2,
+        "colors": [
+          "R"
+        ],
+        "colorIdentity": [
+          "R"
+        ],
+        "power": "2",
+        "toughness": "1",
+        "rarity": "uncommon",
+        "setCode": "clb",
+        "collectorNumber": "792",
+        "scryfallId": "e2f789b3-3274-4a93-b44b-fabc44c1833c"
+      }
     },
     "206": {
       "id": 206,
@@ -4809,10 +4962,21 @@
     },
     "231": {
       "id": 231,
-      "name": "Etali, Primal Conqueror",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Etali, Primal Conqueror // Etali, Primal Sickness",
+      "type": "Legendary Creature — Elder Dinosaur // Legendary Creature — Phyrexian Elder Dinosaur",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/9/5/95c14c4d-6c16-4826-8d93-d89ad04aee09.jpg?1739657577",
+      "attributes": {
+        "cmc": 7,
+        "colorIdentity": [
+          "G",
+          "R"
+        ],
+        "rarity": "rare",
+        "setCode": "mom",
+        "collectorNumber": "137",
+        "scryfallId": "95c14c4d-6c16-4826-8d93-d89ad04aee09"
+      }
     },
     "232": {
       "id": 232,
@@ -5338,10 +5502,20 @@
     },
     "257": {
       "id": 257,
-      "name": "Fable of the Mirror-Breaker",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Fable of the Mirror-Breaker // Reflection of Kiki-Jiki",
+      "type": "Enchantment — Saga // Enchantment Creature — Goblin Shaman",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/2/4/24c0d87b-0049-4beb-b9cb-6f813b7aa7dc.jpg?1691108103",
+      "attributes": {
+        "cmc": 3,
+        "colorIdentity": [
+          "R"
+        ],
+        "rarity": "rare",
+        "setCode": "neo",
+        "collectorNumber": "141",
+        "scryfallId": "24c0d87b-0049-4beb-b9cb-6f813b7aa7dc"
+      }
     },
     "258": {
       "id": 258,
@@ -6240,10 +6414,20 @@
     },
     "297": {
       "id": 297,
-      "name": "Ulvenwald Oddity",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Ulvenwald Oddity // Ulvenwald Behemoth",
+      "type": "Creature — Beast // Creature — Beast Horror",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/5/f/5fdf5fc4-69c8-4a59-9095-c2feefb64371.jpg?1643593558",
+      "attributes": {
+        "cmc": 4,
+        "colorIdentity": [
+          "G"
+        ],
+        "rarity": "rare",
+        "setCode": "vow",
+        "collectorNumber": "225",
+        "scryfallId": "5fdf5fc4-69c8-4a59-9095-c2feefb64371"
+      }
     },
     "298": {
       "id": 298,
@@ -6602,10 +6786,20 @@
     },
     "314": {
       "id": 314,
-      "name": "Esper Origins",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Esper Origins // Summon: Esper Maduin",
+      "type": "Sorcery // Enchantment Creature — Saga Elemental",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/0/f/0f503360-216a-4629-89b2-d32072850aef.jpg?1748707822",
+      "attributes": {
+        "cmc": 2,
+        "colorIdentity": [
+          "G"
+        ],
+        "rarity": "rare",
+        "setCode": "fin",
+        "collectorNumber": "185",
+        "scryfallId": "0f503360-216a-4629-89b2-d32072850aef"
+      }
     },
     "315": {
       "id": 315,
@@ -8250,10 +8444,27 @@
     },
     "401": {
       "id": 401,
-      "name": "Questing Druid",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Questing Druid // Seek the Beast",
+      "type": "Creature — Human Druid // Instant — Adventure",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/7/2/72c130e2-1e17-4996-a5ae-231155d68261.jpg?1692939742",
+      "attributes": {
+        "manaCost": "{1}{G} // {1}{R}",
+        "cmc": 2,
+        "colors": [
+          "G"
+        ],
+        "colorIdentity": [
+          "G",
+          "R"
+        ],
+        "power": "1",
+        "toughness": "1",
+        "rarity": "rare",
+        "setCode": "woe",
+        "collectorNumber": "234",
+        "scryfallId": "72c130e2-1e17-4996-a5ae-231155d68261"
+      }
     },
     "402": {
       "id": 402,
@@ -8405,10 +8616,21 @@
     },
     "408": {
       "id": 408,
-      "name": "Cecil, Dark Knight",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Cecil, Dark Knight // Cecil, Redeemed Paladin",
+      "type": "Legendary Creature — Human Knight // Legendary Creature — Human Knight",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/0/2/026e7167-d665-43d0-a51e-8df2d68cdb5e.jpg?1748707809",
+      "attributes": {
+        "cmc": 1,
+        "colorIdentity": [
+          "B",
+          "W"
+        ],
+        "rarity": "rare",
+        "setCode": "fin",
+        "collectorNumber": "91",
+        "scryfallId": "026e7167-d665-43d0-a51e-8df2d68cdb5e"
+      }
     },
     "409": {
       "id": 409,
@@ -8678,10 +8900,27 @@
     },
     "420": {
       "id": 420,
-      "name": "Mosswood Dreadknight",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Mosswood Dreadknight // Dread Whispers",
+      "type": "Creature — Human Knight // Sorcery — Adventure",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/9/8/9869ac70-5907-45fa-952c-31aef70c5066.jpg?1692939707",
+      "attributes": {
+        "manaCost": "{1}{G} // {1}{B}",
+        "cmc": 2,
+        "colors": [
+          "G"
+        ],
+        "colorIdentity": [
+          "B",
+          "G"
+        ],
+        "power": "3",
+        "toughness": "2",
+        "rarity": "rare",
+        "setCode": "woe",
+        "collectorNumber": "231",
+        "scryfallId": "9869ac70-5907-45fa-952c-31aef70c5066"
+      }
     },
     "421": {
       "id": 421,
@@ -8781,9 +9020,25 @@
     "425": {
       "id": 425,
       "name": "Life // Death",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "type": "Sorcery // Sorcery",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/e/1/e16d52ca-f8de-4852-9bff-9d208e5f678f.jpg?1677291168",
+      "attributes": {
+        "manaCost": "{G} // {1}{B}",
+        "cmc": 3,
+        "colors": [
+          "B",
+          "G"
+        ],
+        "colorIdentity": [
+          "B",
+          "G"
+        ],
+        "rarity": "uncommon",
+        "setCode": "dmr",
+        "collectorNumber": "216",
+        "scryfallId": "e16d52ca-f8de-4852-9bff-9d208e5f678f"
+      }
     },
     "426": {
       "id": 426,
@@ -8835,10 +9090,21 @@
     },
     "428": {
       "id": 428,
-      "name": "Joshua, Phoenix's Dominant",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Joshua, Phoenix's Dominant // Phoenix, Warden of Fire",
+      "type": "Legendary Creature — Human Noble Wizard // Legendary Enchantment Creature — Saga Phoenix",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/4/5/457fdbb9-5439-460f-8e37-176f8919362c.jpg?1748707830",
+      "attributes": {
+        "cmc": 3,
+        "colorIdentity": [
+          "R",
+          "W"
+        ],
+        "rarity": "rare",
+        "setCode": "fin",
+        "collectorNumber": "229",
+        "scryfallId": "457fdbb9-5439-460f-8e37-176f8919362c"
+      }
     },
     "429": {
       "id": 429,
@@ -9012,10 +9278,22 @@
     },
     "436": {
       "id": 436,
-      "name": "Kefka, Court Mage",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Kefka, Court Mage // Kefka, Ruler of Ruin",
+      "type": "Legendary Creature — Human Wizard // Legendary Creature — Avatar Wizard",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/8/f/8fcf3fbb-1ddd-437e-81c1-f5a3133f5ee8.jpg?1748707830",
+      "attributes": {
+        "cmc": 5,
+        "colorIdentity": [
+          "B",
+          "R",
+          "U"
+        ],
+        "rarity": "mythic",
+        "setCode": "fin",
+        "collectorNumber": "231",
+        "scryfallId": "8fcf3fbb-1ddd-437e-81c1-f5a3133f5ee8"
+      }
     },
     "437": {
       "id": 437,

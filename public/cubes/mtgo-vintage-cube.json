@@ -150,10 +150,21 @@
     },
     "8": {
       "id": 8,
-      "name": "Ajani, Nacatl Pariah",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Ajani, Nacatl Pariah // Ajani, Nacatl Avenger",
+      "type": "Legendary Creature — Cat Warrior // Legendary Planeswalker — Ajani",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/0/d/0d16e8e0-31b2-4389-afd6-783c501f6fa0.jpg?1738269605",
+      "attributes": {
+        "cmc": 2,
+        "colorIdentity": [
+          "R",
+          "W"
+        ],
+        "rarity": "mythic",
+        "setCode": "mh3",
+        "collectorNumber": "237",
+        "scryfallId": "0d16e8e0-31b2-4389-afd6-783c501f6fa0"
+      }
     },
     "9": {
       "id": 9,
@@ -1214,10 +1225,20 @@
     },
     "57": {
       "id": 57,
-      "name": "Witch Enchanter",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Witch Enchanter // Witch-Blessed Meadow",
+      "type": "Creature — Human Warlock // Land",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/6/2/62061e7c-cf19-4f03-b8fa-2bdba62d6b0b.jpg?1717013161",
+      "attributes": {
+        "cmc": 4,
+        "colorIdentity": [
+          "W"
+        ],
+        "rarity": "uncommon",
+        "setCode": "mh3",
+        "collectorNumber": "239",
+        "scryfallId": "62061e7c-cf19-4f03-b8fa-2bdba62d6b0b"
+      }
     },
     "58": {
       "id": 58,
@@ -1244,10 +1265,21 @@
     },
     "59": {
       "id": 59,
-      "name": "Tamiyo, Inquisitive Student",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar",
+      "type": "Legendary Creature — Moonfolk Wizard // Legendary Planeswalker — Tamiyo",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/2/a/2a717b98-cdac-416d-bf6c-f6b6638e65d1.jpg?1748260594",
+      "attributes": {
+        "cmc": 1,
+        "colorIdentity": [
+          "G",
+          "U"
+        ],
+        "rarity": "mythic",
+        "setCode": "mh3",
+        "collectorNumber": "242",
+        "scryfallId": "2a717b98-cdac-416d-bf6c-f6b6638e65d1"
+      }
     },
     "60": {
       "id": 60,
@@ -1274,10 +1306,20 @@
     },
     "61": {
       "id": 61,
-      "name": "Jace, Vryn's Prodigy",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Jace, Vryn's Prodigy // Jace, Telepath Unbound",
+      "type": "Legendary Creature — Human Wizard // Legendary Planeswalker — Jace",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1651492800",
+      "attributes": {
+        "cmc": 2,
+        "colorIdentity": [
+          "U"
+        ],
+        "rarity": "mythic",
+        "setCode": "ori",
+        "collectorNumber": "60",
+        "scryfallId": "02d6d693-f1f3-4317-bcc0-c21fa8490d38"
+      }
     },
     "62": {
       "id": 62,
@@ -1511,10 +1553,26 @@
     },
     "72": {
       "id": 72,
-      "name": "Brazen Borrower",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Brazen Borrower // Petty Theft",
+      "type": "Creature — Faerie Rogue // Instant — Adventure",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/c/2/c2089ec9-0665-448f-bfe9-d181de127814.jpg?1616182088",
+      "attributes": {
+        "manaCost": "{1}{U}{U} // {1}{U}",
+        "cmc": 3,
+        "colors": [
+          "U"
+        ],
+        "colorIdentity": [
+          "U"
+        ],
+        "power": "3",
+        "toughness": "1",
+        "rarity": "mythic",
+        "setCode": "eld",
+        "collectorNumber": "39",
+        "scryfallId": "c2089ec9-0665-448f-bfe9-d181de127814"
+      }
     },
     "73": {
       "id": 73,
@@ -2778,24 +2836,55 @@
     },
     "132": {
       "id": 132,
-      "name": "Sink into Stupor",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Sink into Stupor // Soporific Springs",
+      "type": "Instant // Land",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/5/3/5358b87a-1a29-426d-b165-40c97da2c14d.jpg?1717013194",
+      "attributes": {
+        "cmc": 3,
+        "colorIdentity": [
+          "U"
+        ],
+        "rarity": "uncommon",
+        "setCode": "mh3",
+        "collectorNumber": "241",
+        "scryfallId": "5358b87a-1a29-426d-b165-40c97da2c14d"
+      }
     },
     "133": {
       "id": 133,
-      "name": "Cecil, Dark Knight",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Cecil, Dark Knight // Cecil, Redeemed Paladin",
+      "type": "Legendary Creature — Human Knight // Legendary Creature — Human Knight",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/0/2/026e7167-d665-43d0-a51e-8df2d68cdb5e.jpg?1748707809",
+      "attributes": {
+        "cmc": 1,
+        "colorIdentity": [
+          "B",
+          "W"
+        ],
+        "rarity": "rare",
+        "setCode": "fin",
+        "collectorNumber": "91",
+        "scryfallId": "026e7167-d665-43d0-a51e-8df2d68cdb5e"
+      }
     },
     "134": {
       "id": 134,
-      "name": "Concealing Curtains",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Concealing Curtains // Revealing Eye",
+      "type": "Creature — Wall // Creature — Eye Horror",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/6/1/612b2e6e-fe8d-49ad-b845-6fa7fa59ffd1.jpg?1643596119",
+      "attributes": {
+        "cmc": 1,
+        "colorIdentity": [
+          "B"
+        ],
+        "rarity": "rare",
+        "setCode": "vow",
+        "collectorNumber": "101",
+        "scryfallId": "612b2e6e-fe8d-49ad-b845-6fa7fa59ffd1"
+      }
     },
     "135": {
       "id": 135,
@@ -3851,9 +3940,25 @@
     "183": {
       "id": 183,
       "name": "Life // Death",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "type": "Sorcery // Sorcery",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/e/1/e16d52ca-f8de-4852-9bff-9d208e5f678f.jpg?1677291168",
+      "attributes": {
+        "manaCost": "{G} // {1}{B}",
+        "cmc": 3,
+        "colors": [
+          "B",
+          "G"
+        ],
+        "colorIdentity": [
+          "B",
+          "G"
+        ],
+        "rarity": "uncommon",
+        "setCode": "dmr",
+        "collectorNumber": "216",
+        "scryfallId": "e16d52ca-f8de-4852-9bff-9d208e5f678f"
+      }
     },
     "184": {
       "id": 184,
@@ -4318,10 +4423,26 @@
     },
     "206": {
       "id": 206,
-      "name": "Embereth Shieldbreaker",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Embereth Shieldbreaker // Battle Display",
+      "type": "Creature — Human Knight // Sorcery — Adventure",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/e/2/e2f789b3-3274-4a93-b44b-fabc44c1833c.jpg?1674141983",
+      "attributes": {
+        "manaCost": "{1}{R} // {R}",
+        "cmc": 2,
+        "colors": [
+          "R"
+        ],
+        "colorIdentity": [
+          "R"
+        ],
+        "power": "2",
+        "toughness": "1",
+        "rarity": "uncommon",
+        "setCode": "clb",
+        "collectorNumber": "792",
+        "scryfallId": "e2f789b3-3274-4a93-b44b-fabc44c1833c"
+      }
     },
     "207": {
       "id": 207,
@@ -4532,10 +4653,26 @@
     },
     "216": {
       "id": 216,
-      "name": "Bonecrusher Giant",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Bonecrusher Giant // Stomp",
+      "type": "Creature — Giant // Instant — Adventure",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/b/5/b5b71cd2-de35-451f-b16e-2e3936169407.jpg?1674141884",
+      "attributes": {
+        "manaCost": "{2}{R} // {1}{R}",
+        "cmc": 3,
+        "colors": [
+          "R"
+        ],
+        "colorIdentity": [
+          "R"
+        ],
+        "power": "4",
+        "toughness": "3",
+        "rarity": "rare",
+        "setCode": "clb",
+        "collectorNumber": "781",
+        "scryfallId": "b5b71cd2-de35-451f-b16e-2e3936169407"
+      }
     },
     "217": {
       "id": 217,
@@ -4907,10 +5044,21 @@
     },
     "233": {
       "id": 233,
-      "name": "Etali, Primal Conqueror",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Etali, Primal Conqueror // Etali, Primal Sickness",
+      "type": "Legendary Creature — Elder Dinosaur // Legendary Creature — Phyrexian Elder Dinosaur",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/9/5/95c14c4d-6c16-4826-8d93-d89ad04aee09.jpg?1739657577",
+      "attributes": {
+        "cmc": 7,
+        "colorIdentity": [
+          "G",
+          "R"
+        ],
+        "rarity": "rare",
+        "setCode": "mom",
+        "collectorNumber": "137",
+        "scryfallId": "95c14c4d-6c16-4826-8d93-d89ad04aee09"
+      }
     },
     "234": {
       "id": 234,
@@ -5419,10 +5567,20 @@
     },
     "258": {
       "id": 258,
-      "name": "Fable of the Mirror-Breaker",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Fable of the Mirror-Breaker // Reflection of Kiki-Jiki",
+      "type": "Enchantment — Saga // Enchantment Creature — Goblin Shaman",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/2/4/24c0d87b-0049-4beb-b9cb-6f813b7aa7dc.jpg?1691108103",
+      "attributes": {
+        "cmc": 3,
+        "colorIdentity": [
+          "R"
+        ],
+        "rarity": "rare",
+        "setCode": "neo",
+        "collectorNumber": "141",
+        "scryfallId": "24c0d87b-0049-4beb-b9cb-6f813b7aa7dc"
+      }
     },
     "259": {
       "id": 259,
@@ -5466,10 +5624,20 @@
     },
     "261": {
       "id": 261,
-      "name": "Sundering Eruption",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Sundering Eruption // Volcanic Fissure",
+      "type": "Sorcery // Land",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/5/0/50686ac7-346c-43d1-bdaa-28d46a12ad93.jpg?1717013301",
+      "attributes": {
+        "cmc": 3,
+        "colorIdentity": [
+          "R"
+        ],
+        "rarity": "uncommon",
+        "setCode": "mh3",
+        "collectorNumber": "248",
+        "scryfallId": "50686ac7-346c-43d1-bdaa-28d46a12ad93"
+      }
     },
     "262": {
       "id": 262,
@@ -6812,9 +6980,23 @@
     "322": {
       "id": 322,
       "name": "Walk-In Closet // Forgotten Cellar",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "type": "Enchantment — Room // Enchantment — Room",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/0/a/0adcd4e5-d542-4293-8774-ace2305ef820.jpg?1726867658",
+      "attributes": {
+        "manaCost": "{2}{G} // {3}{G}{G}",
+        "cmc": 8,
+        "colors": [
+          "G"
+        ],
+        "colorIdentity": [
+          "G"
+        ],
+        "rarity": "mythic",
+        "setCode": "dsk",
+        "collectorNumber": "205",
+        "scryfallId": "0adcd4e5-d542-4293-8774-ace2305ef820"
+      }
     },
     "323": {
       "id": 323,
@@ -7965,10 +8147,21 @@
     },
     "388": {
       "id": 388,
-      "name": "Aang, Swift Savior",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "name": "Aang, Swift Savior // Aang and La, Ocean's Fury",
+      "type": "Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Spirit Ally",
+      "description": "",
+      "imageUrl": "https://cards.scryfall.io/normal/front/8/2/82866a0e-485a-4f7e-8c49-f7d9ff3f4ad4.jpg?1764121420",
+      "attributes": {
+        "cmc": 3,
+        "colorIdentity": [
+          "U",
+          "W"
+        ],
+        "rarity": "rare",
+        "setCode": "tla",
+        "collectorNumber": "204",
+        "scryfallId": "82866a0e-485a-4f7e-8c49-f7d9ff3f4ad4"
+      }
     },
     "389": {
       "id": 389,

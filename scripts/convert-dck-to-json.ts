@@ -81,18 +81,41 @@ function parseForgeFormat(content: string): { name: string; cardNames: string[] 
 }
 
 /**
+ * Normalize card name for Scryfall lookup
+ * Split cards like "Life // Death" need to be searched as just "Life"
+ */
+function normalizeCardName(name: string): string {
+  if (name.includes(' // ')) {
+    return name.split(' // ')[0].trim();
+  }
+  return name;
+}
+
+/**
  * Fetch cards from Scryfall by name (using collection endpoint)
  */
 async function fetchCardsFromScryfall(cardNames: string[]): Promise<Map<string, ScryfallCard>> {
   const cardMap = new Map<string, ScryfallCard>();
   const uniqueNames = [...new Set(cardNames)];
 
+  // Create mapping of normalized name -> original names
+  const normalizedToOriginal = new Map<string, string[]>();
+  for (const name of uniqueNames) {
+    const normalized = normalizeCardName(name).toLowerCase();
+    const originals = normalizedToOriginal.get(normalized) || [];
+    originals.push(name);
+    normalizedToOriginal.set(normalized, originals);
+  }
+
+  // Use normalized names for API call
+  const normalizedNames = [...new Set(uniqueNames.map(normalizeCardName))];
+
   // Scryfall collection endpoint accepts up to 75 cards at a time
   const batchSize = 75;
 
-  for (let i = 0; i < uniqueNames.length; i += batchSize) {
-    const batch = uniqueNames.slice(i, i + batchSize);
-    console.log(`Fetching batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(uniqueNames.length / batchSize)} (${batch.length} cards)...`);
+  for (let i = 0; i < normalizedNames.length; i += batchSize) {
+    const batch = normalizedNames.slice(i, i + batchSize);
+    console.log(`Fetching batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(normalizedNames.length / batchSize)} (${batch.length} cards)...`);
 
     const identifiers = batch.map(name => ({ name }));
 
@@ -111,7 +134,13 @@ async function fetchCardsFromScryfall(cardNames: string[]): Promise<Map<string, 
       const data = await response.json();
 
       for (const card of data.data || []) {
+        // Store by full name
         cardMap.set(card.name.toLowerCase(), card);
+        // For DFCs and split cards, also store by front face name
+        if (card.name.includes(' // ')) {
+          const frontName = card.name.split(' // ')[0].trim().toLowerCase();
+          cardMap.set(frontName, card);
+        }
       }
 
       // Log not found cards

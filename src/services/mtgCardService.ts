@@ -158,6 +158,18 @@ export const mtgCardService = {
   },
 
   /**
+   * Normalize card name for Scryfall lookup
+   * Split cards like "Life // Death" need to be searched as just "Life"
+   */
+  normalizeCardName(name: string): string {
+    // For split cards (Life // Death), use just the first half
+    if (name.includes(' // ')) {
+      return name.split(' // ')[0].trim();
+    }
+    return name;
+  },
+
+  /**
    * Fetch multiple cards by name using Scryfall collection endpoint
    * More efficient than individual requests
    */
@@ -168,11 +180,14 @@ export const mtgCardService = {
     const notFound: string[] = [];
     const uncachedNames: string[] = [];
 
-    // Check cache first
+    // Check cache first (try both original and normalized names)
     for (const name of names) {
       const cacheKey = `name:${name.toLowerCase()}`;
+      const normalizedKey = `name:${this.normalizeCardName(name).toLowerCase()}`;
       if (cardCache.has(cacheKey)) {
         cards.push(cardCache.get(cacheKey)!);
+      } else if (cardCache.has(normalizedKey)) {
+        cards.push(cardCache.get(normalizedKey)!);
       } else {
         uncachedNames.push(name);
       }
@@ -188,7 +203,8 @@ export const mtgCardService = {
       const batch = uncachedNames.slice(i, i + batchSize);
 
       try {
-        const identifiers = batch.map(name => ({ name }));
+        // Normalize names for Scryfall (handles split cards)
+        const identifiers = batch.map(name => ({ name: this.normalizeCardName(name) }));
         const response = await rateLimitedFetch(`${SCRYFALL_API}/cards/collection`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -213,8 +229,15 @@ export const mtgCardService = {
         // Process found cards
         for (const sc of data.data) {
           const card = scryfallToCard(sc);
+          // Cache by full name (e.g., "Life // Death")
           cardCache.set(`name:${sc.name.toLowerCase()}`, card);
+          // Cache by Scryfall ID
           cardCache.set(sc.id.toLowerCase(), card);
+          // For DFCs and split cards, also cache by front face name
+          if (sc.name.includes(' // ')) {
+            const frontName = sc.name.split(' // ')[0].trim().toLowerCase();
+            cardCache.set(`name:${frontName}`, card);
+          }
           cards.push(card);
         }
 
