@@ -19,6 +19,8 @@ interface BottomSheetProps {
   centerTitle?: boolean;
   /** When true, any key (not just Escape) dismisses the sheet */
   dismissOnAnyKey?: boolean;
+  /** Footer content that stays fixed at the bottom of the sheet */
+  footer?: ReactNode;
 }
 
 /**
@@ -37,6 +39,7 @@ export function BottomSheet({
   header,
   centerTitle = false,
   dismissOnAnyKey = false,
+  footer,
 }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -82,11 +85,11 @@ export function BottomSheet({
 
       {/* Sheet */}
       <div
-        className="relative w-full bg-yugi-darker rounded-t-2xl border-t border-yugi-border overflow-hidden animate-slide-up"
+        className="relative w-full bg-yugi-darker rounded-t-2xl border-t border-yugi-border overflow-hidden animate-slide-up flex flex-col"
         style={{ maxHeight: `${maxHeight}vh` }}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-yugi-darker pt-3 pb-2 px-4 border-b border-yugi-border z-10">
+        <div className="flex-shrink-0 bg-yugi-darker pt-3 pb-2 px-4 border-b border-yugi-border z-10">
           {showHandle && (
             <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-2" />
           )}
@@ -123,12 +126,16 @@ export function BottomSheet({
         </div>
 
         {/* Content */}
-        <div
-          className="overflow-y-auto custom-scrollbar pb-6"
-          style={{ maxHeight: `calc(${maxHeight}vh - 70px)` }}
-        >
+        <div className="flex-1 overflow-y-auto custom-scrollbar pb-6 min-h-0">
           {children}
         </div>
+
+        {/* Footer - always visible at bottom */}
+        {footer && (
+          <div className="flex-shrink-0 bg-yugi-darker border-t border-yugi-border px-4 py-3">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

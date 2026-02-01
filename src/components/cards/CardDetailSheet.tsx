@@ -60,6 +60,7 @@ export function CardDetailSheet({
           PRE-ERRATA
         </span>
       )}
+      footer={footer}
     >
       <div className="p-4 md:p-6">
         {/* Constrain content width for readability */}
@@ -390,12 +391,6 @@ export function CardDetailSheet({
             </div>
           )}
 
-          {/* Footer actions (e.g., Pick button, Move buttons) */}
-          {footer && (
-            <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border">
-              {footer}
-            </div>
-          )}
         </div>
       </div>
     </BottomSheet>
