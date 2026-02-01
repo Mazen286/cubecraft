@@ -287,22 +287,29 @@ function getCardCMC(card: Card): number {
 
 /**
  * Pile view configuration for MTG
- * Groups cards by CMC (0, 1, 2, 3, 4, 5, 6+)
+ * Groups cards by type (Lands first) then CMC (0, 1, 2, 3, 4, 5, 6+)
  */
 const mtgPileViewConfig: PileViewConfig = {
   groups: [
-    // CMC 0-5 (individual piles)
+    // Lands first (matched before CMC groups)
+    {
+      id: 'lands',
+      label: 'Lands',
+      matches: isLand,
+      order: -1, // Before CMC groups
+    },
+    // CMC 0-5 (individual piles, excluding lands)
     ...Array.from({ length: 6 }, (_, i) => ({
       id: `cmc-${i}`,
       label: `${i}`,
-      matches: (card: Card) => getCardCMC(card) === i,
+      matches: (card: Card) => !isLand(card) && getCardCMC(card) === i,
       order: i,
     })),
-    // CMC 6+ (grouped)
+    // CMC 6+ (grouped, excluding lands)
     {
       id: 'cmc-6plus',
       label: '6+',
-      matches: (card: Card) => getCardCMC(card) >= 6,
+      matches: (card: Card) => !isLand(card) && getCardCMC(card) >= 6,
       order: 6,
     },
   ],
