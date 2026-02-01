@@ -6,9 +6,22 @@ import type { MTGCardAttributes } from '../config/games/mtg';
 
 const SCRYFALL_API = 'https://api.scryfall.com';
 
+interface ScryfallCardFace {
+  name?: string;
+  printed_name?: string;
+  oracle_text?: string;
+  mana_cost?: string;
+  image_uris?: {
+    small?: string;
+    normal?: string;
+    large?: string;
+  };
+}
+
 interface ScryfallCard {
   id: string;
   name: string;
+  printed_name?: string;  // Alternate/printed name (e.g., Marvel crossover cards)
   type_line: string;
   oracle_text?: string;
   mana_cost?: string;
@@ -26,13 +39,7 @@ interface ScryfallCard {
     normal?: string;
     large?: string;
   };
-  card_faces?: Array<{
-    image_uris?: {
-      small?: string;
-      normal?: string;
-      large?: string;
-    };
-  }>;
+  card_faces?: ScryfallCardFace[];
 }
 
 interface ScryfallCollectionResponse {
@@ -63,14 +70,28 @@ async function rateLimitedFetch(url: string, options?: RequestInit): Promise<Res
  * Convert Scryfall card to our Card format
  */
 function scryfallToCard(sc: ScryfallCard, userScore?: number): Card {
+  const frontFace = sc.card_faces?.[0];
+
   // Get image URL (handle double-faced cards)
   let imageUrl = sc.image_uris?.normal;
-  if (!imageUrl && sc.card_faces?.[0]?.image_uris?.normal) {
-    imageUrl = sc.card_faces[0].image_uris.normal;
+  if (!imageUrl && frontFace?.image_uris?.normal) {
+    imageUrl = frontFace.image_uris.normal;
   }
 
+  // Get oracle text (DFCs have it in card_faces, not top level)
+  let oracleText = sc.oracle_text;
+  if (!oracleText && frontFace?.oracle_text) {
+    oracleText = frontFace.oracle_text;
+  }
+
+  // Use printed name if available (for Marvel crossover cards)
+  // This shows "Nia, Skysail Storyteller" instead of "Gwen Stacy // Ghost-Spider"
+  const displayName = sc.printed_name
+    || frontFace?.printed_name
+    || sc.name;
+
   const attributes: MTGCardAttributes = {
-    manaCost: sc.mana_cost,
+    manaCost: sc.mana_cost || frontFace?.mana_cost,
     cmc: sc.cmc,
     colors: sc.colors,
     colorIdentity: sc.color_identity,
@@ -81,13 +102,15 @@ function scryfallToCard(sc: ScryfallCard, userScore?: number): Card {
     setCode: sc.set,
     collectorNumber: sc.collector_number,
     scryfallId: sc.id,
+    // Store actual Scryfall name for lookups if different from display name
+    scryfallName: displayName !== sc.name ? sc.name : undefined,
   };
 
   return {
     id: sc.id, // Use Scryfall ID as card ID
-    name: sc.name,
+    name: displayName,
     type: sc.type_line,
-    description: sc.oracle_text || '',
+    description: oracleText || '',
     score: userScore,
     imageUrl,
     attributes: attributes as Record<string, unknown>,
@@ -120,6 +143,33 @@ export const mtgCardService = {
   },
 
   /**
+   * Cache a card by all possible lookup keys
+   */
+  cacheCard(card: Card, scryfallData: ScryfallCard, originalLookupName?: string): void {
+    const frontFace = scryfallData.card_faces?.[0];
+
+    // Cache by Scryfall ID
+    cardCache.set(scryfallData.id.toLowerCase(), card);
+    // Cache by full name
+    cardCache.set(`name:${scryfallData.name.toLowerCase()}`, card);
+    // For DFCs and split cards, also cache by front face name
+    if (scryfallData.name.includes(' // ')) {
+      const frontName = scryfallData.name.split(' // ')[0].trim().toLowerCase();
+      cardCache.set(`name:${frontName}`, card);
+    }
+    // Cache by printed name if different (e.g., Marvel crossover cards)
+    // Check both top-level and card_faces[0] for DFCs
+    const printedName = scryfallData.printed_name || frontFace?.printed_name;
+    if (printedName && printedName.toLowerCase() !== scryfallData.name.toLowerCase()) {
+      cardCache.set(`name:${printedName.toLowerCase()}`, card);
+    }
+    // Cache by original lookup name if provided
+    if (originalLookupName) {
+      cardCache.set(`name:${originalLookupName.toLowerCase()}`, card);
+    }
+  },
+
+  /**
    * Fetch a card by exact name
    */
   async getCardByName(name: string): Promise<Card | null> {
@@ -133,7 +183,7 @@ export const mtgCardService = {
         `${SCRYFALL_API}/cards/named?exact=${encodeURIComponent(name)}`
       );
       if (!response.ok) {
-        // Try fuzzy search
+        // Try fuzzy search (handles alternate/printed names like Marvel crossover)
         const fuzzyResponse = await rateLimitedFetch(
           `${SCRYFALL_API}/cards/named?fuzzy=${encodeURIComponent(name)}`
         );
@@ -142,15 +192,13 @@ export const mtgCardService = {
         }
         const data: ScryfallCard = await fuzzyResponse.json();
         const card = scryfallToCard(data);
-        cardCache.set(cacheKey, card);
-        cardCache.set(data.id.toLowerCase(), card);
+        this.cacheCard(card, data, name);
         return card;
       }
 
       const data: ScryfallCard = await response.json();
       const card = scryfallToCard(data);
-      cardCache.set(cacheKey, card);
-      cardCache.set(data.id.toLowerCase(), card);
+      this.cacheCard(card, data, name);
       return card;
     } catch {
       return null;
@@ -229,22 +277,19 @@ export const mtgCardService = {
         // Process found cards
         for (const sc of data.data) {
           const card = scryfallToCard(sc);
-          // Cache by full name (e.g., "Life // Death")
-          cardCache.set(`name:${sc.name.toLowerCase()}`, card);
-          // Cache by Scryfall ID
-          cardCache.set(sc.id.toLowerCase(), card);
-          // For DFCs and split cards, also cache by front face name
-          if (sc.name.includes(' // ')) {
-            const frontName = sc.name.split(' // ')[0].trim().toLowerCase();
-            cardCache.set(`name:${frontName}`, card);
-          }
+          this.cacheCard(card, sc);
           cards.push(card);
         }
 
-        // Track not found
+        // Fuzzy search fallback for not-found cards (handles alternate/printed names)
         for (const nf of data.not_found) {
           if (nf.name) {
-            notFound.push(nf.name);
+            const card = await this.getCardByName(nf.name);
+            if (card) {
+              cards.push(card);
+            } else {
+              notFound.push(nf.name);
+            }
           }
         }
       } catch (error) {

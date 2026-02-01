@@ -16,9 +16,18 @@ interface Card {
   attributes: Record<string, unknown>;
 }
 
+interface ScryfallCardFace {
+  name?: string;
+  printed_name?: string;
+  oracle_text?: string;
+  mana_cost?: string;
+  image_uris?: { normal?: string; small?: string };
+}
+
 interface ScryfallCard {
   id: string;
   name: string;
+  printed_name?: string;  // Alternate/printed name (e.g., Marvel crossover cards)
   type_line: string;
   oracle_text?: string;
   mana_cost?: string;
@@ -32,7 +41,7 @@ interface ScryfallCard {
   set: string;
   collector_number: string;
   image_uris?: { normal?: string; small?: string };
-  card_faces?: Array<{ image_uris?: { normal?: string } }>;
+  card_faces?: ScryfallCardFace[];
 }
 
 /**
@@ -92,7 +101,50 @@ function normalizeCardName(name: string): string {
 }
 
 /**
- * Fetch cards from Scryfall by name (using collection endpoint)
+ * Fetch a single card using fuzzy search (handles alternate/printed names)
+ */
+async function fetchCardFuzzy(name: string): Promise<ScryfallCard | null> {
+  try {
+    const response = await fetch(
+      `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Store card in map by all possible lookup keys
+ */
+function storeCardInMap(cardMap: Map<string, ScryfallCard>, card: ScryfallCard, originalName?: string) {
+  // Store by full name
+  cardMap.set(card.name.toLowerCase(), card);
+
+  // For DFCs and split cards, also store by front face name
+  if (card.name.includes(' // ')) {
+    const frontName = card.name.split(' // ')[0].trim().toLowerCase();
+    cardMap.set(frontName, card);
+  }
+
+  // Store by printed name if different (e.g., Marvel crossover cards)
+  if (card.printed_name && card.printed_name.toLowerCase() !== card.name.toLowerCase()) {
+    cardMap.set(card.printed_name.toLowerCase(), card);
+  }
+
+  // Store by original lookup name if provided
+  if (originalName) {
+    cardMap.set(originalName.toLowerCase(), card);
+  }
+}
+
+/**
+ * Fetch cards from Scryfall by name (using collection endpoint with fuzzy fallback)
  */
 async function fetchCardsFromScryfall(cardNames: string[]): Promise<Map<string, ScryfallCard>> {
   const cardMap = new Map<string, ScryfallCard>();
@@ -109,6 +161,9 @@ async function fetchCardsFromScryfall(cardNames: string[]): Promise<Map<string, 
 
   // Use normalized names for API call
   const normalizedNames = [...new Set(uniqueNames.map(normalizeCardName))];
+
+  // Track not found cards for fuzzy search fallback
+  const notFoundNames: string[] = [];
 
   // Scryfall collection endpoint accepts up to 75 cards at a time
   const batchSize = 75;
@@ -134,19 +189,15 @@ async function fetchCardsFromScryfall(cardNames: string[]): Promise<Map<string, 
       const data = await response.json();
 
       for (const card of data.data || []) {
-        // Store by full name
-        cardMap.set(card.name.toLowerCase(), card);
-        // For DFCs and split cards, also store by front face name
-        if (card.name.includes(' // ')) {
-          const frontName = card.name.split(' // ')[0].trim().toLowerCase();
-          cardMap.set(frontName, card);
-        }
+        storeCardInMap(cardMap, card);
       }
 
-      // Log not found cards
+      // Collect not found cards for fuzzy search
       if (data.not_found?.length > 0) {
         for (const nf of data.not_found) {
-          console.warn(`Card not found: ${nf.name}`);
+          if (nf.name) {
+            notFoundNames.push(nf.name);
+          }
         }
       }
 
@@ -154,6 +205,31 @@ async function fetchCardsFromScryfall(cardNames: string[]): Promise<Map<string, 
       await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error(`Error fetching batch: ${error}`);
+    }
+  }
+
+  // Fuzzy search fallback for not found cards (handles alternate/printed names)
+  if (notFoundNames.length > 0) {
+    console.log(`\nTrying fuzzy search for ${notFoundNames.length} not-found cards...`);
+
+    for (const name of notFoundNames) {
+      // Find original name(s) that map to this normalized name
+      const originals = normalizedToOriginal.get(name.toLowerCase()) || [name];
+
+      const card = await fetchCardFuzzy(name);
+
+      if (card) {
+        // Store by all lookup keys including the original name from the file
+        for (const original of originals) {
+          storeCardInMap(cardMap, card, original);
+        }
+        console.log(`  Found via fuzzy: "${name}" -> "${card.name}"`);
+      } else {
+        console.warn(`  Not found: ${name}`);
+      }
+
+      // Rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
 
@@ -165,20 +241,34 @@ async function fetchCardsFromScryfall(cardNames: string[]): Promise<Map<string, 
  * Uses numeric IDs starting from 1 for compatibility with cubeService
  */
 function convertCard(scryfallCard: ScryfallCard, index: number): Card {
+  const frontFace = scryfallCard.card_faces?.[0];
+
   // Get image URL (handle double-faced cards)
   let imageUrl = scryfallCard.image_uris?.normal;
-  if (!imageUrl && scryfallCard.card_faces?.[0]?.image_uris?.normal) {
-    imageUrl = scryfallCard.card_faces[0].image_uris.normal;
+  if (!imageUrl && frontFace?.image_uris?.normal) {
+    imageUrl = frontFace.image_uris.normal;
   }
+
+  // Get oracle text (DFCs have it in card_faces, not top level)
+  let oracleText = scryfallCard.oracle_text;
+  if (!oracleText && frontFace?.oracle_text) {
+    oracleText = frontFace.oracle_text;
+  }
+
+  // Use printed name if available (for Marvel crossover cards)
+  // This shows "Nia, Skysail Storyteller" instead of "Gwen Stacy // Ghost-Spider"
+  const displayName = scryfallCard.printed_name
+    || frontFace?.printed_name
+    || scryfallCard.name;
 
   return {
     id: index + 1, // Numeric ID starting from 1
-    name: scryfallCard.name,
+    name: displayName,
     type: scryfallCard.type_line,
-    description: scryfallCard.oracle_text || '',
+    description: oracleText || '',
     imageUrl,
     attributes: {
-      manaCost: scryfallCard.mana_cost,
+      manaCost: scryfallCard.mana_cost || frontFace?.mana_cost,
       cmc: scryfallCard.cmc,
       colors: scryfallCard.colors,
       colorIdentity: scryfallCard.color_identity,
@@ -189,6 +279,8 @@ function convertCard(scryfallCard: ScryfallCard, index: number): Card {
       setCode: scryfallCard.set,
       collectorNumber: scryfallCard.collector_number,
       scryfallId: scryfallCard.id,
+      // Store actual Scryfall name for lookups if different from display name
+      scryfallName: displayName !== scryfallCard.name ? scryfallCard.name : undefined,
     },
   };
 }
@@ -221,7 +313,11 @@ async function main() {
   let cardIndex = 0;
 
   cardNames.forEach((cardName) => {
-    const scryfallCard = scryfallCards.get(cardName.toLowerCase());
+    // Try multiple lookup strategies: exact name, normalized name
+    let scryfallCard = scryfallCards.get(cardName.toLowerCase());
+    if (!scryfallCard) {
+      scryfallCard = scryfallCards.get(normalizeCardName(cardName).toLowerCase());
+    }
     cardIndex++;
 
     if (scryfallCard) {

@@ -42,6 +42,7 @@ export interface MTGCardAttributes {
   toughness?: string;
   loyalty?: number;     // For planeswalkers
   scryfallId?: string;  // For image URLs
+  scryfallName?: string; // Actual Scryfall name when different from display name
 }
 
 /**

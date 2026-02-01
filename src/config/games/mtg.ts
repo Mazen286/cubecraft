@@ -16,6 +16,7 @@ export interface MTGCardAttributes {
   setCode?: string;
   collectorNumber?: string;
   scryfallId?: string;
+  scryfallName?: string;  // Actual Scryfall name when different from display name (e.g., Marvel crossover cards)
 }
 
 /**

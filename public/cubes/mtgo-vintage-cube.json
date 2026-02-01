@@ -144,17 +144,35 @@
     "7": {
       "id": 7,
       "name": "Ademi of the Silkchutes",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "type": "Legendary Creature — Spider Human Hero",
+      "description": "Flash\n{1}: Spectacular Spider-Man gains flying until end of turn.\n{1}, Sacrifice Spectacular Spider-Man: Creatures you control gain hexproof and indestructible until end of turn.",
+      "imageUrl": "https://cards.scryfall.io/normal/front/8/f/8ff57c8b-173e-4a72-a0a0-1ad2d5cc6e5e.jpg?1757632293",
+      "attributes": {
+        "manaCost": "{1}{W}",
+        "cmc": 2,
+        "colors": [
+          "W"
+        ],
+        "colorIdentity": [
+          "W"
+        ],
+        "power": "3",
+        "toughness": "2",
+        "rarity": "rare",
+        "setCode": "om1",
+        "collectorNumber": "1",
+        "scryfallId": "8ff57c8b-173e-4a72-a0a0-1ad2d5cc6e5e",
+        "scryfallName": "Spectacular Spider-Man"
+      }
     },
     "8": {
       "id": 8,
       "name": "Ajani, Nacatl Pariah // Ajani, Nacatl Avenger",
       "type": "Legendary Creature — Cat Warrior // Legendary Planeswalker — Ajani",
-      "description": "",
+      "description": "When Ajani enters, create a 2/1 white Cat Warrior creature token.\nWhenever one or more other Cats you control die, you may exile Ajani, then return him to the battlefield transformed under his owner's control.",
       "imageUrl": "https://cards.scryfall.io/normal/front/0/d/0d16e8e0-31b2-4389-afd6-783c501f6fa0.jpg?1738269605",
       "attributes": {
+        "manaCost": "{1}{W}",
         "cmc": 2,
         "colorIdentity": [
           "R",
@@ -1211,7 +1229,6 @@
       "description": "This land enters tapped unless you control a basic land.\n{T}: Add {W}.\n{3}{W}, {T}: Put a +1/+1 counter on each creature you control.",
       "imageUrl": "https://cards.scryfall.io/normal/front/9/c/9c0433f9-8f1e-4a19-a83f-a41925f1b1a9.jpg?1764121937",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -1227,9 +1244,10 @@
       "id": 57,
       "name": "Witch Enchanter // Witch-Blessed Meadow",
       "type": "Creature — Human Warlock // Land",
-      "description": "",
+      "description": "When this creature enters, destroy target artifact or enchantment an opponent controls.",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/2/62061e7c-cf19-4f03-b8fa-2bdba62d6b0b.jpg?1717013161",
       "attributes": {
+        "manaCost": "{3}{W}",
         "cmc": 4,
         "colorIdentity": [
           "W"
@@ -1267,9 +1285,10 @@
       "id": 59,
       "name": "Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar",
       "type": "Legendary Creature — Moonfolk Wizard // Legendary Planeswalker — Tamiyo",
-      "description": "",
+      "description": "Flying\nWhenever Tamiyo attacks, investigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")\nWhen you draw your third card in a turn, exile Tamiyo, then return her to the battlefield transformed under her owner's control.",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/a/2a717b98-cdac-416d-bf6c-f6b6638e65d1.jpg?1748260594",
       "attributes": {
+        "manaCost": "{U}",
         "cmc": 1,
         "colorIdentity": [
           "G",
@@ -1308,9 +1327,10 @@
       "id": 61,
       "name": "Jace, Vryn's Prodigy // Jace, Telepath Unbound",
       "type": "Legendary Creature — Human Wizard // Legendary Planeswalker — Jace",
-      "description": "",
+      "description": "{T}: Draw a card, then discard a card. If there are five or more cards in your graveyard, exile Jace, then return him to the battlefield transformed under his owner's control.",
       "imageUrl": "https://cards.scryfall.io/normal/front/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1651492800",
       "attributes": {
+        "manaCost": "{1}{U}",
         "cmc": 2,
         "colorIdentity": [
           "U"
@@ -1555,7 +1575,7 @@
       "id": 72,
       "name": "Brazen Borrower // Petty Theft",
       "type": "Creature — Faerie Rogue // Instant — Adventure",
-      "description": "",
+      "description": "Flash\nFlying\nThis creature can block only creatures with flying.",
       "imageUrl": "https://cards.scryfall.io/normal/front/c/2/c2089ec9-0665-448f-bfe9-d181de127814.jpg?1616182088",
       "attributes": {
         "manaCost": "{1}{U}{U} // {1}{U}",
@@ -2803,7 +2823,6 @@
       "description": "{T}: Add {U}.\nChannel — {3}{U}, Discard this card: Return target artifact, creature, enchantment, or planeswalker to its owner's hand. This ability costs {1} less to activate for each legendary creature you control.",
       "imageUrl": "https://cards.scryfall.io/normal/front/4/8/486d7edc-d983-41f0-8b78-c99aecd72996.jpg?1654568960",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -2822,7 +2841,6 @@
       "description": "Hideaway 4 (When this land enters, look at the top four cards of your library, exile one face down, then put the rest on the bottom in a random order.)\nThis land enters tapped.\n{T}: Add {U}.\n{U}, {T}: You may play the exiled card without paying its mana cost if a library has twenty or fewer cards in it.",
       "imageUrl": "https://cards.scryfall.io/normal/front/4/2/4216656e-90e8-45fc-a0f6-0d0d79d0a021.jpg?1758104092",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -2838,9 +2856,10 @@
       "id": 132,
       "name": "Sink into Stupor // Soporific Springs",
       "type": "Instant // Land",
-      "description": "",
+      "description": "Return target spell or nonland permanent an opponent controls to its owner's hand.",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/3/5358b87a-1a29-426d-b165-40c97da2c14d.jpg?1717013194",
       "attributes": {
+        "manaCost": "{1}{U}{U}",
         "cmc": 3,
         "colorIdentity": [
           "U"
@@ -2855,9 +2874,10 @@
       "id": 133,
       "name": "Cecil, Dark Knight // Cecil, Redeemed Paladin",
       "type": "Legendary Creature — Human Knight // Legendary Creature — Human Knight",
-      "description": "",
+      "description": "Deathtouch\nDarkness — Whenever Cecil deals damage, you lose that much life. Then if your life total is less than or equal to half your starting life total, untap Cecil and transform it.",
       "imageUrl": "https://cards.scryfall.io/normal/front/0/2/026e7167-d665-43d0-a51e-8df2d68cdb5e.jpg?1748707809",
       "attributes": {
+        "manaCost": "{B}",
         "cmc": 1,
         "colorIdentity": [
           "B",
@@ -2873,9 +2893,10 @@
       "id": 134,
       "name": "Concealing Curtains // Revealing Eye",
       "type": "Creature — Wall // Creature — Eye Horror",
-      "description": "",
+      "description": "Defender\n{2}{B}: Transform this creature. Activate only as a sorcery.",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/1/612b2e6e-fe8d-49ad-b845-6fa7fa59ffd1.jpg?1643596119",
       "attributes": {
+        "manaCost": "{B}",
         "cmc": 1,
         "colorIdentity": [
           "B"
@@ -3941,7 +3962,7 @@
       "id": 183,
       "name": "Life // Death",
       "type": "Sorcery // Sorcery",
-      "description": "",
+      "description": "All lands you control become 1/1 creatures until end of turn. They're still lands.",
       "imageUrl": "https://cards.scryfall.io/normal/front/e/1/e16d52ca-f8de-4852-9bff-9d208e5f678f.jpg?1677291168",
       "attributes": {
         "manaCost": "{G} // {1}{B}",
@@ -4219,7 +4240,6 @@
       "description": "Each land is a Swamp in addition to its other land types.",
       "imageUrl": "https://cards.scryfall.io/normal/front/9/e/9e1a9e38-6ffc-490f-b0be-23ba4e8204c6.jpg?1619399578",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -4417,9 +4437,26 @@
     "205": {
       "id": 205,
       "name": "Cam and Farrik, Havoc Duo",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "type": "Legendary Creature — Goblin Human Villain",
+      "description": "Flying, haste\nWhenever you discard a card, Hobgoblin gets +2/+0 until end of turn.",
+      "imageUrl": "https://cards.scryfall.io/normal/front/a/4/a4c5097b-204f-4dd1-b2f7-81555c408dd7.jpg?1757542347",
+      "attributes": {
+        "manaCost": "{1}{R}",
+        "cmc": 2,
+        "colors": [
+          "R"
+        ],
+        "colorIdentity": [
+          "R"
+        ],
+        "power": "1",
+        "toughness": "2",
+        "rarity": "uncommon",
+        "setCode": "om1",
+        "collectorNumber": "77",
+        "scryfallId": "a4c5097b-204f-4dd1-b2f7-81555c408dd7",
+        "scryfallName": "Hobgoblin, Mantled Marauder"
+      }
     },
     "206": {
       "id": 206,
@@ -4655,7 +4692,7 @@
       "id": 216,
       "name": "Bonecrusher Giant // Stomp",
       "type": "Creature — Giant // Instant — Adventure",
-      "description": "",
+      "description": "Whenever this creature becomes the target of a spell, this creature deals 2 damage to that spell's controller.",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/5/b5b71cd2-de35-451f-b16e-2e3936169407.jpg?1674141884",
       "attributes": {
         "manaCost": "{2}{R} // {1}{R}",
@@ -5046,9 +5083,10 @@
       "id": 233,
       "name": "Etali, Primal Conqueror // Etali, Primal Sickness",
       "type": "Legendary Creature — Elder Dinosaur // Legendary Creature — Phyrexian Elder Dinosaur",
-      "description": "",
+      "description": "Trample\nWhen Etali enters, each player exiles cards from the top of their library until they exile a nonland card. You may cast any number of spells from among the nonland cards exiled this way without paying their mana costs.\n{9}{G/P}: Transform Etali. Activate only as a sorcery.",
       "imageUrl": "https://cards.scryfall.io/normal/front/9/5/95c14c4d-6c16-4826-8d93-d89ad04aee09.jpg?1739657577",
       "attributes": {
+        "manaCost": "{5}{R}{R}",
         "cmc": 7,
         "colorIdentity": [
           "G",
@@ -5569,9 +5607,10 @@
       "id": 258,
       "name": "Fable of the Mirror-Breaker // Reflection of Kiki-Jiki",
       "type": "Enchantment — Saga // Enchantment Creature — Goblin Shaman",
-      "description": "",
+      "description": "(As this Saga enters and after your draw step, add a lore counter.)\nI — Create a 2/2 red Goblin Shaman creature token with \"Whenever this token attacks, create a Treasure token.\"\nII — You may discard up to two cards. If you do, draw that many cards.\nIII — Exile this Saga, then return it to the battlefield transformed under your control.",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/4/24c0d87b-0049-4beb-b9cb-6f813b7aa7dc.jpg?1691108103",
       "attributes": {
+        "manaCost": "{2}{R}",
         "cmc": 3,
         "colorIdentity": [
           "R"
@@ -5610,7 +5649,6 @@
       "description": "This land enters tapped unless you control a Mountain.\n{T}: Add {R}.\n{R}, {T}, Exert this land: Add {R}{R}. If that mana is spent on a creature spell, it gains haste until end of turn. (An exerted permanent won't untap during your next untap step.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/d/d/dd148edc-9e43-41aa-bb50-f912115d3e72.jpg?1717047864",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -5626,9 +5664,10 @@
       "id": 261,
       "name": "Sundering Eruption // Volcanic Fissure",
       "type": "Sorcery // Land",
-      "description": "",
+      "description": "Destroy target land. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle. Creatures without flying can't block this turn.",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/0/50686ac7-346c-43d1-bdaa-28d46a12ad93.jpg?1717013301",
       "attributes": {
+        "manaCost": "{2}{R}",
         "cmc": 3,
         "colorIdentity": [
           "R"
@@ -6358,9 +6397,26 @@
     "293": {
       "id": 293,
       "name": "The Scouring Stormsoul",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "type": "Legendary Creature — Sand Elemental Villain",
+      "description": "Sandman's power and toughness are each equal to the number of lands you control.\nSandman can't be blocked by creatures with power 2 or less.\n{3}{G}{G}: Return this card and target land card from your graveyard to the battlefield tapped.",
+      "imageUrl": "https://cards.scryfall.io/normal/front/6/2/62531cc3-c218-41f0-a3a2-beb42185baaf.jpg?1757548810",
+      "attributes": {
+        "manaCost": "{1}{G}{G}",
+        "cmc": 3,
+        "colors": [
+          "G"
+        ],
+        "colorIdentity": [
+          "G"
+        ],
+        "power": "*",
+        "toughness": "*",
+        "rarity": "rare",
+        "setCode": "om1",
+        "collectorNumber": "113",
+        "scryfallId": "62531cc3-c218-41f0-a3a2-beb42185baaf",
+        "scryfallName": "Sandman, Shifting Scoundrel"
+      }
     },
     "294": {
       "id": 294,
@@ -6981,7 +7037,7 @@
       "id": 322,
       "name": "Walk-In Closet // Forgotten Cellar",
       "type": "Enchantment — Room // Enchantment — Room",
-      "description": "",
+      "description": "You may play lands from your graveyard.\n(You may cast either half. That door unlocks on the battlefield. As a sorcery, you may pay the mana cost of a locked door to unlock it.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/0/a/0adcd4e5-d542-4293-8774-ace2305ef820.jpg?1726867658",
       "attributes": {
         "manaCost": "{2}{G} // {3}{G}{G}",
@@ -7005,7 +7061,6 @@
       "description": "{T}: Add {G}.\nChannel — {1}{G}, Discard this card: Destroy target artifact, enchantment, or nonbasic land an opponent controls. That player may search their library for a land card with a basic land type, put it onto the battlefield, then shuffle. This ability costs {1} less to activate for each legendary creature you control.",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/1/2135ac5a-187b-4dc9-8f82-34e8d1603416.jpg?1654568912",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -7024,7 +7079,6 @@
       "description": "This land enters tapped unless you control a Forest.\n{T}: Add {G}.\nDelirium — {2}{G}{G}: This land becomes a copy of target permanent card in your graveyard until end of turn. Activate only if there are four or more card types among cards in your graveyard.",
       "imageUrl": "https://cards.scryfall.io/normal/front/0/5/059164e1-894d-4586-9800-e60d6fbd6eb6.jpg?1717013047",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -7043,7 +7097,6 @@
       "description": "Each land is a Forest in addition to its other land types.",
       "imageUrl": "https://cards.scryfall.io/normal/front/4/e/4e4b6e22-93b2-4896-bba5-0ceaa5d8ea3c.jpg?1758104095",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -8098,9 +8151,28 @@
     "385": {
       "id": 385,
       "name": "Makdee and Itla, Skysnarers",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "type": "Legendary Creature — Spider Human Hero",
+      "description": "Flying\nVenom Blast — Artifacts and creatures your opponents control enter tapped.",
+      "imageUrl": "https://cards.scryfall.io/normal/front/f/b/fbf1ea21-2e90-4792-b399-111ff70a9d06.jpg?1757545753",
+      "attributes": {
+        "manaCost": "{1}{W/U}",
+        "cmc": 2,
+        "colors": [
+          "U",
+          "W"
+        ],
+        "colorIdentity": [
+          "U",
+          "W"
+        ],
+        "power": "2",
+        "toughness": "2",
+        "rarity": "rare",
+        "setCode": "om1",
+        "collectorNumber": "145",
+        "scryfallId": "fbf1ea21-2e90-4792-b399-111ff70a9d06",
+        "scryfallName": "Spider-Woman, Stunning Savior"
+      }
     },
     "386": {
       "id": 386,
@@ -8149,9 +8221,10 @@
       "id": 388,
       "name": "Aang, Swift Savior // Aang and La, Ocean's Fury",
       "type": "Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Spirit Ally",
-      "description": "",
+      "description": "Flash\nFlying\nWhen Aang enters, airbend up to one other target creature or spell. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)\nWaterbend {8}: Transform Aang.",
       "imageUrl": "https://cards.scryfall.io/normal/front/8/2/82866a0e-485a-4f7e-8c49-f7d9ff3f4ad4.jpg?1764121420",
       "attributes": {
+        "manaCost": "{1}{W}{U}",
         "cmc": 3,
         "colorIdentity": [
           "U",
@@ -8527,9 +8600,28 @@
     "404": {
       "id": 404,
       "name": "Desecrex, Gift of Servitude",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "type": "Legendary Creature — Symbiote Villain",
+      "description": "Trample\nWhen Carnage enters, return target creature card with mana value 3 or less from your graveyard to the battlefield. It gains \"This creature attacks each combat if able\" and \"When this creature deals combat damage to a player, sacrifice it.\"\nMayhem {B}{R}",
+      "imageUrl": "https://cards.scryfall.io/normal/front/e/1/e1332480-4986-421f-9a31-1d597d597c65.jpg?1759150573",
+      "attributes": {
+        "manaCost": "{2}{B}{R}",
+        "cmc": 4,
+        "colors": [
+          "B",
+          "R"
+        ],
+        "colorIdentity": [
+          "B",
+          "R"
+        ],
+        "power": "4",
+        "toughness": "3",
+        "rarity": "rare",
+        "setCode": "om1",
+        "collectorNumber": "133",
+        "scryfallId": "e1332480-4986-421f-9a31-1d597d597c65",
+        "scryfallName": "Carnage, Crimson Chaos"
+      }
     },
     "405": {
       "id": 405,
@@ -9446,9 +9538,23 @@
     "443": {
       "id": 443,
       "name": "Goben, Gene-Splice Savant",
-      "type": "Unknown",
-      "description": "Card not found in Scryfall",
-      "attributes": {}
+      "type": "Legendary Creature — Human Scientist Villain // Legendary Creature — Goblin Human Villain",
+      "description": "Norman Osborn can't be blocked.\nWhenever Norman Osborn deals combat damage to a player, he connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on this creature.)\n{1}{U}{B}{R}: Transform Norman Osborn. Activate only as a sorcery.",
+      "imageUrl": "https://cards.scryfall.io/normal/front/d/a/da13a060-36ee-41e9-bab1-af8ddcc893b8.jpg?1757544686",
+      "attributes": {
+        "manaCost": "{1}{U}",
+        "cmc": 2,
+        "colorIdentity": [
+          "B",
+          "R",
+          "U"
+        ],
+        "rarity": "mythic",
+        "setCode": "om1",
+        "collectorNumber": "30",
+        "scryfallId": "da13a060-36ee-41e9-bab1-af8ddcc893b8",
+        "scryfallName": "Norman Osborn // Green Goblin"
+      }
     },
     "444": {
       "id": 444,
@@ -9590,7 +9696,6 @@
       "description": "This land enters tapped.\n{T}: Add {W} or {U}.\n{3}{W}{U}: Until end of turn, this land becomes a 4/4 white and blue Elemental creature with flying and vigilance. It's still a land.",
       "imageUrl": "https://cards.scryfall.io/normal/front/4/c/4c830a99-595b-4aed-9f6b-85a78917f498.jpg?1547518582",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9610,7 +9715,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Plains or Island card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/8/f/8f85e12c-196b-4459-b81f-0c9c854e9f57.jpg?1717012985",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -9627,7 +9731,6 @@
       "description": "({T}: Add {W} or {U}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/e/0/e056b55f-82ed-4fe0-ab0c-bb20fa4a218a.jpg?1759144845",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9647,7 +9750,6 @@
       "description": "({T}: Add {W} or {U}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/5/652236c2-84ef-45e4-b5fc-ed6170bc3d6c.jpg?1759236529",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9667,7 +9769,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {W} or {U}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/9/e/9ed7441f-f624-49c8-8611-d9bba0e441ac.jpg?1675957278",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9687,7 +9788,6 @@
       "description": "({T}: Add {W} or {U}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/e/f/efd35cb4-862d-4699-a197-b744989b3ceb.jpg?1562943174",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9707,7 +9807,6 @@
       "description": "This land enters tapped.\n{T}: Add {U} or {B}.\n{1}{U}{B}: Until end of turn, this land becomes a 3/2 blue and black Elemental creature. It's still a land. It can't be blocked this turn.",
       "imageUrl": "https://cards.scryfall.io/normal/front/1/f/1f60e172-fcdc-4699-a212-815201375d47.jpg?1674142856",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9727,7 +9826,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {U} or {B}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/c/4/c49305d1-ac95-43ea-b02d-c3c7205bcda6.jpg?1712354960",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9747,7 +9845,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for an Island or Swamp card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/e/6e288374-2b71-4ace-b1d2-a19fee6cb4af.jpg?1717013017",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -9764,7 +9861,6 @@
       "description": "({T}: Add {U} or {B}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/b/2b5801fb-2026-4f25-98bc-ebb2f99684b9.jpg?1759236533",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9784,7 +9880,6 @@
       "description": "({T}: Add {U} or {B}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/6/26cee543-6eab-494e-a803-33a5d48d7d74.jpg?1562902883",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9804,7 +9899,6 @@
       "description": "({T}: Add {U} or {B}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/b/5b8170dc-6a90-46fc-9989-7575f3d402b5.jpg?1752947617",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9824,7 +9918,6 @@
       "description": "({T}: Add {B} or {R}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/7/3/73403d04-fe97-4830-8b80-16dd1a1a6cc1.jpg?1562918068",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9844,7 +9937,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {B} or {R}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/f/7/f75715ce-744f-409c-aeb1-e66eb9186a74.jpg?1726285365",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9864,7 +9956,6 @@
       "description": "{T}: Add {B}.\n{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
       "imageUrl": "https://cards.scryfall.io/normal/front/d/1/d151c8e2-d715-470d-868a-f45191db9fa0.jpg?1726286828",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9884,7 +9975,6 @@
       "description": "({T}: Add {B} or {R}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/d/6da63cc5-4624-4491-abd9-9b600c3fefe2.jpg?1759144844",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9904,7 +9994,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Swamp or Mountain card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/7/579743fe-f71e-4cb2-8629-d6b02ed1591d.jpg?1717012950",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -9921,7 +10010,6 @@
       "description": "({T}: Add {B} or {R}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/5/b598c93e-dae1-4d71-a9e4-917abf76d2d0.jpg?1759236530",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9941,7 +10029,6 @@
       "description": "({T}: Add {R} or {G}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/f/bf220c06-3cce-4bdd-aa58-83940c223e9c.jpg?1759236510",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9961,7 +10048,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {R} or {G}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/7/8/78b0f36b-7d8c-4e77-adc2-a4dad93a81d5.jpg?1675957264",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -9981,7 +10067,6 @@
       "description": "({T}: Add {R} or {G}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/9/69be21b4-c613-47c6-ba57-f4785861af3e.jpg?1752947608",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10001,7 +10086,6 @@
       "description": "({T}: Add {R} or {G}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/0/c/0c2c39fc-b564-4ab5-833c-ff029760b7a7.jpg?1562897467",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10021,7 +10105,6 @@
       "description": "{T}: Add {R}.\n{T}: Add {G}. Activate only if you control a Mountain or a Forest.",
       "imageUrl": "https://cards.scryfall.io/normal/front/7/e/7e1cdc03-6faa-4138-9a52-caafbe34fb59.jpg?1726286882",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10041,7 +10124,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Mountain or Forest card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/4/e/4e11ea8a-f895-438d-a3b7-f070238e4161.jpg?1717013111",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -10058,7 +10140,6 @@
       "description": "{T}, Pay 1 life: Add {G} or {W}.\n{1}, {T}, Sacrifice this land: Draw a card.",
       "imageUrl": "https://cards.scryfall.io/normal/front/9/3/93f7c880-9bae-4d29-b7b6-b6be6b2ffa89.jpg?1562851585",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10078,7 +10159,6 @@
       "description": "({T}: Add {G} or {W}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/c/1/c17816e8-28b1-4295-a637-efb0e5c18873.jpg?1759236528",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10098,7 +10178,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {G} or {W}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/5/65b26f68-3a25-4c4e-bc76-a199ab479a50.jpg?1675957278",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10118,7 +10197,6 @@
       "description": "({T}: Add {G} or {W}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/0/b0d161fc-4a2a-4f1d-82b4-a746552552df.jpg?1562930574",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10138,7 +10216,6 @@
       "description": "({T}: Add {G} or {W}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/c/6cdd2a74-63b3-4ff2-9c5a-a85dee63c3c9.jpg?1759144838",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10158,7 +10235,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Forest or Plains card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/d/bd1d13f7-fd38-4f0b-a8e0-1eac78668117.jpg?1717013102",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -10175,7 +10251,6 @@
       "description": "{T}: Add {B}.\n{T}: Add {W}. Activate only if you control a Plains or a Swamp.",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/2/52dcdabd-a186-45fe-9fee-6c0f1afeaf16.jpg?1738356877",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10195,7 +10270,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {W} or {B}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/7/b75df1f0-0513-40e4-a449-454f75de6434.jpg?1712356373",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10215,7 +10289,6 @@
       "description": "({T}: Add {W} or {B}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/8/c/8c542ea4-98c3-4c2d-9066-205ab7aa697a.jpg?1752947593",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10235,7 +10308,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Plains or Swamp card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/9/d/9db3ba6d-eb7f-4f5b-9a3b-c6239c3baa42.jpg?1738703598",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -10252,7 +10324,6 @@
       "description": "({T}: Add {W} or {B}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/9/d/9d471e36-a3ab-4a96-ba4b-8eca921ea37a.jpg?1562926691",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10272,7 +10343,6 @@
       "description": "({T}: Add {W} or {B}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/9/69c1b656-1d67-499c-bf0f-417682a86c7d.jpg?1759236532",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10292,7 +10362,6 @@
       "description": "{T}: Add {R}.\n{T}: Add {U}. Activate only if you control an Island or a Mountain.",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/7/57a93a71-d77c-417f-85d0-cd420f573331.jpg?1738356929",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10312,7 +10381,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for an Island or Mountain card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/7/1/71e491c5-8c07-449b-b2f1-ffa052e6d311.jpg?1738703652",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -10329,7 +10397,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {U} or {R}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/9/59a04e16-a767-4112-ab01-6ca1b09c286c.jpg?1712356382",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10349,7 +10416,6 @@
       "description": "({T}: Add {U} or {R}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/6/b66daa94-d367-4812-9f18-f35378c1febb.jpg?1759144847",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10369,7 +10435,6 @@
       "description": "({T}: Add {U} or {R}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/1/7/17260fff-b239-4af4-9306-3236ae3fa5a5.jpg?1759236532",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10389,7 +10454,6 @@
       "description": "({T}: Add {U} or {R}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/f/2f607e7e-30c0-45e9-8f61-bf6e9fe63f2b.jpg?1562904669",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10409,7 +10473,6 @@
       "description": "({T}: Add {B} or {G}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/d/bd7567df-b4d8-41a8-8eac-c05afa784bfe.jpg?1562933075",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10429,7 +10492,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {B} or {G}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/8/6/861caabb-0573-4e94-8b03-342f90465064.jpg?1723149884",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10449,7 +10511,6 @@
       "description": "({T}: Add {B} or {G}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/4/5/45b92924-baa1-4c9b-9932-9a5eda8f3446.jpg?1759144847",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10469,7 +10530,6 @@
       "description": "({T}: Add {B} or {G}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/f/6/f6ca59cd-8779-4a84-a54b-e863b79c61f0.jpg?1759236535",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10489,7 +10549,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Swamp or Forest card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/9/4/94c229ea-90da-4aa0-bfda-b162fb3b5b8b.jpg?1738703665",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -10506,7 +10565,6 @@
       "description": "{T}: Add {G}.\n{T}: Add {B}. Activate only if you control a Swamp or a Forest.",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/c/5ceacc7d-d407-4f82-af58-9bdf8426924e.jpg?1738356966",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10526,7 +10584,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Mountain or Plains card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/5/25ac5405-df7b-4097-914a-022cb18e20d4.jpg?1738703645",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -10543,7 +10600,6 @@
       "description": "({T}: Add {R} or {W}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/7/2/72c6d541-e2cb-4d6e-acac-90a8f53b7006.jpg?1759236525",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10563,7 +10619,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {R} or {W}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/8/5/85df6b6a-2dcf-4828-a4a8-e07d52e1fddd.jpg?1723149865",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10583,7 +10638,6 @@
       "description": "({T}: Add {R} or {W}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/b/bb979a96-a57d-4fb5-8ebe-0bd398272abe.jpg?1562932720",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10603,7 +10657,6 @@
       "description": "({T}: Add {R} or {W}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/8/b/8b4e2642-3c87-4708-b9b4-2e7f7359ac7d.jpg?1752947600",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10623,7 +10676,6 @@
       "description": "{T}, Pay 1 life: Add {R} or {W}.\n{1}, {T}, Sacrifice this land: Draw a card.",
       "imageUrl": "https://cards.scryfall.io/normal/front/c/3/c36820fa-ee86-4206-9a0d-737a67cf5208.jpg?1562202603",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10643,7 +10695,6 @@
       "description": "This land enters tapped unless you control two or fewer other lands.\n{T}: Add {G} or {U}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/c/c/cc18d5f4-a56a-4f7d-9f56-ccc92cbfb7f7.jpg?1712356371",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10663,7 +10714,6 @@
       "description": "({T}: Add {G} or {U}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
       "imageUrl": "https://cards.scryfall.io/normal/front/3/c/3c750d5a-f743-41ff-b5ba-02025ca0bec2.jpg?1752947580",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10683,7 +10733,6 @@
       "description": "({T}: Add {G} or {U}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/2/5260f8ae-805b-4eae-badf-62de0f768867.jpg?1759236526",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10703,7 +10752,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Forest or Island card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/8/8/88231c0d-0cc8-44ec-bf95-81d1710ac141.jpg?1738703648",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -10720,7 +10768,6 @@
       "description": "({T}: Add {G} or {U}.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/4/7/47033ba4-8f26-4a6b-97bd-5b366327325e.jpg?1632873386",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10740,7 +10787,6 @@
       "description": "{T}, Pay 1 life: Add {G} or {U}.\n{1}, {T}, Sacrifice this land: Draw a card.",
       "imageUrl": "https://cards.scryfall.io/normal/front/0/a/0ab6bfbd-d2e1-4c4c-9f91-6f69c5b8e3bb.jpg?1562202616",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10760,7 +10806,6 @@
       "description": "({T}: Add {G}, {W}, or {U}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/7/3/7363f1fb-9af3-4212-921f-d59533faf0e5.jpg?1664414585",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10781,7 +10826,6 @@
       "description": "({T}: Add {W}, {U}, or {B}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/a/2/a2c56479-4bee-4edb-80d7-4af010b7c793.jpg?1664414518",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10802,7 +10846,6 @@
       "description": "({T}: Add {U}, {B}, or {R}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/4/54f449ff-4025-465e-9ec5-a5cf42c4c9d3.jpg?1664414651",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10823,7 +10866,6 @@
       "description": "{T}: Add {C}.\n{T}, Sacrifice this land: Search your library for a basic Swamp, Mountain, or Forest card, put it onto the battlefield tapped, then shuffle.\nCycling {B}{R}{G} ({B}{R}{G}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/d/0/d0e3e7b3-7ba9-47a2-b46c-a40bffb445e2.jpg?1717013079",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10844,7 +10886,6 @@
       "description": "({T}: Add {B}, {R}, or {G}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/7/5/75fdce80-e338-4a50-bdc6-786511feaeef.jpg?1664414670",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10865,7 +10906,6 @@
       "description": "({T}: Add {R}, {G}, or {W}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/6/26d40e03-6de4-4373-9fbf-04c1dd79e995.jpg?1664414440",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10886,7 +10926,6 @@
       "description": "{T}: Add {C}.\n{T}, Sacrifice this land: Search your library for a basic Mountain, Forest, or Plains card, put it onto the battlefield tapped, then shuffle.\nCycling {R}{G}{W} ({R}{G}{W}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/0/f/0fe070f4-8877-4280-b8fd-869f3ac34ab6.jpg?1717013040",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10907,7 +10946,6 @@
       "description": "({T}: Add {R}, {W}, or {B}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/7/4/748e6a61-9c1f-4225-9f04-e54002f63ac3.jpg?1591228681",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10928,7 +10966,6 @@
       "description": "{T}: Add {C}.\n{T}, Sacrifice this land: Search your library for a basic Forest, Island, or Mountain card, put it onto the battlefield tapped, then shuffle.\nCycling {G}{U}{R} ({G}{U}{R}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/f/1/f1c99617-6e38-4af7-a064-6db9a5e2cc6a.jpg?1743207443",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10949,7 +10986,6 @@
       "description": "({T}: Add {G}, {U}, or {R}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/a/2/a249b1f4-2b22-4b67-a207-e0c4ae95d2e1.jpg?1601241399",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10970,7 +11006,6 @@
       "description": "({T}: Add {W}, {B}, or {G}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/b/2b74bb81-fb9a-40e5-a941-e517430b52f5.jpg?1636491374",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -10991,7 +11026,6 @@
       "description": "({T}: Add {U}, {R}, or {W}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/0/2/02138fbb-3962-4348-8d31-faaefba0b8b2.jpg?1591228666",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -11012,7 +11046,6 @@
       "description": "({T}: Add {B}, {G}, or {U}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)",
       "imageUrl": "https://cards.scryfall.io/normal/front/c/c/cc520518-2063-4b57-a0d4-10cf62a7175e.jpg?1591228738",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -11033,7 +11066,6 @@
       "description": "{T}: Add {C}{C}. This land deals 2 damage to you.",
       "imageUrl": "https://cards.scryfall.io/normal/front/b/d/bd3d4b4b-cf31-4f89-8140-9650edb03c7b.jpg?1764758774",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11050,7 +11082,6 @@
       "description": "{T}: Draw two cards, then discard three cards.",
       "imageUrl": "https://cards.scryfall.io/normal/front/c/8/c88acaa8-ad4d-4321-a6f6-9361916e5b5e.jpg?1653966861",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11067,7 +11098,6 @@
       "description": "When you play another land, sacrifice this land.\n{T}: Add {C}{C}.",
       "imageUrl": "https://cards.scryfall.io/normal/front/7/1/71624139-a255-48be-93ca-594a4beba487.jpg?1562429861",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11084,7 +11114,6 @@
       "description": "Dark Depths enters with ten ice counters on it.\n{3}: Remove an ice counter from Dark Depths.\nWhen Dark Depths has no ice counters on it, sacrifice it. If you do, create Marit Lage, a legendary 20/20 black Avatar creature token with flying and indestructible.",
       "imageUrl": "https://cards.scryfall.io/normal/front/3/a/3a8b11ad-d077-40b6-988c-0462e118fe3d.jpg?1764119697",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11101,7 +11130,6 @@
       "description": "{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap that land.",
       "imageUrl": "https://cards.scryfall.io/normal/front/6/a/6a21ecc8-f6fd-4670-91d8-94b9ce94c2fe.jpg?1752944504",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11118,7 +11146,6 @@
       "description": "{T}: Add {G} for each creature you control.",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/5/25b0b816-0583-44aa-9dc5-f3ff48993a51.jpg?1562902898",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -11137,7 +11164,6 @@
       "description": "{T}: Add {W}.\n{T}: Return target legendary creature to its owner's hand.",
       "imageUrl": "https://cards.scryfall.io/normal/front/e/5/e52214e1-404a-405a-b08e-20e13c087338.jpg?1559959289",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -11156,7 +11182,6 @@
       "description": "{T}: Add {C}.\n{T}: Draw a card. Activate only if you have exactly seven cards in hand.",
       "imageUrl": "https://cards.scryfall.io/normal/front/e/5/e5145f31-a4ac-44ef-8f85-e4d95f2c9ff5.jpg?1562940986",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11173,7 +11198,6 @@
       "description": "{T}, Pay 1 life: Add one mana of any color.",
       "imageUrl": "https://cards.scryfall.io/normal/front/5/0/504a69eb-3c2d-4bb1-b117-252b15acf0c2.jpg?1593096534",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11190,7 +11214,6 @@
       "description": "{T}: Add {C}{C}{C}. Spend this mana only to cast artifact spells.",
       "imageUrl": "https://cards.scryfall.io/normal/front/a/a/aac0c8df-f01d-4178-8d66-ee603f814d24.jpg?1562929426",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11207,7 +11230,6 @@
       "description": "As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.\nThis land is the chosen type.",
       "imageUrl": "https://cards.scryfall.io/normal/front/f/5/f5fb426a-5618-4dd4-9c51-0cc847be8c1d.jpg?1757378140",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11224,7 +11246,6 @@
       "description": "{T}, Pay 1 life, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/e/3/e37da81e-be12-45a2-9128-376f1ad7b3e8.jpg?1562202585",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11241,7 +11262,6 @@
       "description": "This land enters tapped unless it's your first, second, or third turn of the game.\n{T}: Add {C}.\n{T}, Pay 1 life: Add one mana of any color.",
       "imageUrl": "https://cards.scryfall.io/normal/front/f/c/fc7d1912-7e27-49ef-bd98-375d975a42b0.jpg?1748706861",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11258,7 +11278,6 @@
       "description": "{T}: Add {C}.\n{T}, Sacrifice this land: Destroy target land.",
       "imageUrl": "https://cards.scryfall.io/normal/front/f/5/f57fd4c9-0004-4f71-a30f-2720943f57ca.jpg?1764758782",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11275,7 +11294,6 @@
       "description": "When this land enters, up to one target creature phases out.\n{T}: Add {C}.\n{1}, {T}: Add one mana of any color.\n{4}: Put this card from your hand onto the battlefield.",
       "imageUrl": "https://cards.scryfall.io/normal/front/d/e/de92facf-762b-4a23-8d5e-bb673b0500c0.jpg?1717190007",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11292,7 +11310,6 @@
       "description": "{T}: Add {C}.\n{2}, {T}: This land becomes a copy of target land, except it has this ability.",
       "imageUrl": "https://cards.scryfall.io/normal/front/2/6/269a926d-7788-4668-8bd8-7572dbf5f5eb.jpg?1599710662",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11309,7 +11326,6 @@
       "description": "{T}: Add {U} for each artifact you control.",
       "imageUrl": "https://cards.scryfall.io/normal/front/f/d/fd99bce1-ce39-464b-8e61-2631eb3ed6f6.jpg?1610147079",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [
@@ -11328,7 +11344,6 @@
       "description": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — This Saga gains \"{T}: Add {C}.\"\nII — This Saga gains \"{2}, {T}: Create a 0/0 colorless Construct artifact creature token with 'This token gets +1/+1 for each artifact you control.'\"\nIII — Search your library for an artifact card with mana cost {0} or {1}, put it onto the battlefield, then shuffle.",
       "imageUrl": "https://cards.scryfall.io/normal/front/c/1/c1e0f201-42cb-46a1-901a-65bb4fc18f6c.jpg?1667318301",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
@@ -11345,7 +11360,6 @@
       "description": "{T}: Add {C}.\n{T}, Sacrifice this land: Destroy target nonbasic land.",
       "imageUrl": "https://cards.scryfall.io/normal/front/a/a/aaafb9bc-7cea-4624-a227-595544fa42b0.jpg?1590511888",
       "attributes": {
-        "manaCost": "",
         "cmc": 0,
         "colors": [],
         "colorIdentity": [],
