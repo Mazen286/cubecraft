@@ -153,6 +153,14 @@ const AVAILABLE_CUBES: CubeInfo[] = [
   },
   // MTG Cubes
   {
+    id: 'mtgo-vintage-cube',
+    name: 'MTGO Vintage Cube',
+    description: 'The legendary MTGO Vintage Cube with 540 of the most powerful cards in Magic history.',
+    cardCount: 540,
+    gameId: 'mtg',
+    source: 'local',
+  },
+  {
     id: 'arena-powered-cube',
     name: 'Arena Powered Cube 2.0',
     description: 'Official Arena Powered Cube featuring 540 iconic cards including Power Nine and modern staples.',
