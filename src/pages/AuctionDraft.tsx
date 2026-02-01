@@ -198,25 +198,6 @@ export function AuctionDraft() {
     return sortedGridCards.filter(card => remainingCardIds.includes(card.id));
   }, [sortedGridCards, remainingCardIds]);
 
-  // Calculate synergy-adjusted scores for grid cards
-  // Only calculate if not in competitive mode and synergies are loaded
-  const gridSynergies = useMemo((): Map<number, SynergyResult> => {
-    if (!cubeSynergies || !showScores) return new Map();
-    if (gridCards.length === 0) return new Map();
-    return synergyService.calculatePackSynergies(gridCards, draftedCards, cubeSynergies);
-  }, [gridCards, draftedCards, cubeSynergies, showScores]);
-
-  // Calculate synergy for a specific card (used for card detail view)
-  const getCardSynergy = useCallback((card: YuGiOhCardType | null): SynergyResult | null => {
-    if (!card || !cubeSynergies || !showScores) return null;
-    // Check if it's a grid card (use pre-calculated)
-    const gridSynergy = gridSynergies.get(card.id);
-    if (gridSynergy) return gridSynergy;
-    // For drafted cards, calculate synergy against other drafted cards
-    const otherDraftedCards = draftedCards.filter(c => c.id !== card.id);
-    return synergyService.calculateCardSynergy(card, otherDraftedCards, cubeSynergies);
-  }, [cubeSynergies, showScores, gridSynergies, draftedCards]);
-
   // Helper to convert YuGiOhCard to Card format
   const toCardWithAttributes = useCallback((card: YuGiOhCardType) => ({
     id: card.id,
@@ -525,6 +506,25 @@ export function AuctionDraft() {
   const cubeHasScores = session?.cube_id ? cubeService.cubeHasScores(session.cube_id) : true;
   // Show scores only if cube has them AND competitive mode is off
   const showScores = cubeHasScores && !session?.hide_scores;
+
+  // Calculate synergy-adjusted scores for grid cards
+  // Only calculate if not in competitive mode and synergies are loaded
+  const gridSynergies = useMemo((): Map<number, SynergyResult> => {
+    if (!cubeSynergies || !showScores) return new Map();
+    if (gridCards.length === 0) return new Map();
+    return synergyService.calculatePackSynergies(gridCards, draftedCards, cubeSynergies);
+  }, [gridCards, draftedCards, cubeSynergies, showScores]);
+
+  // Calculate synergy for a specific card (used for card detail view)
+  const getCardSynergy = useCallback((card: YuGiOhCardType | null): SynergyResult | null => {
+    if (!card || !cubeSynergies || !showScores) return null;
+    // Check if it's a grid card (use pre-calculated)
+    const gridSynergy = gridSynergies.get(card.id);
+    if (gridSynergy) return gridSynergy;
+    // For drafted cards, calculate synergy against other drafted cards
+    const otherDraftedCards = draftedCards.filter(c => c.id !== card.id);
+    return synergyService.calculateCardSynergy(card, otherDraftedCards, cubeSynergies);
+  }, [cubeSynergies, showScores, gridSynergies, draftedCards]);
 
   // Auto-start for solo mode with retry
   useEffect(() => {

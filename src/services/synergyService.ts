@@ -14,6 +14,9 @@ import type {
   SynergyBreakdown,
 } from '../types/synergy';
 
+// Re-export types for use by other modules
+export type { CubeSynergies, SynergyResult, SynergyBreakdown };
+
 // Cache for loaded synergies
 const synergiesCache = new Map<string, CubeSynergies>();
 
