@@ -54,6 +54,7 @@ export function CardDetailSheet({
       onClose={onClose}
       title={card.name}
       centerTitle
+      dismissOnAnyKey
       titleBadge={hasErrata(card.id) && (
         <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded align-middle">
           PRE-ERRATA

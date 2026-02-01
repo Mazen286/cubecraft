@@ -8,6 +8,7 @@
 import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { CanvasMode } from './CanvasMode';
 import { buildInitialZones, type CardWithId } from './buildInitialZones';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import type { ZoneCanvas } from './types';
 import type { Card } from '../../types/card';
 import type { YuGiOhCard } from '../../types';
@@ -74,6 +75,8 @@ export function ResultsCanvasView({
   className,
   keyboardEnabled = true,
 }: ResultsCanvasViewProps) {
+  const isMobile = useIsMobile();
+
   // Track previous zones for detecting cross-zone movements
   const prevZonesRef = useRef<ZoneCanvas[]>([]);
   // Skip zone change detection during initial load to prevent false positives
@@ -137,11 +140,12 @@ export function ResultsCanvasView({
       cards: cardsWithIds,
       zoneAssignments,
       pileGroups,
-      cardSize: 'normal',
+      cardSize: isMobile ? 'compact' : 'normal',
       canvasWidth: 800,
       zoneIds: availableZoneIds,
+      isMobile,
     });
-  }, [cardsWithIds, zoneAssignments, pileGroups, allCards.length, availableZoneIds]);
+  }, [cardsWithIds, zoneAssignments, pileGroups, allCards.length, availableZoneIds, isMobile]);
 
   const storageKey = `canvas-results-${sessionId}`;
 

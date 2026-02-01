@@ -8,6 +8,7 @@
 import { useMemo, useCallback } from 'react';
 import { CanvasMode } from './CanvasMode';
 import { buildInitialZones, type CardWithId } from './buildInitialZones';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import type { ZoneCanvas } from './types';
 import type { Card } from '../../types/card';
 import type { YuGiOhCard } from '../../types';
@@ -54,6 +55,8 @@ export function DraftCanvasView({
   className,
   keyboardEnabled = true,
 }: DraftCanvasViewProps) {
+  const isMobile = useIsMobile();
+
   // Convert YuGiOhCard[] to Card[] with IDs
   const cardsWithIds = useMemo<CardWithId[]>(() => {
     return draftedCards.map((card) => ({
@@ -87,11 +90,12 @@ export function DraftCanvasView({
     return buildInitialZones({
       cards: cardsWithIds,
       pileGroups,
-      cardSize: 'normal',
+      cardSize: isMobile ? 'compact' : 'normal',
       canvasWidth: 800,
       zoneIds: ['main'],
+      isMobile,
     });
-  }, [cardsWithIds, pileGroups]);
+  }, [cardsWithIds, pileGroups, isMobile]);
 
   const storageKey = `canvas-draft-${sessionId}`;
 

@@ -17,6 +17,8 @@ interface BottomSheetProps {
   header?: ReactNode;
   /** Center the title text, default false */
   centerTitle?: boolean;
+  /** When true, any key (not just Escape) dismisses the sheet */
+  dismissOnAnyKey?: boolean;
 }
 
 /**
@@ -34,25 +36,32 @@ export function BottomSheet({
   showHandle = true,
   header,
   centerTitle = false,
+  dismissOnAnyKey = false,
 }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  // Handle Escape key to close the sheet
+  // Handle keyboard events when sheet is open
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      // Stop ALL keyboard events from reaching background handlers
+      e.stopPropagation();
+
+      // Close on Escape, or any key if dismissOnAnyKey is enabled
+      if (e.key === 'Escape' || dismissOnAnyKey) {
         e.preventDefault();
-        e.stopPropagation();
         onClose();
       }
     };
 
+    // Focus the sheet for accessibility
+    sheetRef.current?.focus();
+
     // Use capture phase to ensure we handle it first
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, dismissOnAnyKey]);
 
   if (!isOpen) return null;
 
@@ -61,6 +70,9 @@ export function BottomSheet({
       ref={sheetRef}
       className="fixed inset-0 flex items-end justify-center"
       style={{ zIndex }}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
     >
       {/* Backdrop */}
       <div
