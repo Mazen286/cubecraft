@@ -153,6 +153,14 @@ const AVAILABLE_CUBES: CubeInfo[] = [
   },
   // MTG Cubes
   {
+    id: 'arena-powered-cube',
+    name: 'Arena Powered Cube 2.0',
+    description: 'Official Arena Powered Cube featuring 540 iconic cards including Power Nine and modern staples.',
+    cardCount: 540,
+    gameId: 'mtg',
+    source: 'local',
+  },
+  {
     id: 'mtg-starter',
     name: 'Planeswalker\'s Vault',
     description: 'Powered cube with the complete Power Nine and iconic Magic cards across all colors.',
