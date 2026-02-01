@@ -11,7 +11,7 @@ import { cn, formatTime, isExtraDeckCard, isMonsterCard, isSpellCard, isTrapCard
 import { Download, BarChart3, Clock, Zap, ChevronDown, ChevronUp, Flame, Trophy, RotateCcw, Plus, Minus, Layers, Archive, Share2, Hand, Shuffle, X, Save, FolderOpen, PlusCircle } from 'lucide-react';
 import { useDraftSession } from '../hooks/useDraftSession';
 import { useCards } from '../hooks/useCards';
-import { useCardFilters, type Tier, type ViewMode } from '../hooks/useCardFilters';
+import { useCardFilters, type Tier } from '../hooks/useCardFilters';
 import { useCardKeyboardNavigation } from '../hooks/useCardKeyboardNavigation';
 import { statisticsService } from '../services/statisticsService';
 import { draftService } from '../services/draftService';
@@ -735,42 +735,6 @@ export function Results() {
     return id;
   }, []);
 
-  const deleteCustomStack = useCallback((zone: DeckZone, stackId: string) => {
-    setCustomStacks(prev => {
-      const stackToDelete = prev[zone].find(s => s.id === stackId);
-      if (!stackToDelete) return prev;
-
-      const cardsToMove = stackToDelete.cardIndices;
-      const remainingStacks = prev[zone].filter(s => s.id !== stackId);
-
-      // If there are cards to move, put them in an "Uncategorized" stack
-      if (cardsToMove.length > 0) {
-        // Check if an Uncategorized stack already exists
-        const uncategorizedStack = remainingStacks.find(s => s.name === 'Uncategorized');
-        if (uncategorizedStack) {
-          // Add cards to existing Uncategorized stack
-          uncategorizedStack.cardIndices = [...uncategorizedStack.cardIndices, ...cardsToMove];
-        } else {
-          // Create new Uncategorized stack at the end
-          remainingStacks.push({
-            id: `stack-uncategorized-${Date.now()}`,
-            name: 'Uncategorized',
-            cardIndices: cardsToMove,
-          });
-        }
-      }
-
-      return { ...prev, [zone]: remainingStacks };
-    });
-  }, []);
-
-  const renameCustomStack = useCallback((zone: DeckZone, stackId: string, newName: string) => {
-    setCustomStacks(prev => ({
-      ...prev,
-      [zone]: prev[zone].map(s => s.id === stackId ? { ...s, name: newName } : s),
-    }));
-  }, []);
-
   const moveCardToStack = useCallback((zone: DeckZone, cardIndex: number, stackId: string) => {
     setCustomStacks(prev => {
       const updated = { ...prev };
@@ -788,43 +752,6 @@ export function Results() {
 
       return updated;
     });
-  }, []);
-
-  // Merge two stacks - move all cards from source to target
-  const mergeStacks = useCallback((zone: DeckZone, sourceStackId: string, targetStackId: string) => {
-    setCustomStacks(prev => {
-      const sourceStack = prev[zone].find(s => s.id === sourceStackId);
-      if (!sourceStack) return prev;
-
-      return {
-        ...prev,
-        [zone]: prev[zone]
-          .map(s => s.id === targetStackId
-            ? { ...s, cardIndices: [...s.cardIndices, ...sourceStack.cardIndices] }
-            : s
-          )
-          .filter(s => s.id !== sourceStackId), // Remove empty source
-      };
-    });
-  }, []);
-
-  // Create a new stack at a specific position (for insertion between stacks)
-  const createStackAtPosition = useCallback((zone: DeckZone, cardName: string, cardIndex: number, position: number) => {
-    const id = `stack-${Date.now()}`;
-    setCustomStacks(prev => {
-      // Remove card from any existing stack
-      const cleanedStacks = prev[zone].map(s => ({
-        ...s,
-        cardIndices: s.cardIndices.filter(i => i !== cardIndex),
-      })).filter(s => s.cardIndices.length > 0);
-
-      // Insert new stack at position
-      const newStack = { id, name: cardName, cardIndices: [cardIndex] };
-      cleanedStacks.splice(position, 0, newStack);
-
-      return { ...prev, [zone]: cleanedStacks };
-    });
-    return id;
   }, []);
 
   // Initialize custom stacks from default pile groups
@@ -2490,12 +2417,6 @@ function StatCard({
       <div className="text-xs sm:text-sm text-gray-300">{label}</div>
     </div>
   );
-}
-
-interface CustomStack {
-  id: string;
-  name: string;
-  cardIndices: number[];
 }
 
 function DeckZoneSection({
