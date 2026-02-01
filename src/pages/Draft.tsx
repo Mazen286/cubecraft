@@ -156,10 +156,13 @@ export function Draft() {
   const [myCardsInline, setMyCardsInline] = useState(false); // Toggle between drawer and inline view
   const [focusedSection, setFocusedSection] = useState<'pack' | 'myCards'>('pack'); // Which section has keyboard focus when inline
 
-  // Collapsible drawer sections state
-  const [drawerSectionsCollapsed, setDrawerSectionsCollapsed] = useState({
-    filters: false,
-    cubeStats: true, // Collapsed by default to save space
+  // Collapsible drawer sections state - collapse filters on mobile by default
+  const [drawerSectionsCollapsed, setDrawerSectionsCollapsed] = useState(() => {
+    const isMobileInit = typeof window !== 'undefined' && window.innerWidth < 768;
+    return {
+      filters: isMobileInit, // Collapsed by default on mobile
+      cubeStats: true, // Collapsed by default to save space
+    };
   });
 
   // Refs for cross-section highlight management (to avoid closure issues)

@@ -19,6 +19,7 @@ import {
   type DragMoveEvent,
   pointerWithin,
 } from '@dnd-kit/core';
+import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import { GameCard } from '../cards/GameCard';
 import { cn } from '../../lib/utils';
 import { ZoneCanvas } from './ZoneCanvas';
@@ -635,7 +636,7 @@ export function CanvasMode({
         ))}
 
         {/* DragOverlay shows a preview of the dragged item floating above everything */}
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay dropAnimation={null} modifiers={isMobile ? [snapCenterToCursor] : undefined}>
           {activeDrag?.type === 'card' && activeDrag.data.card && (
             <div
               className="pointer-events-none opacity-90 shadow-2xl ring-2 ring-gold-400 rounded-lg"

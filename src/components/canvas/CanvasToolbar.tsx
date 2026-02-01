@@ -4,8 +4,7 @@
  * Includes card size toggle, undo/redo, templates, snap-to-grid, zoom, and reset layout button.
  */
 
-import { Undo2, Redo2, RotateCcw, Grid3X3, Magnet, ZoomIn, ZoomOut, Maximize2, LayoutGrid, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { Undo2, Redo2, RotateCcw, Grid3X3, Magnet, ZoomIn, ZoomOut, Maximize2, LayoutGrid } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { StackTemplates, type StackTemplate } from './StackTemplates';
 import type { CardSize } from './types';
@@ -57,19 +56,18 @@ export function CanvasToolbar({
   className,
 }: CanvasToolbarProps) {
   const zoomPercent = Math.round(zoom * 100);
-  const [mobileExpanded, setMobileExpanded] = useState(false);
   return (
     <div
       className={cn(
         'flex items-center gap-2 px-3 py-2',
         'bg-yugi-card/70 border border-yugi-border rounded-lg',
-        isMobile && 'flex-wrap gap-y-2',  // Allow wrapping on mobile
+        isMobile && 'gap-1.5 px-2 py-1.5',  // Tighter spacing on mobile
         className
       )}
     >
       {/* Card Size Toggle - ALWAYS SHOW */}
       <div className="flex items-center gap-1">
-        <Grid3X3 className="w-4 h-4 text-gray-400 mr-1" />
+        {!isMobile && <Grid3X3 className="w-4 h-4 text-gray-400 mr-1" />}
         <div className="flex rounded overflow-hidden border border-yugi-border">
           {SIZE_OPTIONS.map(({ value, label }) => (
             <button
@@ -122,26 +120,8 @@ export function CanvasToolbar({
         </button>
       </div>
 
-      {/* Mobile: Expand/Collapse button */}
-      {isMobile && (
-        <>
-          <div className="w-px h-6 bg-yugi-border" />
-          <button
-            onClick={() => setMobileExpanded(!mobileExpanded)}
-            className={cn(
-              'flex items-center gap-1 px-2 py-1 rounded',
-              'text-xs text-gray-300 hover:text-white',
-              'hover:bg-white/10 transition-colors'
-            )}
-          >
-            {mobileExpanded ? 'Less' : 'More'}
-            <ChevronDown className={cn('w-3 h-3 transition-transform', mobileExpanded && 'rotate-180')} />
-          </button>
-        </>
-      )}
-
-      {/* Templates - DESKTOP or MOBILE EXPANDED */}
-      {(!isMobile || mobileExpanded) && onApplyTemplate && (
+      {/* Templates - DESKTOP ONLY */}
+      {!isMobile && onApplyTemplate && (
         <>
           <div className="w-px h-6 bg-yugi-border" />
           <StackTemplates
@@ -151,14 +131,15 @@ export function CanvasToolbar({
         </>
       )}
 
-      {/* Snap to Grid - DESKTOP or MOBILE EXPANDED (icon only on mobile) */}
-      {(!isMobile || mobileExpanded) && onSnapToGridChange && (
+      {/* Snap to Grid - Always show (icon only on mobile) */}
+      {onSnapToGridChange && (
         <>
           <div className="w-px h-6 bg-yugi-border" />
           <button
             onClick={() => onSnapToGridChange(!snapToGrid)}
             className={cn(
-              'flex items-center gap-1.5 px-2 py-1 rounded',
+              'flex items-center gap-1.5 rounded',
+              isMobile ? 'p-1.5' : 'px-2 py-1',
               'text-xs transition-colors',
               snapToGrid
                 ? 'bg-gold-500/20 text-gold-400 border border-gold-500/50'
@@ -218,8 +199,8 @@ export function CanvasToolbar({
         </>
       )}
 
-      {/* Auto Layout (Tidy) - DESKTOP or MOBILE EXPANDED */}
-      {(!isMobile || mobileExpanded) && onAutoLayout && (
+      {/* Auto Layout (Tidy) - DESKTOP ONLY */}
+      {!isMobile && onAutoLayout && (
         <>
           <div className="w-px h-6 bg-yugi-border" />
           <button
@@ -237,8 +218,8 @@ export function CanvasToolbar({
         </>
       )}
 
-      {/* Reset Layout - DESKTOP or MOBILE EXPANDED */}
-      {(!isMobile || mobileExpanded) && (
+      {/* Reset Layout - DESKTOP ONLY */}
+      {!isMobile && (
         <>
           <div className="w-px h-6 bg-yugi-border" />
           <button
