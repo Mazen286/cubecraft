@@ -1568,6 +1568,12 @@ export const auctionService = {
         return;
       }
 
+      // Don't act while paused
+      if (session.paused) {
+        console.log('[makeBotBid] Session is paused, aborting');
+        return;
+      }
+
       const auctionState = session.auction_state as AuctionStateData | null;
       if (!auctionState || auctionState.phase !== 'bidding') {
         console.log('[makeBotBid] Not in bidding phase, aborting. Phase:', auctionState?.phase);
@@ -1764,11 +1770,11 @@ export const auctionService = {
       .single();
 
     if (!session || session.status !== 'in_progress') return;
+    if (session.paused) return; // Don't take action while paused
 
     const auctionState = session.auction_state as AuctionStateData | null;
     if (!auctionState || auctionState.phase !== 'bidding') return;
 
-    // Check if bid timer has expired
     const bidTimerSeconds = auctionState.bidTimerSeconds ?? DEFAULT_BID_TIMER_SECONDS;
     const bidStartedAt = auctionState.bidStartedAt;
 
@@ -1776,11 +1782,6 @@ export const auctionService = {
 
     const startTime = new Date(bidStartedAt).getTime();
     const elapsed = (Date.now() - startTime) / 1000;
-
-    // Add a small grace period (2 seconds) to allow for network latency
-    if (elapsed < bidTimerSeconds + 2) return;
-
-    console.log(`[auctionService] Bid timer expired for seat ${auctionState.nextBidderSeat}, elapsed: ${elapsed}s`);
 
     // Get all players
     const { data: allPlayers } = await supabase
@@ -1798,14 +1799,20 @@ export const auctionService = {
     // Already passed?
     if (auctionState.passedPlayerIds.includes(currentBidder.id)) return;
 
-    // If current bidder is a bot, trigger bot bid (shouldn't normally get here, but fallback)
+    // For BOTS: Retry bot bid after just 5 seconds of inactivity
+    // This catches cases where the initial bot bid trigger failed
     if (currentBidder.is_bot) {
-      console.log(`[auctionService] Triggering fallback bot bid for ${currentBidder.name}`);
-      await this.makeBotBid(sessionId, session.current_grid, auctionState.cardId!, currentBidder.id);
+      if (elapsed >= 5) {
+        console.log(`[auctionService] Bot ${currentBidder.name} hasn't acted in ${elapsed.toFixed(1)}s, triggering retry`);
+        await this.makeBotBid(sessionId, session.current_grid, auctionState.cardId!, currentBidder.id);
+      }
       return;
     }
 
-    // Auto-pass for human player who timed out
+    // For HUMANS: Wait for full timer + grace period before auto-passing
+    if (elapsed < bidTimerSeconds + 2) return;
+
+    console.log(`[auctionService] Bid timer expired for ${currentBidder.name}, elapsed: ${elapsed}s`);
     console.log(`[auctionService] Auto-passing for timed-out player ${currentBidder.name}`);
     await this.passBid(sessionId, currentBidder.id);
   },
