@@ -312,7 +312,8 @@ export function useCanvasKeyboardNavigation({
           break;
         }
 
-        case 'Enter': {
+        case 'Enter':
+        case ' ': {
           e.preventDefault();
           const cardId = getFocusedCardId();
           if (cardId !== null && onCardSelect) {

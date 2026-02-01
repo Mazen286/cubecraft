@@ -60,9 +60,8 @@ function calculateGridPositions(
   isMobile: boolean = false
 ): Array<{ x: number; y: number }> {
   const dims = STACK_DIMENSIONS[cardSize];
-  // No spacing on mobile, normal spacing on desktop (24px)
-  const stackPadding = isMobile ? 0 : 24;
-  const stackWidth = dims.width + stackPadding;
+  // No spacing - stacks are directly adjacent
+  const stackWidth = dims.width;
 
   const columns = Math.floor(canvasWidth / stackWidth) || 1;
   const positions: Array<{ x: number; y: number }> = [];

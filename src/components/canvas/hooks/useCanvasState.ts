@@ -866,9 +866,8 @@ export function useCanvasState({
   const autoLayout = useCallback((containerWidth: number = 800) => {
     const stackDims = STACK_DIMENSIONS[cardSize];
     const cardDims = CARD_DIMENSIONS[cardSize];
-    // No spacing on mobile, normal spacing on desktop (24px)
-    const stackPadding = isMobile ? 0 : 24;
-    const stackWidth = stackDims.width + stackPadding;
+    // No spacing - stacks are directly adjacent
+    const stackWidth = stackDims.width;
 
     const columns = Math.max(1, Math.floor(containerWidth / stackWidth) || 1);
 
@@ -927,7 +926,7 @@ export function useCanvasState({
       recordAction('move_stack', before, newZones);
       return newZones;
     });
-  }, [cardSize, isMobile, recordAction]);
+  }, [cardSize, recordAction]);
 
   return {
     zones,

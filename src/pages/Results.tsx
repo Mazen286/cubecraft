@@ -2236,7 +2236,7 @@ ${sideDeck}
                       {gameConfig.id === 'mtg' ? 'Sideboard' : 'Side Deck'}
                     </Button>
                   )}
-                  {selectedCard.zone !== 'pool' && (
+                  {selectedCard.zone !== 'pool' && gameConfig.id !== 'mtg' && (
                     <Button
                       onClick={() => moveCard(selectedCard.index, 'pool')}
                       variant="ghost"
