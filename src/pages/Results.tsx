@@ -2080,6 +2080,13 @@ ${sideDeck}
                 pileGroups={gameConfig.pileViewConfig?.groups}
                 showTier={hasScores}
                 onCardClick={(card, _index) => {
+                  // Check if this is a basic resource (by matching name)
+                  const basicResource = gameConfig.basicResources?.find(r => r.name === card.name);
+                  if (basicResource) {
+                    handleBasicResourceClick(basicResource);
+                    return;
+                  }
+                  // Otherwise find in drafted cards
                   const cardIndex = allDraftedCards.findIndex(c => c.card.id === card.id);
                   if (cardIndex !== -1) {
                     handleCardClick(card, cardIndex);
