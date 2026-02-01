@@ -377,15 +377,15 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center md:p-4">
+    <div className="fixed inset-0 z-[9999]">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/90 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal - full screen on mobile, contained on desktop */}
-      <div className="relative w-full md:max-w-6xl h-full md:h-auto md:max-h-[90vh] bg-yugi-darker md:rounded-xl md:border border-yugi-border shadow-2xl flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] md:pt-0">
+      {/* Modal - full screen on mobile, contained and centered on desktop */}
+      <div className="absolute inset-0 md:inset-4 md:top-8 md:bottom-8 md:left-1/2 md:-translate-x-1/2 md:max-w-6xl md:rounded-xl bg-yugi-darker md:border border-yugi-border shadow-2xl flex flex-col overflow-hidden">
         {/* Header - compact on mobile */}
         <div className="flex items-center justify-between p-2 md:p-4 border-b border-yugi-border flex-shrink-0">
           <div className="min-w-0 flex-1">
