@@ -1023,9 +1023,10 @@ export async function enrichMTGCube(
   try {
     const { cards: apiCards, notFound } = await mtgCardService.getCardsByNames(cardNames);
 
-    // Apply user scores to fetched cards
-    const enrichedCards: Card[] = apiCards.map(card => ({
+    // Apply user scores and assign sequential numeric IDs for compatibility with cubeService
+    const enrichedCards: Card[] = apiCards.map((card, index) => ({
       ...card,
+      id: index + 1, // Sequential numeric ID starting from 1
       score: userScores.get(card.name.toLowerCase()),
     }));
 
