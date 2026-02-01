@@ -163,7 +163,7 @@ function Header() {
 
 function Footer() {
   return (
-    <footer className="relative z-10 border-t border-yugi-border mt-auto bg-yugi-darker">
+    <footer className="border-t border-yugi-border mt-auto bg-yugi-darker">
       <div className="container mx-auto px-4 py-6 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-300">
           <p>
