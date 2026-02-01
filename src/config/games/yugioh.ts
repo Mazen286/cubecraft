@@ -489,7 +489,6 @@ export const yugiohConfig: GameConfig = {
 
   getCardImageUrl: (card, size) => {
     // Use card's imageUrl if available (e.g., from API enrichment)
-    // Otherwise fall back to local images
     if (card.imageUrl) {
       // For small size, try to use the small version if it's a YGOProDeck URL
       if (size === 'sm' && card.imageUrl.includes('ygoprodeck.com')) {
@@ -497,12 +496,14 @@ export const yugiohConfig: GameConfig = {
       }
       return card.imageUrl;
     }
-    // Fall back to local images
+    // Fall back to local small images or YGOProDeck for large
     const id = card.id;
     if (size === 'sm') {
+      // Use local small images
       return `/images/cards_small/${id}.jpg`;
     }
-    return `/images/cards/${id}.jpg`;
+    // Use YGOProDeck API for large images (we don't store large locally)
+    return `https://images.ygoprodeck.com/images/cards/${id}.jpg`;
   },
 
   exportFormats: yugiohExportFormats,
