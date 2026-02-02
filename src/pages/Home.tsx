@@ -186,6 +186,7 @@ export function Home() {
         onClose={() => setInfoSheet(null)}
         title="Multi-Game Support"
         maxHeight={70}
+        fullWidth={false}
       >
         <div className="p-4 space-y-6">
           <p className="text-gray-300">
@@ -229,6 +230,7 @@ export function Home() {
         onClose={() => setInfoSheet(null)}
         title="Real-time Multiplayer"
         maxHeight={70}
+        fullWidth={false}
       >
         <div className="p-4 space-y-6">
           <p className="text-gray-300">
@@ -286,6 +288,7 @@ export function Home() {
         onClose={() => setInfoSheet(null)}
         title="Export Decks"
         maxHeight={70}
+        fullWidth={false}
       >
         <div className="p-4 space-y-6">
           <p className="text-gray-300">

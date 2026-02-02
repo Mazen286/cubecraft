@@ -19,6 +19,8 @@ interface BottomSheetProps {
   dismissOnAnyKey?: boolean;
   /** Footer content that stays fixed at the bottom of the sheet */
   footer?: ReactNode;
+  /** When true, sheet spans full width. When false, constrained on desktop. Default true */
+  fullWidth?: boolean;
 }
 
 /**
@@ -37,6 +39,7 @@ export function BottomSheet({
   centerTitle = false,
   dismissOnAnyKey = false,
   footer,
+  fullWidth = true,
 }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -101,46 +104,52 @@ export function BottomSheet({
             <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-2" />
           )}
 
-          {header ? (
-            header
-          ) : centerTitle ? (
-            <div className="relative flex items-center justify-center">
-              <h3 className="font-bold text-gold-400 text-base truncate max-w-[80%] text-center">
-                {title}
-                {titleBadge}
-              </h3>
-              <button
-                onClick={onClose}
-                className="absolute right-0 p-1 text-gray-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gold-400 text-base truncate flex-1 mr-2">
-                {title}
-                {titleBadge}
-              </h3>
-              <button
-                onClick={onClose}
-                className="p-1 text-gray-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          )}
+          <div className={fullWidth ? '' : 'max-w-lg mx-auto'}>
+            {header ? (
+              header
+            ) : centerTitle ? (
+              <div className="relative flex items-center justify-center">
+                <h3 className="font-bold text-gold-400 text-base truncate max-w-[80%] text-center">
+                  {title}
+                  {titleBadge}
+                </h3>
+                <button
+                  onClick={onClose}
+                  className="absolute right-0 p-1 text-gray-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-gold-400 text-base truncate flex-1 mr-2">
+                  {title}
+                  {titleBadge}
+                </h3>
+                <button
+                  onClick={onClose}
+                  className="p-1 text-gray-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar pb-6 min-h-0">
-          {children}
+          <div className={fullWidth ? '' : 'max-w-lg mx-auto'}>
+            {children}
+          </div>
         </div>
 
         {/* Footer - always visible at bottom */}
         {footer && (
           <div className="flex-shrink-0 bg-yugi-darker border-t border-yugi-border px-4 py-3">
-            {footer}
+            <div className={fullWidth ? '' : 'max-w-lg mx-auto'}>
+              {footer}
+            </div>
           </div>
         )}
       </div>

@@ -673,6 +673,7 @@ export function DraftSetup() {
         title="How Pack Draft Works"
         maxHeight={90}
         centerTitle
+        fullWidth={false}
       >
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
           {/* Overview */}
@@ -724,6 +725,7 @@ export function DraftSetup() {
         title="How Auction Grid Works"
         maxHeight={90}
         centerTitle
+        fullWidth={false}
       >
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
           {/* Overview */}
@@ -785,6 +787,7 @@ export function DraftSetup() {
         title="How Open Draft Works"
         maxHeight={90}
         centerTitle
+        fullWidth={false}
       >
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
           {/* Overview */}

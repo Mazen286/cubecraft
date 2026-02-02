@@ -1560,6 +1560,7 @@ export function AuctionDraft() {
             </span>
           }
           maxHeight={90}
+          fullWidth={false}
         >
           <div className="p-4 space-y-4">
             {isOpenMode ? (

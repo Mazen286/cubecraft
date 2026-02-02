@@ -272,7 +272,7 @@ function CubeManagement() {
       id: cube.id,
       name: cube.name,
       description: cube.description || null,
-      game_id: cube.gameId,
+      game_id: cube.gameId || 'yugioh',
       creator_id: null,
       is_public: true,
       card_count: cube.cardCount,
