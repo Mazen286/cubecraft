@@ -1,0 +1,10 @@
+# robots.txt for CubeCraft
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://figmentcubecraft.netlify.app/sitemap.xml
+
+# Disallow admin and auth routes
+Disallow: /admin
+Disallow: /auth/
