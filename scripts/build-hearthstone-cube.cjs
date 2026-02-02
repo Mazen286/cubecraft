@@ -355,9 +355,9 @@ function selectCardsForCube(cards, targetSize = 540) {
     };
   }
 
-  // === CLASS CARDS: 40 per class (20 legendary + 20 non-legendary) ===
-  const legendaryPerClass = 20;
-  const nonLegendaryPerClass = 20;
+  // === CLASS CARDS: 40 per class (4 legendary + 36 non-legendary = 10% legendary) ===
+  const legendaryPerClass = 4;
+  const nonLegendaryPerClass = 36;
   const numClasses = CLASSES.length - 1; // exclude NEUTRAL
 
   for (const cls of CLASSES) {
@@ -381,10 +381,10 @@ function selectCardsForCube(cards, targetSize = 540) {
     console.log(`  - ${cls}: ${classLegendaries.length} leg + ${classNonLegendaries.length} non-leg = ${classLegendaries.length + classNonLegendaries.length}`);
   }
 
-  // === NEUTRAL CARDS: Fill remaining with balanced legendary/non-legendary ===
+  // === NEUTRAL CARDS: Fill remaining with 10% legendary ratio ===
   const classCardsTotal = selected.length;
   const neutralTarget = Math.max(0, targetSize - classCardsTotal);
-  const neutralLegendaryTarget = Math.floor(neutralTarget / 2);
+  const neutralLegendaryTarget = Math.floor(neutralTarget * 0.1); // 10% legendary
   const neutralNonLegendaryTarget = neutralTarget - neutralLegendaryTarget;
 
   const { legendary: neutralLeg, nonLegendary: neutralNonLeg } = byClassAndRarity['NEUTRAL'];
