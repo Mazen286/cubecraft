@@ -409,9 +409,19 @@ export const hearthstoneConfig: GameConfig = {
   cardAttributes: HEARTHSTONE_CLASSES,
 
   getCardImageUrl: (card, size) => {
-    // HearthstoneJSON render URLs
+    // If card has imageUrl stored, use it (cubes store the full URL)
+    if (card.imageUrl) {
+      // Swap resolution if needed
+      if (size === 'sm' && card.imageUrl.includes('/512x/')) {
+        return card.imageUrl.replace('/512x/', '/256x/');
+      }
+      return card.imageUrl;
+    }
+    // Fallback: use hsCardId from attributes
+    const attrs = card.attributes as HearthstoneCardAttributes & { hsCardId?: string };
+    const hsCardId = attrs?.hsCardId || card.id;
     const resolution = size === 'sm' ? '256x' : '512x';
-    return `https://art.hearthstonejson.com/v1/render/latest/enUS/${resolution}/${card.id}.png`;
+    return `https://art.hearthstonejson.com/v1/render/latest/enUS/${resolution}/${hsCardId}.png`;
   },
 
   exportFormats,
