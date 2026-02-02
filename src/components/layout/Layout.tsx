@@ -177,8 +177,11 @@ function Footer() {
               Figment Analytics
             </a>
           </p>
-          <p>
+          <p className="text-center">
             A multi-game cube drafting platform for TCG enthusiasts.
+            <span className="block md:inline md:ml-2 text-gray-500 text-xs">
+              Card links may earn us a commission.
+            </span>
           </p>
         </div>
       </div>

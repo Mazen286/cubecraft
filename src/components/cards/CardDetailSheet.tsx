@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, ExternalLink } from 'lucide-react';
 import { BottomSheet } from '../ui/BottomSheet';
 import { YuGiOhCard } from './YuGiOhCard';
 import { ManaCostWithFaces, OracleText } from './ManaSymbols';
 import { useGameConfig } from '../../context/GameContext';
 import { hasErrata, getErrata } from '../../data/cardErrata';
 import { cn, getTierFromScore } from '../../lib/utils';
+import { getTCGPlayerAffiliateLink, getTCGPlayerDirectLink } from '../../lib/affiliate';
 import { type YuGiOhCard as YuGiOhCardType, type SynergyResult, toCardWithAttributes } from '../../types';
 import type { PokemonCardAttributes, PokemonAttack, PokemonAbility } from '../../config/games/pokemon';
 import { ENERGY_COLORS } from '../../config/games/pokemon';
@@ -243,6 +244,25 @@ export function CardDetailSheet({
                   </span>
                 </div>
               )}
+
+              {/* Buy on TCGPlayer link */}
+              {(() => {
+                const affiliateLink = getTCGPlayerAffiliateLink(card.name, gameConfig.id, 'card-detail');
+                const directLink = getTCGPlayerDirectLink(card.name, gameConfig.id);
+                const buyLink = affiliateLink || directLink;
+                if (!buyLink) return null;
+                return (
+                  <a
+                    href={buyLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-lg bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600/30 hover:text-blue-300 transition-colors text-sm"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Buy on TCGPlayer
+                  </a>
+                );
+              })()}
             </div>
           </div>
 
