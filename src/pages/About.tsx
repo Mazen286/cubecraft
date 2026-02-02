@@ -1,6 +1,7 @@
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
+import { Heart, Coffee } from 'lucide-react';
 
 export function About() {
   const navigate = useNavigate();
@@ -92,6 +93,27 @@ export function About() {
               All card game names and logos are trademarks of their respective owners. This project is not
               affiliated with or endorsed by any card game publisher.
             </p>
+          </section>
+
+          {/* Support */}
+          <section className="glass-card p-6">
+            <h2 className="text-xl font-semibold text-gold-400 mb-4 flex items-center gap-2">
+              <Heart className="w-5 h-5" />
+              Support CubeCraft
+            </h2>
+            <p className="text-gray-300 mb-4">
+              CubeCraft is free to use and always will be. If you enjoy using it and want to help
+              cover hosting costs and support future development, consider buying me a coffee!
+            </p>
+            <a
+              href="https://ko-fi.com/V7V51TGDH8"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#72a4f2] hover:bg-[#5a8fd9] text-white font-medium transition-colors"
+            >
+              <Coffee className="w-5 h-5" />
+              Support me on Ko-fi
+            </a>
           </section>
 
           {/* Affiliate Disclosure */}

@@ -176,10 +176,18 @@ function Footer() {
             >
               Figment Analytics
             </a>
+            <span className="mx-2 text-gray-600">·</span>
+            <a
+              href="https://ko-fi.com/V7V51TGDH8"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#72a4f2] hover:text-[#5a8fd9] transition-colors"
+            >
+              Support on Ko-fi
+            </a>
           </p>
           <p className="text-center">
-            A multi-game cube drafting platform for TCG enthusiasts.
-            <span className="block md:inline md:ml-2 text-gray-500 text-xs">
+            <span className="text-gray-500 text-xs">
               Card links may earn us a commission.
             </span>
           </p>
