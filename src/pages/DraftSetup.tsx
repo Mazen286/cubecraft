@@ -861,6 +861,7 @@ const GAME_BADGES: Record<string, { label: string; color: string; bg: string }> 
   yugioh: { label: 'YGO', color: 'text-gold-400', bg: 'bg-gold-500/20' },
   mtg: { label: 'MTG', color: 'text-red-400', bg: 'bg-red-500/20' },
   pokemon: { label: 'PKM', color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
+  hearthstone: { label: 'HS', color: 'text-amber-400', bg: 'bg-amber-500/20' },
 };
 
 // CubeSection component - renders a titled section with cube grid

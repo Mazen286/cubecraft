@@ -199,8 +199,8 @@ const AVAILABLE_CUBES: CubeInfo[] = [
   {
     id: 'hearthstone-classic-cube',
     name: 'Classic Hearthstone Cube',
-    description: 'Iconic cards from Hearthstone\'s history. Heavy on neutrals for flexible class selection.',
-    cardCount: 359,
+    description: 'Iconic cards from Hearthstone\'s history. 40 cards per class with balanced legendary/non-legendary ratio.',
+    cardCount: 540,
     gameId: 'hearthstone',
     source: 'local',
   },

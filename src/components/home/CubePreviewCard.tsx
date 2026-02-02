@@ -4,7 +4,7 @@ import { Eye } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { CubeViewer } from '../cube/CubeViewer';
 import { cubeService, type CubeInfo } from '../../services/cubeService';
-import { getGameConfig } from '../../config/games';
+import { getGameConfigOrNull } from '../../config/games';
 import type { YuGiOhCard } from '../../types';
 
 interface CubePreviewCardProps {
@@ -21,7 +21,7 @@ export function CubePreviewCard({ cube }: CubePreviewCardProps) {
   const [showViewer, setShowViewer] = useState(false);
 
   // Get game config for styling
-  const gameConfig = cube.gameId ? getGameConfig(cube.gameId) : null;
+  const gameConfig = cube.gameId ? getGameConfigOrNull(cube.gameId) : null;
   const gameBadgeColor = gameConfig?.theme.primaryColor || '#DAA520';
 
   // Lazy load preview cards when component mounts
@@ -102,22 +102,20 @@ export function CubePreviewCard({ cube }: CubePreviewCardProps) {
         className="flex-shrink-0 w-72 sm:w-80 glass-card p-4 snap-start"
       >
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1 min-w-0">
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className="px-2 py-0.5 text-xs font-bold rounded flex-shrink-0"
+              style={{
+                backgroundColor: gameBadgeColor + '20',
+                color: gameBadgeColor,
+              }}
+            >
+              {gameConfig?.shortName || 'TCG'}
+            </span>
             <h3 className="font-bold text-white truncate">{cube.name}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span
-                className="px-2 py-0.5 text-xs font-bold rounded"
-                style={{
-                  backgroundColor: gameBadgeColor + '20',
-                  color: gameBadgeColor,
-                }}
-              >
-                {gameConfig?.shortName || 'TCG'}
-              </span>
-              <span className="text-sm text-gray-400">{cube.cardCount} cards</span>
-            </div>
           </div>
+          <span className="text-sm text-gray-400">{cube.cardCount} cards</span>
         </div>
 
         {/* Card Previews */}

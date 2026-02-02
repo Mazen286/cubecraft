@@ -408,6 +408,18 @@ export function CardDetailSheet({
                   );
                 }
 
+                // Check if description contains HTML tags (like Hearthstone's <b> for keywords)
+                const hasHtml = cardDescription && /<[^>]+>/.test(cardDescription);
+
+                if (hasHtml) {
+                  return (
+                    <p
+                      className="text-xs md:text-sm text-gray-300 leading-relaxed whitespace-pre-wrap [&_b]:text-white [&_b]:font-semibold"
+                      dangerouslySetInnerHTML={{ __html: cardDescription }}
+                    />
+                  );
+                }
+
                 return (
                   <p className="text-xs md:text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
                     {cardDescription || 'No description available.'}

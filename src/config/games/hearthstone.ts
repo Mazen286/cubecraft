@@ -141,7 +141,7 @@ function generateDeckCode(cards: Card[], heroClass: string): string {
   const doubleCopy: number[] = [];
   const multiCopy: [number, number][] = []; // [dbfId, count]
 
-  for (const [dbfId, count] of cardCounts) {
+  for (const [dbfId, count] of Array.from(cardCounts.entries())) {
     if (count === 1) {
       singleCopy.push(dbfId);
     } else if (count === 2) {
@@ -228,7 +228,7 @@ const exportFormats: ExportFormat[] = [
       // Find the class with most cards
       let dominantClass = 'MAGE';
       let maxCount = 0;
-      for (const [cls, count] of classCounts) {
+      for (const [cls, count] of Array.from(classCounts.entries())) {
         if (count > maxCount) {
           maxCount = count;
           dominantClass = cls;
