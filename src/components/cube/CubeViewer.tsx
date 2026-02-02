@@ -185,9 +185,14 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
         const type = card.type.toLowerCase();
 
         switch (groupId) {
-          // Yu-Gi-Oh filters
+          // Card type filter (works for all games)
           case 'cardType': {
-            // Match card type (monster/spell/trap for yugioh, creature/instant/etc for mtg)
+            // For Hearthstone, check attrs.cardType (uppercase like "MINION", "SPELL")
+            const hsCardType = attrs?.cardType as string | undefined;
+            if (hsCardType) {
+              return selectedValues.has(hsCardType);
+            }
+            // For Yu-Gi-Oh/MTG, check card.type (lowercase like "monster", "creature")
             return Array.from(selectedValues).some(val => type.includes(val));
           }
           case 'level': {
@@ -247,6 +252,33 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             // Match pokemon type
             const types = attrs?.types as string[] | undefined;
             return types && Array.from(selectedValues).some(t => types.includes(t));
+          }
+
+          // Hearthstone filters
+          case 'manaCost': {
+            // Match mana cost (Hearthstone)
+            const cost = attrs?.cost as number | undefined;
+            const costKey = cost !== undefined ? (cost >= 10 ? '10+' : String(cost)) : undefined;
+            return costKey !== undefined && selectedValues.has(costKey);
+          }
+          case 'cardClass': {
+            // Match class (Hearthstone)
+            const cardClass = attrs?.cardClass as string | undefined;
+            return cardClass !== undefined && selectedValues.has(cardClass);
+          }
+          case 'rarity': {
+            // Match rarity (Hearthstone)
+            const rarity = attrs?.rarity as string | undefined;
+            return rarity !== undefined && selectedValues.has(rarity);
+          }
+          case 'mechanics': {
+            // Match mechanics (Hearthstone)
+            const mechanics = attrs?.mechanics as string[] | undefined;
+            if (!mechanics) return false;
+            // Card has the mechanic if any selected mechanic is in the card's mechanics list
+            return Array.from(selectedValues).some(mech =>
+              mechanics.some(m => m.toUpperCase().replace(/ /g, '_') === mech)
+            );
           }
 
           default:
