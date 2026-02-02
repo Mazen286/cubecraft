@@ -224,12 +224,14 @@ export const MTG_CARD_TYPES = [
  * Bot names for MTG (planeswalkers and legendary characters)
  */
 const MTG_BOT_NAMES = [
-  // Core planeswalkers
-  'Jace', 'Liliana', 'Chandra', 'Nissa', 'Gideon',
+  // Gatewatch and allies
+  'Jace', 'Liliana', 'Chandra', 'Nissa', 'Gideon', 'Ajani', 'Teferi', 'Kaya',
   // Fan favorites
-  'Ajani', 'Sorin', 'Elspeth', 'Teferi', 'Kaya',
-  // Villains and others
-  'Nicol Bolas', 'Tezzeret', 'Vraska', 'Nahiri', 'Ashiok',
+  'Sorin', 'Elspeth', 'Garruk', 'Tamiyo', 'Narset', 'Saheeli', 'Vivien', 'Basri',
+  // Villains and antagonists
+  'Nicol Bolas', 'Tezzeret', 'Vraska', 'Nahiri', 'Ashiok', 'Ob Nixilis', 'Tibalt',
+  // Legendary creatures
+  'Emrakul', 'Ulamog', 'Kozilek', 'Urza', 'Yawgmoth', 'Omnath', 'Atraxa',
 ];
 
 /**

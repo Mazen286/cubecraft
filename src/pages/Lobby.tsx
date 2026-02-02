@@ -385,12 +385,12 @@ export function Lobby() {
           </Button>
           {isHost && (
             <Button
-              variant="ghost"
-              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+              variant="secondary"
+              className="text-red-400 border-red-500/50 hover:text-red-300 hover:bg-red-500/10 hover:border-red-500"
               onClick={handleCancelSession}
               disabled={isCancelling}
             >
-              {isCancelling ? 'Cancelling...' : 'Cancel'}
+              {isCancelling ? 'Cancelling...' : 'Cancel Draft'}
             </Button>
           )}
           {isHost && (

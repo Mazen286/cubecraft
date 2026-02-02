@@ -211,11 +211,15 @@ export const POKEMON_ENERGY_TYPES = [
  */
 const POKEMON_BOT_NAMES = [
   // Anime protagonists
-  'Ash', 'Misty', 'Brock', 'May', 'Dawn',
+  'Ash', 'Misty', 'Brock', 'May', 'Dawn', 'Serena', 'Iris', 'Cilan',
   // Game protagonists and rivals
-  'Red', 'Blue', 'Cynthia', 'N', 'Leon',
+  'Red', 'Blue', 'Green', 'Silver', 'Brendan', 'Lucas', 'Hilbert', 'Nate',
+  // Champions and Elite Four
+  'Cynthia', 'N', 'Leon', 'Steven', 'Lance', 'Diantha', 'Alder',
+  // Gym Leaders
+  'Giovanni', 'Sabrina', 'Lt. Surge', 'Erika', 'Blaine', 'Volkner', 'Elesa',
   // Professors
-  'Prof. Oak', 'Prof. Elm', 'Prof. Sycamore', 'Prof. Kukui', 'Prof. Turo',
+  'Prof. Oak', 'Prof. Elm', 'Prof. Birch', 'Prof. Rowan', 'Prof. Juniper', 'Prof. Sycamore', 'Prof. Kukui',
 ];
 
 /**

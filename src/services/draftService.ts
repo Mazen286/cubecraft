@@ -230,13 +230,16 @@ export const draftService = {
         'Bot 1', 'Bot 2', 'Bot 3', 'Bot 4', 'Bot 5', 'Bot 6',
         'Bot 7', 'Bot 8', 'Bot 9', 'Bot 10', 'Bot 11', 'Bot 12'
       ];
+
+      // Shuffle bot names for random assignment
+      const shuffledNames = [...botNames].sort(() => Math.random() - 0.5);
       const botPlayers: DraftPlayerInsert[] = [];
 
       for (let i = 0; i < settings.botCount; i++) {
         botPlayers.push({
           session_id: session.id,
           user_id: `bot-${i + 1}`,
-          name: botNames[i % botNames.length],
+          name: shuffledNames[i % shuffledNames.length],
           seat_position: i + 1, // Human is seat 0
           is_host: false,
           is_bot: true,
@@ -1728,14 +1731,19 @@ export const draftService = {
       'Bot 7', 'Bot 8', 'Bot 9', 'Bot 10', 'Bot 11', 'Bot 12'
     ];
 
-    // Count existing bots to get a unique name
+    // Get names already used by existing bots
     const existingBots = players.filter(p => p.is_bot);
-    const botIndex = existingBots.length;
+    const usedNames = new Set(existingBots.map(b => b.name));
+
+    // Pick a random unused name, or fall back to any random name if all used
+    const availableNames = botNames.filter(n => !usedNames.has(n));
+    const namePool = availableNames.length > 0 ? availableNames : botNames;
+    const randomName = namePool[Math.floor(Math.random() * namePool.length)];
 
     const botData: DraftPlayerInsert = {
       session_id: sessionId,
-      user_id: `bot-mp-${Date.now()}-${botIndex}`,
-      name: botNames[botIndex % botNames.length],
+      user_id: `bot-mp-${Date.now()}-${existingBots.length}`,
+      name: randomName,
       seat_position: nextSeat,
       is_host: false,
       is_bot: true,

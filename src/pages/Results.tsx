@@ -101,8 +101,8 @@ export function Results() {
   // Get unique card IDs for fetching card data
   const uniqueCardIds = useMemo(() => [...new Set(draftedCardIds)], [draftedCardIds]);
 
-  // Fetch actual card data for unique cards
-  const { cards: uniqueCards, isLoading: cardsLoading } = useCards(uniqueCardIds);
+  // Fetch actual card data for unique cards (pass cubeId to ensure correct game's cards)
+  const { cards: uniqueCards, isLoading: cardsLoading } = useCards(uniqueCardIds, session?.cube_id);
 
   // Create full deck list preserving duplicates with unique indices
   const allDraftedCards = useMemo(() => {
@@ -302,7 +302,7 @@ export function Results() {
   }, [burnedCardRecords]);
 
   // Fetch card data for burned cards (unique cards)
-  const { cards: burnedCardData } = useCards(uniqueBurnedCardIds);
+  const { cards: burnedCardData } = useCards(uniqueBurnedCardIds, session?.cube_id);
 
   // Map burned records to full card data (preserves duplicates and order)
   const burnedCards = useMemo(() => {
@@ -316,7 +316,7 @@ export function Results() {
   }, [burnedCardRecords, burnedCardData]);
 
   // Fetch card data for first picks
-  const { cards: firstPickCards } = useCards(firstPickIds);
+  const { cards: firstPickCards } = useCards(firstPickIds, session?.cube_id);
 
   // Get draft statistics
   const draftStats = useMemo(() => {

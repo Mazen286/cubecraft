@@ -228,13 +228,17 @@ export const YUGIOH_MONSTER_TYPES = [
  */
 const YUGIOH_BOT_NAMES = [
   // Duel Monsters era
-  'Yugi', 'Kaiba', 'Joey', 'Mai', 'Pegasus',
+  'Yugi', 'Kaiba', 'Joey', 'Mai', 'Pegasus', 'Marik', 'Bakura', 'Ishizu', 'Mokuba', 'Tea',
   // GX era
-  'Jaden', 'Aster', 'Zane',
+  'Jaden', 'Aster', 'Zane', 'Chazz', 'Alexis', 'Syrus', 'Bastion', 'Jesse',
   // 5D's era
-  'Yusei', 'Jack Atlas', 'Crow',
-  // ZEXAL/ARC-V/VRAINS era
-  'Yuma', 'Yuya', 'Playmaker', 'Revolver',
+  'Yusei', 'Jack Atlas', 'Crow', 'Akiza', 'Leo', 'Luna',
+  // ZEXAL era
+  'Yuma', 'Astral', 'Shark', 'Kite', 'Rio',
+  // ARC-V era
+  'Yuya', 'Declan', 'Gong', 'Zuzu', 'Shay', 'Sora',
+  // VRAINS era
+  'Playmaker', 'Revolver', 'Soulburner', 'Blue Angel', 'Go Onizuka',
 ];
 
 /**

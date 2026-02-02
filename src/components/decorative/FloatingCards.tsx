@@ -2,7 +2,7 @@ import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '../../lib/utils';
 
 // Card game types
-type CardGame = 'yugioh' | 'mtg' | 'pokemon';
+type CardGame = 'yugioh' | 'mtg' | 'pokemon' | 'hearthstone';
 
 // Configuration
 const CONFIG = {
@@ -10,10 +10,12 @@ const CONFIG = {
 };
 
 // Card backs for each game - all local for reliability
+// Hearthstone falls back to yugioh since card backs are rarely shown anyway
 const CARD_BACKS: Record<CardGame, string> = {
   yugioh: '/card-backs/yugioh.jpg',
   mtg: '/card-backs/mtg.jpg',
   pokemon: '/card-backs/pokemon.jpg',
+  hearthstone: '/card-backs/yugioh.jpg', // Fallback - Hearthstone card backs rarely shown
 };
 
 interface IconicCard {
@@ -41,6 +43,10 @@ const ICONIC_CARDS: IconicCard[] = [
   { id: 'ygo-44508094', name: 'Stardust Dragon', game: 'yugioh', imageUrl: 'https://images.ygoprodeck.com/images/cards/44508094.jpg' },
   { id: 'ygo-84013237', name: 'Number 39: Utopia', game: 'yugioh', imageUrl: 'https://images.ygoprodeck.com/images/cards/84013237.jpg' },
   { id: 'ygo-14558127', name: 'Ash Blossom & Joyous Spring', game: 'yugioh', imageUrl: 'https://images.ygoprodeck.com/images/cards/14558127.jpg' },
+  // Modern favorites
+  { id: 'ygo-95454996', name: 'Maliss White Binder', game: 'yugioh', imageUrl: 'https://images.ygoprodeck.com/images/cards/95454996.jpg' },
+  { id: 'ygo-69272449', name: 'Maliss White Rabbit', game: 'yugioh', imageUrl: 'https://images.ygoprodeck.com/images/cards/69272449.jpg' },
+  { id: 'ygo-55285840', name: 'Time Thief Redoer', game: 'yugioh', imageUrl: 'https://images.ygoprodeck.com/images/cards/55285840.jpg' },
 
   // === MAGIC: THE GATHERING ===
   // Power Nine & Iconic
@@ -80,6 +86,22 @@ const ICONIC_CARDS: IconicCard[] = [
   // Fan Favorites
   { id: 'pkmn-eevee', name: 'Eevee', game: 'pokemon', imageUrl: 'https://images.pokemontcg.io/base2/51_hires.png' },
   { id: 'pkmn-snorlax', name: 'Snorlax', game: 'pokemon', imageUrl: 'https://images.pokemontcg.io/base2/11_hires.png' },
+
+  // === HEARTHSTONE ===
+  // Classic Legendaries
+  { id: 'hs-ragnaros', name: 'Ragnaros the Firelord', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/EX1_298.png' },
+  { id: 'hs-sylvanas', name: 'Sylvanas Windrunner', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/EX1_016.png' },
+  { id: 'hs-tirion', name: 'Tirion Fordring', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/EX1_383.png' },
+  { id: 'hs-ysera', name: 'Ysera', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/EX1_572.png' },
+  { id: 'hs-deathwing', name: 'Deathwing', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/NEW1_030.png' },
+  { id: 'hs-leeroy', name: 'Leeroy Jenkins', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/EX1_116.png' },
+  // Iconic Expansion Cards
+  { id: 'hs-drboom', name: 'Dr. Boom', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/GVG_110.png' },
+  { id: 'hs-zilliax', name: 'Zilliax', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/BOT_548.png' },
+  { id: 'hs-reno', name: 'Reno Jackson', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/LOE_011.png' },
+  { id: 'hs-nzoth', name: "N'Zoth, the Corruptor", game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/OG_133.png' },
+  { id: 'hs-yogg', name: 'Yogg-Saron', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/OG_134.png' },
+  { id: 'hs-loatheb', name: 'Loatheb', game: 'hearthstone', imageUrl: 'https://art.hearthstonejson.com/v1/render/latest/enUS/512x/FP1_030.png' },
 ];
 
 // Lane configuration - 12 lanes avoiding center content (doubled from 6)
@@ -216,9 +238,10 @@ const FloatingCard = memo(function FloatingCard({
         <div
           className={cn(
             'aspect-[63/88] rounded-lg overflow-hidden',
-            'border border-gold-500/30',
-            card.hasGlow && 'shadow-[0_0_20px_rgba(212,175,55,0.4),0_0_40px_rgba(212,175,55,0.2),0_8px_25px_rgba(0,0,0,0.4)]',
-            !card.hasGlow && 'shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
+            // No border/glow for Hearthstone - cards have decorative frames
+            card.cardGame !== 'hearthstone' && 'border border-gold-500/30',
+            card.cardGame !== 'hearthstone' && card.hasGlow && 'shadow-[0_0_20px_rgba(212,175,55,0.4),0_0_40px_rgba(212,175,55,0.2),0_8px_25px_rgba(0,0,0,0.4)]',
+            card.cardGame !== 'hearthstone' && !card.hasGlow && 'shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
           )}
         >
           <img

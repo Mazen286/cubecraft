@@ -145,8 +145,8 @@ export function AuctionDraft() {
     defaultDirection: 'desc',
   });
 
-  // Fetch drafted card data
-  const { cards: draftedCards } = useCards(draftedCardIds);
+  // Fetch drafted card data (pass cubeId to ensure correct game's cards)
+  const { cards: draftedCards } = useCards(draftedCardIds, session?.cube_id);
 
   // Track selected card index for keyboard navigation (grid)
   const [selectedCardIndex, setSelectedCardIndex] = useState(0);

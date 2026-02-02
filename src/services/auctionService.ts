@@ -594,13 +594,16 @@ export const auctionService = {
         'Bot 1', 'Bot 2', 'Bot 3', 'Bot 4', 'Bot 5', 'Bot 6',
         'Bot 7', 'Bot 8', 'Bot 9', 'Bot 10', 'Bot 11', 'Bot 12'
       ];
+
+      // Shuffle bot names for random assignment
+      const shuffledNames = [...botNames].sort(() => Math.random() - 0.5);
       const botPlayers: DraftPlayerInsert[] = [];
 
       for (let i = 0; i < settings.botCount; i++) {
         botPlayers.push({
           session_id: session.id,
           user_id: `bot-${i + 1}`,
-          name: botNames[i % botNames.length],
+          name: shuffledNames[i % shuffledNames.length],
           seat_position: i + 1,
           is_host: false,
           is_bot: true,

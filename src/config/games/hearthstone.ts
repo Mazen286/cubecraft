@@ -391,17 +391,14 @@ export const hearthstoneConfig: GameConfig = {
   defaultPlayerName: 'Player',
 
   botNames: [
-    'Innkeeper',
-    'Arthas',
-    'Thrall',
-    'Jaina',
-    'Garrosh',
-    'Uther',
-    'Rexxar',
-    'Malfurion',
-    'Valeera',
-    'Gul\'dan',
-    'Anduin',
+    // Classic Heroes
+    'Jaina', 'Thrall', 'Garrosh', 'Uther', 'Rexxar', 'Malfurion', 'Valeera', 'Gul\'dan', 'Anduin',
+    // Alternate Heroes
+    'Medivh', 'Alleria', 'Magni', 'Khadgar', 'Lady Liadrin', 'Morgl', 'Tyrande',
+    // Legendary Characters
+    'Arthas', 'Illidan', 'Ragnaros', 'Sylvanas', 'Dr. Boom', 'Kel\'Thuzad', 'Yogg-Saron',
+    // Innkeeper and others
+    'Innkeeper', 'Reno', 'Elise', 'Brann', 'Finley', 'Zephrys',
   ],
 
   cardTypes: ['MINION', 'SPELL', 'WEAPON', 'HERO'],

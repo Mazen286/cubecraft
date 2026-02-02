@@ -1,7 +1,7 @@
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Coffee } from 'lucide-react';
+import { Heart, Coffee, Bug, Lightbulb } from 'lucide-react';
 
 export function About() {
   const navigate = useNavigate();
@@ -84,15 +84,40 @@ export function About() {
           <section className="glass-card p-6">
             <h2 className="text-xl font-semibold text-gold-400 mb-4">Credits</h2>
             <p className="text-gray-300 mb-4">
-              Card images are provided by{' '}
+              Card data and images are provided by{' '}
               <a href="https://ygoprodeck.com/api-guide/" target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-300 transition-colors">YGOPRODeck</a> (Yu-Gi-Oh!),{' '}
-              <a href="https://scryfall.com" target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-300 transition-colors">Scryfall</a> (MTG), and{' '}
+              <a href="https://scryfall.com" target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-300 transition-colors">Scryfall</a> (MTG),{' '}
+              <a href="https://hearthstonejson.com" target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-300 transition-colors">HearthstoneJSON</a> (Hearthstone), and{' '}
               <a href="https://pokemontcg.io" target="_blank" rel="noopener noreferrer" className="text-gold-400 hover:text-gold-300 transition-colors">Pokemon TCG API</a>.
             </p>
             <p className="text-gray-400 text-sm">
               All card game names and logos are trademarks of their respective owners. This project is not
               affiliated with or endorsed by any card game publisher.
             </p>
+          </section>
+
+          {/* Feedback */}
+          <section className="glass-card p-6">
+            <h2 className="text-xl font-semibold text-gold-400 mb-4">Feedback</h2>
+            <p className="text-gray-300 mb-4">
+              Found a bug or have an idea for a new feature? We'd love to hear from you!
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="mailto:mazen@figmentanalytics.com?subject=[CubeCraft Bug] "
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/50 hover:bg-red-500/20 text-red-400 font-medium transition-colors"
+              >
+                <Bug className="w-5 h-5" />
+                Report a Bug
+              </a>
+              <a
+                href="mailto:mazen@figmentanalytics.com?subject=[CubeCraft Feature Request] "
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/50 hover:bg-green-500/20 text-green-400 font-medium transition-colors"
+              >
+                <Lightbulb className="w-5 h-5" />
+                Request a Feature
+              </a>
+            </div>
           </section>
 
           {/* Support */}

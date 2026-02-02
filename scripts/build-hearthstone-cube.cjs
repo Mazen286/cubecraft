@@ -355,9 +355,11 @@ function selectCardsForCube(cards, targetSize = 540) {
     };
   }
 
-  // === CLASS CARDS: 40 per class (4 legendary + 36 non-legendary = 10% legendary) ===
-  const legendaryPerClass = 4;
-  const nonLegendaryPerClass = 36;
+  // === TARGET: 60% neutral, 40% class ===
+  // 540 * 0.4 = 216 class cards / 11 classes = ~20 per class
+  // 540 * 0.6 = 324 neutral cards
+  const legendaryPerClass = 2;
+  const nonLegendaryPerClass = 18;
   const numClasses = CLASSES.length - 1; // exclude NEUTRAL
 
   for (const cls of CLASSES) {
@@ -381,7 +383,7 @@ function selectCardsForCube(cards, targetSize = 540) {
     console.log(`  - ${cls}: ${classLegendaries.length} leg + ${classNonLegendaries.length} non-leg = ${classLegendaries.length + classNonLegendaries.length}`);
   }
 
-  // === NEUTRAL CARDS: Fill remaining with 10% legendary ratio ===
+  // === NEUTRAL CARDS: Fill remaining (~60%) with 10% legendary ratio ===
   const classCardsTotal = selected.length;
   const neutralTarget = Math.max(0, targetSize - classCardsTotal);
   const neutralLegendaryTarget = Math.floor(neutralTarget * 0.1); // 10% legendary
@@ -447,7 +449,7 @@ function formatCube(cards) {
   return {
     id: 'hearthstone-classic-cube',
     name: 'Classic Hearthstone Cube',
-    description: 'A curated cube featuring iconic cards from Hearthstone\'s history. Heavy on neutrals for flexible class selection during draft.',
+    description: 'A curated cube featuring iconic cards from Hearthstone\'s history. 60% neutrals for flexible deckbuilding, 40% class cards for identity.',
     gameId: 'hearthstone',
     version: '1.0',
     cardCount: Object.keys(cardMap).length,

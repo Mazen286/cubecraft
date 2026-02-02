@@ -1,9 +1,54 @@
 import React, { useState, useRef } from 'react';
+import { Download } from 'lucide-react';
 import { useGameConfig } from '../../context/GameContext';
 import { useAuth } from '../../context/AuthContext';
 import { parseUploadedFile, validateCube, cubeToCardMap, enrichCube, cubeNeedsEnrichment, type ParsedCube } from '../../services/cubeUploadService';
 import { cubeService } from '../../services/cubeService';
 import { getAllGameConfigs } from '../../config/games';
+
+// Sample data for each game
+const SAMPLE_DATA: Record<string, { headers: string[]; rows: string[][] }> = {
+  yugioh: {
+    headers: ['ID', 'Name', 'Score'],
+    rows: [
+      ['89631139', 'Blue-Eyes White Dragon', '95'],
+      ['46986414', 'Dark Magician', '92'],
+      ['70903634', 'Exodia the Forbidden One', '88'],
+      ['6150044', 'Summoned Skull', '75'],
+      ['74677422', 'Red-Eyes Black Dragon', '80'],
+    ],
+  },
+  mtg: {
+    headers: ['Name', 'Set', 'Score'],
+    rows: [
+      ['Lightning Bolt', 'M10', '95'],
+      ['Counterspell', 'A25', '90'],
+      ['Sol Ring', 'C21', '98'],
+      ['Llanowar Elves', 'DOM', '82'],
+      ['Path to Exile', 'E02', '88'],
+    ],
+  },
+  hearthstone: {
+    headers: ['dbfId', 'Name', 'Score'],
+    rows: [
+      ['49184', 'Zilliax', '95'],
+      ['41418', 'Dr. Boom, Mad Genius', '90'],
+      ['22379', 'Loatheb', '88'],
+      ['49753', 'Shudderwock', '85'],
+      ['14454', 'Ragnaros the Firelord', '92'],
+    ],
+  },
+  pokemon: {
+    headers: ['Name', 'Type', 'Score'],
+    rows: [
+      ['Charizard', 'Fire', '95'],
+      ['Pikachu', 'Lightning', '85'],
+      ['Mewtwo', 'Psychic', '92'],
+      ['Blastoise', 'Water', '88'],
+      ['Venusaur', 'Grass', '86'],
+    ],
+  },
+};
 
 interface CubeUploadProps {
   onUploadComplete?: (cubeId: string) => void;
@@ -179,124 +224,53 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
 
           {/* Format Help with Sample Table */}
           <div className="text-sm text-gray-500 space-y-3">
-            <p className="font-medium text-gray-400">CSV Format Example:</p>
+            <div className="flex items-center justify-between">
+              <p className="font-medium text-gray-400">CSV Format Example:</p>
+              <button
+                onClick={() => {
+                  const sample = SAMPLE_DATA[selectedGameId] || SAMPLE_DATA.pokemon;
+                  const csv = [sample.headers.join(','), ...sample.rows.map(row => row.join(','))].join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${selectedGameId}-cube-sample.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex items-center gap-1 text-xs text-gold-400 hover:text-gold-300 transition-colors"
+              >
+                <Download className="w-3 h-3" />
+                Download Sample
+              </button>
+            </div>
             <div className="bg-yugi-darker rounded overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-yugi-border">
-                    {selectedGameId === 'yugioh' ? (
-                      <>
-                        <th className="text-left px-3 py-2 text-gray-400">ID</th>
-                        <th className="text-left px-3 py-2 text-gray-400">Name</th>
-                        <th className="text-left px-3 py-2 text-gray-400">Score</th>
-                      </>
-                    ) : selectedGameId === 'mtg' ? (
-                      <>
-                        <th className="text-left px-3 py-2 text-gray-400">Name</th>
-                        <th className="text-left px-3 py-2 text-gray-400">Set</th>
-                        <th className="text-left px-3 py-2 text-gray-400">Score</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="text-left px-3 py-2 text-gray-400">Name</th>
-                        <th className="text-left px-3 py-2 text-gray-400">Type</th>
-                        <th className="text-left px-3 py-2 text-gray-400">Score</th>
-                      </>
-                    )}
+                    {(SAMPLE_DATA[selectedGameId] || SAMPLE_DATA.pokemon).headers.map((header) => (
+                      <th key={header} className="text-left px-3 py-2 text-gray-400">{header}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="font-mono text-white">
-                  {selectedGameId === 'yugioh' ? (
-                    <>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">89631139</td>
-                        <td className="px-3 py-1.5">Blue-Eyes White Dragon</td>
-                        <td className="px-3 py-1.5 text-gold-400">95</td>
-                      </tr>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">46986414</td>
-                        <td className="px-3 py-1.5">Dark Magician</td>
-                        <td className="px-3 py-1.5 text-gold-400">92</td>
-                      </tr>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">70903634</td>
-                        <td className="px-3 py-1.5">Exodia the Forbidden One</td>
-                        <td className="px-3 py-1.5 text-gold-400">88</td>
-                      </tr>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">6150044</td>
-                        <td className="px-3 py-1.5">Summoned Skull</td>
-                        <td className="px-3 py-1.5 text-gold-400">75</td>
-                      </tr>
-                      <tr>
-                        <td className="px-3 py-1.5">74677422</td>
-                        <td className="px-3 py-1.5">Red-Eyes Black Dragon</td>
-                        <td className="px-3 py-1.5 text-gold-400">80</td>
-                      </tr>
-                    </>
-                  ) : selectedGameId === 'mtg' ? (
-                    <>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">Lightning Bolt</td>
-                        <td className="px-3 py-1.5">M10</td>
-                        <td className="px-3 py-1.5 text-gold-400">95</td>
-                      </tr>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">Counterspell</td>
-                        <td className="px-3 py-1.5">A25</td>
-                        <td className="px-3 py-1.5 text-gold-400">90</td>
-                      </tr>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">Sol Ring</td>
-                        <td className="px-3 py-1.5">C21</td>
-                        <td className="px-3 py-1.5 text-gold-400">98</td>
-                      </tr>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">Llanowar Elves</td>
-                        <td className="px-3 py-1.5">DOM</td>
-                        <td className="px-3 py-1.5 text-gold-400">82</td>
-                      </tr>
-                      <tr>
-                        <td className="px-3 py-1.5">Path to Exile</td>
-                        <td className="px-3 py-1.5">E02</td>
-                        <td className="px-3 py-1.5 text-gold-400">88</td>
-                      </tr>
-                    </>
-                  ) : (
-                    <>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">Charizard</td>
-                        <td className="px-3 py-1.5">Fire</td>
-                        <td className="px-3 py-1.5 text-gold-400">95</td>
-                      </tr>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">Pikachu</td>
-                        <td className="px-3 py-1.5">Lightning</td>
-                        <td className="px-3 py-1.5 text-gold-400">85</td>
-                      </tr>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">Mewtwo</td>
-                        <td className="px-3 py-1.5">Psychic</td>
-                        <td className="px-3 py-1.5 text-gold-400">92</td>
-                      </tr>
-                      <tr className="border-b border-yugi-border/50">
-                        <td className="px-3 py-1.5">Blastoise</td>
-                        <td className="px-3 py-1.5">Water</td>
-                        <td className="px-3 py-1.5 text-gold-400">88</td>
-                      </tr>
-                      <tr>
-                        <td className="px-3 py-1.5">Venusaur</td>
-                        <td className="px-3 py-1.5">Grass</td>
-                        <td className="px-3 py-1.5 text-gold-400">86</td>
-                      </tr>
-                    </>
-                  )}
+                  {(SAMPLE_DATA[selectedGameId] || SAMPLE_DATA.pokemon).rows.map((row, rowIdx) => (
+                    <tr key={rowIdx} className={rowIdx < 4 ? "border-b border-yugi-border/50" : ""}>
+                      {row.map((cell, cellIdx) => (
+                        <td key={cellIdx} className={`px-3 py-1.5 ${cellIdx === row.length - 1 ? 'text-gold-400' : ''}`}>
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
             <p className="text-gray-500 text-xs">
               {selectedGameId === 'yugioh'
                 ? 'Only ID is required (YGOProDeck card ID). Name and Score are optional.'
+                : selectedGameId === 'hearthstone'
+                ? 'Use dbfId (HearthstoneJSON ID) or card name. Score is optional.'
                 : 'Score is optional. Duplicates are allowed.'}
             </p>
             <p className="text-yellow-500/80 text-xs mt-1">
@@ -339,7 +313,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
         <div className="text-center py-8">
           <div className="animate-spin w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-white mb-2">
-            Fetching card data from {selectedGameId === 'mtg' ? 'Scryfall' : 'YGOProDeck'}...
+            Fetching card data from {selectedGameId === 'mtg' ? 'Scryfall' : selectedGameId === 'hearthstone' ? 'HearthstoneJSON' : 'YGOProDeck'}...
           </p>
           <p className="text-gray-400 text-sm">
             {enrichmentProgress.current} / {enrichmentProgress.total} cards

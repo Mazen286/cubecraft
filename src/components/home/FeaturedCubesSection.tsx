@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Upload } from 'lucide-react';
 import { cubeService, type CubeInfo } from '../../services/cubeService';
 import { CubePreviewCard } from './CubePreviewCard';
 import { cn } from '../../lib/utils';
@@ -53,9 +55,18 @@ export function FeaturedCubesSection({ className }: FeaturedCubesSectionProps) {
   return (
     <div className={cn("w-full", className)}>
       <div className="max-w-6xl mx-auto px-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 text-center">
+        <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 text-center">
           Featured Cubes
         </h2>
+        <p className="text-center text-gray-500 text-sm mb-6">
+          <Link
+            to="/my-cubes"
+            className="inline-flex items-center gap-1 text-gray-400 hover:text-gold-400 transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Upload your own cube
+          </Link>
+        </p>
       </div>
 
       {/* Horizontal scroll container */}

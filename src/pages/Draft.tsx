@@ -101,11 +101,11 @@ export function Draft() {
   // Preload images for current pack BEFORE fetching card data (starts loading immediately)
   useImagePreloader(currentHandIds, 'md');
 
-  // Fetch card data for current hand
-  const { cards: currentPackCards, isLoading: cardsLoading } = useCards(currentHandIds);
+  // Fetch card data for current hand (pass cubeId to ensure correct game's cards)
+  const { cards: currentPackCards, isLoading: cardsLoading } = useCards(currentHandIds, session?.cube_id);
 
   // Fetch card data for drafted cards
-  const { cards: draftedCards } = useCards(draftedCardIds);
+  const { cards: draftedCards } = useCards(draftedCardIds, session?.cube_id);
 
   // Preload small images for drafted cards (for the sidebar)
   useImagePreloader(draftedCardIds, 'sm');

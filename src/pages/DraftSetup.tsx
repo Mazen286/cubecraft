@@ -11,7 +11,7 @@ import { auctionService } from '../services/auctionService';
 import { cubeService, type CubeInfo } from '../services/cubeService';
 import { useGameConfig, getGameConfig } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
-import { Eye, HelpCircle, ChevronRight, Lock, Globe } from 'lucide-react';
+import { Eye, HelpCircle, ChevronRight, Lock, Globe, Upload } from 'lucide-react';
 
 interface ExistingSessionInfo {
   sessionId: string;
@@ -348,6 +348,17 @@ export function DraftSetup() {
               loading={cubesLoading}
             />
           )}
+
+          {/* Upload prompt */}
+          <div className="text-center pt-2 border-t border-yugi-border/50">
+            <Link
+              to="/my-cubes"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gold-400 transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              Don't see your cube? Upload your own
+            </Link>
+          </div>
         </Section>
 
         {/* Cube Viewer Modal */}
