@@ -22,10 +22,10 @@ interface CubeViewerProps {
 }
 
 // Card dimensions for grid calculation
-// Use smaller width on mobile to fit 5 columns
-const CARD_WIDTH_MOBILE = 64; // Tighter fit for mobile (w-16)
-const CARD_WIDTH_DESKTOP = 72; // w-16 + gap
-const CARD_HEIGHT = 104; // h-24 + gap
+// Use smaller width on mobile to fit 4 columns
+const CARD_WIDTH_MOBILE = 84; // w-20 (80px) + gap
+const CARD_WIDTH_DESKTOP = 88; // w-20 (80px) + gap
+const CARD_HEIGHT = 128; // h-[7.5rem] (120px) + gap
 
 export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProps) {
   const { setGame, gameId: currentGameId, gameConfig } = useGameConfig();

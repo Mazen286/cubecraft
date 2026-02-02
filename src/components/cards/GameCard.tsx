@@ -53,8 +53,8 @@ export const GameCard = memo(function GameCard({
   const [imageError, setImageError] = useState(false);
 
   const sizeClasses = {
-    xs: 'w-12 h-[4.5rem]',
-    sm: 'w-16 h-24',
+    xs: 'w-14 h-[5.25rem]',
+    sm: 'w-20 h-[7.5rem]',
     md: 'w-24 h-36',
     lg: 'w-32 h-48',
     xl: 'w-40 h-60',
