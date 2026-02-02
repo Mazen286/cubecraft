@@ -661,8 +661,8 @@ export const auctionService = {
       }
     }
 
-    // First selector is seat 0 (now randomized)
-    const firstSelectorSeat = 0;
+    // Randomly pick who goes first (any seat position)
+    const firstSelectorSeat = Math.floor(Math.random() * players.length);
 
     // Initialize auction state for selection phase, preserving settings from createSession
     const initialAuctionState: AuctionStateData = {

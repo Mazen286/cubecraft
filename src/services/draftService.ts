@@ -417,6 +417,20 @@ export const draftService = {
       throw new Error('Waiting for more players');
     }
 
+    // Randomize player order by shuffling and reassigning seat positions
+    const shuffledPlayers = shuffleArray([...players]);
+    for (let i = 0; i < shuffledPlayers.length; i++) {
+      const player = shuffledPlayers[i];
+      if (player.seat_position !== i) {
+        await supabase
+          .from('draft_players')
+          .update({ seat_position: i })
+          .eq('id', player.id);
+        // Update local copy for pack distribution
+        player.seat_position = i;
+      }
+    }
+
     // Get pack data
     const packData = session.pack_data as PackData[] | null;
 
