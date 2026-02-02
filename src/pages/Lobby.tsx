@@ -14,6 +14,7 @@ export function Lobby() {
   const [copied, setCopied] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isAddingBot, setIsAddingBot] = useState(false);
+  const [isFillingBots, setIsFillingBots] = useState(false);
   const [removingBotId, setRemovingBotId] = useState<string | null>(null);
   const [botError, setBotError] = useState<string | null>(null);
 
@@ -120,6 +121,29 @@ export function Lobby() {
     }
   };
 
+  const handleFillWithBots = async () => {
+    if (!sessionId || !session) return;
+    const emptySlots = (session.player_count || 0) - players.length;
+    if (emptySlots <= 0) return;
+
+    setBotError(null);
+    setIsFillingBots(true);
+    try {
+      // Add bots one at a time for each empty slot
+      for (let i = 0; i < emptySlots; i++) {
+        await draftService.addBotToSession(sessionId);
+      }
+      await refreshPlayers();
+    } catch (err) {
+      console.error('Failed to fill with bots:', err);
+      setBotError(err instanceof Error ? err.message : 'Failed to add bots');
+      // Still refresh to show any bots that were added
+      await refreshPlayers();
+    } finally {
+      setIsFillingBots(false);
+    }
+  };
+
   if (!sessionId) {
     return (
       <Layout>
@@ -180,9 +204,22 @@ export function Lobby() {
               <Users className="w-5 h-5" />
               Players
             </h2>
-            <span className="text-sm text-gray-300">
-              {players.length} / {session?.player_count || '?'}
-            </span>
+            <div className="flex items-center gap-3">
+              {isHost && waitingFor > 0 && (
+                <button
+                  onClick={handleFillWithBots}
+                  disabled={isFillingBots || isAddingBot}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 text-purple-400 text-sm transition-colors disabled:opacity-50"
+                  title="Fill all empty slots with bots"
+                >
+                  <Bot className="w-4 h-4" />
+                  {isFillingBots ? 'Adding...' : `Fill with Bots (${waitingFor})`}
+                </button>
+              )}
+              <span className="text-sm text-gray-300">
+                {players.length} / {session?.player_count || '?'}
+              </span>
+            </div>
           </div>
 
           {/* Bot Error */}
