@@ -43,6 +43,7 @@ interface CubeItem {
   card_count: number;
   created_at: string;
   user_profiles?: { display_name: string }[] | null;
+  isBuiltIn?: boolean;
 }
 
 export function Admin() {
@@ -265,7 +266,22 @@ function CubeManagement() {
   const loadCubes = async () => {
     const supabase = getSupabase();
 
-    // First, get all cubes
+    // Get built-in cubes first
+    const builtInCubes = cubeService.getAvailableCubes();
+    const builtInCubeItems: CubeItem[] = builtInCubes.map(cube => ({
+      id: cube.id,
+      name: cube.name,
+      description: cube.description || null,
+      game_id: cube.gameId,
+      creator_id: null,
+      is_public: true,
+      card_count: cube.cardCount,
+      created_at: '',
+      isBuiltIn: true,
+      user_profiles: [{ display_name: 'Built-in' }],
+    }));
+
+    // Then get database cubes
     const { data: cubesData, error: cubesError } = await supabase
       .from('cubes')
       .select('id, name, description, game_id, creator_id, is_public, card_count, created_at')
@@ -274,6 +290,8 @@ function CubeManagement() {
     if (cubesError) {
       console.error('Failed to load cubes:', cubesError);
       console.error('RLS may be blocking access. Check that your user has admin role in user_profiles table.');
+      // Still show built-in cubes even if database fails
+      setCubes(builtInCubeItems);
       setIsLoading(false);
       return;
     }
@@ -295,15 +313,17 @@ function CubeManagement() {
       }
     }
 
-    // Merge the data
-    const cubesWithProfiles = (cubesData || []).map(cube => ({
+    // Merge database cubes with profiles
+    const dbCubesWithProfiles: CubeItem[] = (cubesData || []).map(cube => ({
       ...cube,
+      isBuiltIn: false,
       user_profiles: cube.creator_id && profilesMap[cube.creator_id]
         ? [{ display_name: profilesMap[cube.creator_id] }]
         : null,
     }));
 
-    setCubes(cubesWithProfiles);
+    // Combine built-in + database cubes
+    setCubes([...builtInCubeItems, ...dbCubesWithProfiles]);
     setIsLoading(false);
   };
 
@@ -359,7 +379,9 @@ function CubeManagement() {
     <div className="bg-yugi-dark border border-yugi-border rounded-lg overflow-hidden">
       <div className="px-4 py-3 border-b border-yugi-border">
         <h2 className="font-semibold text-white">Cube Management</h2>
-        <p className="text-sm text-gray-400">{cubes.length} cubes in database</p>
+        <p className="text-sm text-gray-400">
+          {cubes.filter(c => c.isBuiltIn).length} built-in, {cubes.filter(c => !c.isBuiltIn).length} user-uploaded
+        </p>
       </div>
 
       <div className="overflow-x-auto">
@@ -390,19 +412,27 @@ function CubeManagement() {
                 </td>
                 <td className="px-4 py-3 text-gray-400">{cube.card_count}</td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => togglePublic(cube.id, cube.is_public)}
-                    className={`px-2 py-0.5 rounded text-xs ${
-                      cube.is_public
-                        ? 'bg-green-900/30 text-green-400'
-                        : 'bg-gray-700 text-gray-400'
-                    }`}
-                  >
-                    {cube.is_public ? 'Public' : 'Private'}
-                  </button>
+                  {cube.isBuiltIn ? (
+                    <span className="px-2 py-0.5 rounded text-xs bg-blue-900/30 text-blue-400">
+                      Built-in
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => togglePublic(cube.id, cube.is_public)}
+                      className={`px-2 py-0.5 rounded text-xs ${
+                        cube.is_public
+                          ? 'bg-green-900/30 text-green-400'
+                          : 'bg-gray-700 text-gray-400'
+                      }`}
+                    >
+                      {cube.is_public ? 'Public' : 'Private'}
+                    </button>
+                  )}
                 </td>
                 <td className="px-4 py-3">
-                  {deleteConfirm === cube.id ? (
+                  {cube.isBuiltIn ? (
+                    <span className="text-gray-600 text-sm">—</span>
+                  ) : deleteConfirm === cube.id ? (
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => deleteCube(cube.id)}
@@ -434,7 +464,7 @@ function CubeManagement() {
 
       {cubes.length === 0 && (
         <div className="text-center py-12 text-gray-400">
-          No cubes in the database yet
+          No cubes available
         </div>
       )}
     </div>
