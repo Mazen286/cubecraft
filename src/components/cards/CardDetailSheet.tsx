@@ -250,17 +250,23 @@ export function CardDetailSheet({
                 const affiliateLink = getTCGPlayerAffiliateLink(card.name, gameConfig.id, 'card-detail');
                 const directLink = getTCGPlayerDirectLink(card.name, gameConfig.id);
                 const buyLink = affiliateLink || directLink;
+                const isAffiliate = !!affiliateLink;
                 if (!buyLink) return null;
                 return (
-                  <a
-                    href={buyLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-lg bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600/30 hover:text-blue-300 transition-colors text-sm"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    Buy on TCGPlayer
-                  </a>
+                  <div className="mt-3">
+                    <a
+                      href={buyLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600/30 hover:text-blue-300 transition-colors text-sm"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Buy on TCGPlayer
+                    </a>
+                    {isAffiliate && (
+                      <p className="text-[10px] text-gray-500 mt-1">Affiliate link - we may earn a commission</p>
+                    )}
+                  </div>
                 );
               })()}
             </div>

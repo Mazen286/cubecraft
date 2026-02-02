@@ -93,6 +93,24 @@ export function About() {
               affiliated with or endorsed by any card game publisher.
             </p>
           </section>
+
+          {/* Affiliate Disclosure */}
+          <section className="glass-card p-6">
+            <h2 className="text-xl font-semibold text-gold-400 mb-4">Affiliate Disclosure</h2>
+            <p className="text-gray-300 mb-4">
+              CubeCraft is a participant in the TCGPlayer Affiliate Program. This means when you click
+              on "Buy on TCGPlayer" links on our site and make a purchase, we may earn a small commission
+              at no additional cost to you.
+            </p>
+            <p className="text-gray-300 mb-4">
+              These commissions help support the development and hosting of CubeCraft. We only link to
+              products that are relevant to the cards you're viewing during your draft experience.
+            </p>
+            <p className="text-gray-400 text-sm">
+              We appreciate your support! If you'd prefer not to use affiliate links, you can always
+              search for cards directly on TCGPlayer or your preferred marketplace.
+            </p>
+          </section>
         </div>
 
         <div className="mt-8 text-center">
