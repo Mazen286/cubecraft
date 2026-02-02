@@ -2570,6 +2570,28 @@
       "boost": { "cardName": "Magicolloidal Sol" },
       "bonus": 5,
       "bonusType": "flat"
+    },
+    {
+      "id": "silent-magician-spellcasters",
+      "name": "Silent Magician + Spellcasters",
+      "category": "type",
+      "description": "Silent Magician benefits from Spellcaster support and synergy",
+      "trigger": { "cardName": "Silent Magician" },
+      "boost": { "and": [{ "race": "Spellcaster" }, { "excludeCards": ["Silent Magician"] }] },
+      "bonus": 2,
+      "bonusType": "flat",
+      "scaling": true,
+      "maxBonus": 8
+    },
+    {
+      "id": "spellcasters-silent-magician",
+      "name": "Spellcasters + Silent Magician",
+      "category": "type",
+      "description": "Spellcasters synergize with Silent Magician",
+      "trigger": { "and": [{ "race": "Spellcaster" }, { "excludeCards": ["Silent Magician"] }] },
+      "boost": { "cardName": "Silent Magician" },
+      "bonus": 2,
+      "bonusType": "flat"
     }
   ]
 }
