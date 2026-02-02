@@ -2578,7 +2578,7 @@
       "description": "Silent Magician benefits from Spellcaster support and synergy",
       "trigger": { "cardName": "Silent Magician" },
       "boost": { "and": [{ "race": "Spellcaster" }, { "excludeCards": ["Silent Magician"] }] },
-      "bonus": 2,
+      "bonus": 1,
       "bonusType": "flat",
       "scaling": true,
       "maxBonus": 8
@@ -2590,7 +2590,7 @@
       "description": "Spellcasters synergize with Silent Magician",
       "trigger": { "and": [{ "race": "Spellcaster" }, { "excludeCards": ["Silent Magician"] }] },
       "boost": { "cardName": "Silent Magician" },
-      "bonus": 2,
+      "bonus": 1,
       "bonusType": "flat"
     }
   ]
