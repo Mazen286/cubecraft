@@ -2,6 +2,7 @@ import type { GameConfig } from '../gameConfig';
 import { yugiohConfig } from './yugioh';
 import { mtgConfig } from './mtg';
 import { pokemonConfig } from './pokemon';
+import { hearthstoneConfig } from './hearthstone';
 
 /**
  * Registry of all available game configurations
@@ -12,6 +13,7 @@ const gameConfigs: Map<string, GameConfig> = new Map();
 gameConfigs.set(yugiohConfig.id, yugiohConfig);
 gameConfigs.set(mtgConfig.id, mtgConfig);
 gameConfigs.set(pokemonConfig.id, pokemonConfig);
+gameConfigs.set(hearthstoneConfig.id, hearthstoneConfig);
 
 /**
  * Get a game configuration by ID
@@ -86,3 +88,4 @@ export function getDefaultGameConfig(): GameConfig {
 export { yugiohConfig } from './yugioh';
 export { mtgConfig } from './mtg';
 export { pokemonConfig } from './pokemon';
+export { hearthstoneConfig } from './hearthstone';

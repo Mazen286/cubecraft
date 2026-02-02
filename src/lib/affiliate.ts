@@ -6,10 +6,12 @@
  */
 
 // TCGPlayer search URLs by game
+// Note: Hearthstone is digital-only, no TCGPlayer support
 const TCGPLAYER_SEARCH_URLS: Record<string, string> = {
   yugioh: 'https://www.tcgplayer.com/search/yugioh/product',
   mtg: 'https://www.tcgplayer.com/search/magic/product',
   pokemon: 'https://www.tcgplayer.com/search/pokemon/product',
+  // hearthstone: not supported - digital only game
 };
 
 /**

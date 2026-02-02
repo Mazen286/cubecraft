@@ -195,6 +195,15 @@ const AVAILABLE_CUBES: CubeInfo[] = [
     // Featured: Charizard, Pikachu, Mewtwo, Blastoise
     featuredCardIds: [3, 36, 32, 6],
   },
+  // Hearthstone Cubes
+  {
+    id: 'hearthstone-classic-cube',
+    name: 'Classic Hearthstone Cube',
+    description: 'Iconic cards from Hearthstone\'s history. Heavy on neutrals for flexible class selection.',
+    cardCount: 359,
+    gameId: 'hearthstone',
+    source: 'local',
+  },
 ];
 
 export const cubeService = {
