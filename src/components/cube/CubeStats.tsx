@@ -39,6 +39,42 @@ const ATTRIBUTE_COLORS: Record<string, string> = {
   DIVINE: 'bg-yellow-500',
 };
 
+// Class colors for Hearthstone
+const HS_CLASS_COLORS: Record<string, string> = {
+  NEUTRAL: 'bg-gray-500',
+  DEATHKNIGHT: 'bg-sky-700',
+  DEMONHUNTER: 'bg-emerald-700',
+  DRUID: 'bg-amber-700',
+  HUNTER: 'bg-green-600',
+  MAGE: 'bg-sky-500',
+  PALADIN: 'bg-yellow-500',
+  PRIEST: 'bg-gray-200',
+  ROGUE: 'bg-yellow-600',
+  SHAMAN: 'bg-blue-600',
+  WARLOCK: 'bg-purple-600',
+  WARRIOR: 'bg-red-700',
+};
+
+// Rarity colors for Hearthstone
+const HS_RARITY_COLORS: Record<string, string> = {
+  FREE: 'bg-gray-500',
+  COMMON: 'bg-gray-400',
+  RARE: 'bg-blue-500',
+  EPIC: 'bg-purple-500',
+  LEGENDARY: 'bg-amber-500',
+};
+
+// Hearthstone card attributes interface
+interface HearthstoneCardAttributes {
+  cost?: number;
+  attack?: number;
+  health?: number;
+  cardClass?: string;
+  rarity?: string;
+  cardType?: string;
+  mechanics?: string[];
+}
+
 export function CubeStats({ cards, filteredCards, onFilterClick, activeFilters }: CubeStatsProps) {
   const { gameConfig } = useGameConfig();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -57,6 +93,8 @@ export function CubeStats({ cards, filteredCards, onFilterClick, activeFilters }
       return calculateMTGStats(cards);
     } else if (gameConfig.id === 'pokemon') {
       return calculatePokemonStats(cards);
+    } else if (gameConfig.id === 'hearthstone') {
+      return calculateHearthstoneStats(cards);
     }
     return [];
   }, [cards, gameConfig.id, isExpanded]);
@@ -163,6 +201,38 @@ export function CubeStats({ cards, filteredCards, onFilterClick, activeFilters }
         const types = (attrs?.types as string[]) ?? [];
         for (const t of types) {
           counts.pokemonType[t] = (counts.pokemonType[t] || 0) + 1;
+        }
+      }
+    } else if (gameConfig.id === 'hearthstone') {
+      counts.cardType = {};
+      counts.manaCost = {};
+      counts.cardClass = {};
+      counts.rarity = {};
+
+      for (const card of filteredCards) {
+        const attrs = card.attributes as HearthstoneCardAttributes | undefined;
+
+        // Card type
+        const cardType = attrs?.cardType;
+        if (cardType) {
+          counts.cardType[cardType] = (counts.cardType[cardType] || 0) + 1;
+        }
+
+        // Mana cost
+        const cost = attrs?.cost ?? 0;
+        const costKey = cost >= 10 ? '10+' : String(cost);
+        counts.manaCost[costKey] = (counts.manaCost[costKey] || 0) + 1;
+
+        // Class
+        const cardClass = attrs?.cardClass;
+        if (cardClass) {
+          counts.cardClass[cardClass] = (counts.cardClass[cardClass] || 0) + 1;
+        }
+
+        // Rarity
+        const rarity = attrs?.rarity;
+        if (rarity) {
+          counts.rarity[rarity] = (counts.rarity[rarity] || 0) + 1;
         }
       }
     }
@@ -541,6 +611,142 @@ function calculatePokemonStats(cards: Card[]): StatsGroup[] {
       distributions: Array.from(typeCounts.entries())
         .sort((a, b) => b[1] - a[1])
         .map(([label, count]) => ({ label, value: label, count })),
+    });
+  }
+
+  return groups;
+}
+
+function calculateHearthstoneStats(cards: Card[]): StatsGroup[] {
+  const cardTypeCounts = new Map<string, number>();
+  const manaCostCounts = new Map<string, number>();
+  const classCounts = new Map<string, number>();
+  const rarityCounts = new Map<string, number>();
+  const mechanicsCounts = new Map<string, number>();
+
+  for (const card of cards) {
+    const attrs = card.attributes as HearthstoneCardAttributes | undefined;
+
+    // Card type (Minion, Spell, Weapon)
+    const cardType = attrs?.cardType;
+    if (cardType) {
+      const label = cardType.charAt(0) + cardType.slice(1).toLowerCase();
+      cardTypeCounts.set(label, (cardTypeCounts.get(label) || 0) + 1);
+    }
+
+    // Mana cost (group 10+ together)
+    const cost = attrs?.cost ?? 0;
+    const costKey = cost >= 10 ? '10+' : String(cost);
+    manaCostCounts.set(costKey, (manaCostCounts.get(costKey) || 0) + 1);
+
+    // Class
+    const cardClass = attrs?.cardClass;
+    if (cardClass) {
+      const label = cardClass.charAt(0) + cardClass.slice(1).toLowerCase();
+      classCounts.set(label, (classCounts.get(label) || 0) + 1);
+    }
+
+    // Rarity
+    const rarity = attrs?.rarity;
+    if (rarity) {
+      const label = rarity.charAt(0) + rarity.slice(1).toLowerCase();
+      rarityCounts.set(label, (rarityCounts.get(label) || 0) + 1);
+    }
+
+    // Mechanics (only count major ones)
+    const mechanics = attrs?.mechanics ?? [];
+    for (const mech of mechanics) {
+      const label = mech.charAt(0) + mech.slice(1).toLowerCase().replace(/_/g, ' ');
+      mechanicsCounts.set(label, (mechanicsCounts.get(label) || 0) + 1);
+    }
+  }
+
+  const groups: StatsGroup[] = [];
+
+  // Card Types
+  if (cardTypeCounts.size > 0) {
+    groups.push({
+      id: 'cardType',
+      label: 'Card Type',
+      distributions: Array.from(cardTypeCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([label, count]) => ({
+          label,
+          value: label.toUpperCase(),
+          count,
+        })),
+    });
+  }
+
+  // Mana Cost
+  if (manaCostCounts.size > 0) {
+    groups.push({
+      id: 'manaCost',
+      label: 'Mana Cost',
+      distributions: Array.from(manaCostCounts.entries())
+        .sort((a, b) => {
+          const aNum = a[0] === '10+' ? 10 : parseInt(a[0]);
+          const bNum = b[0] === '10+' ? 10 : parseInt(b[0]);
+          return aNum - bNum;
+        })
+        .map(([cost, count]) => ({
+          label: cost,
+          value: cost,
+          count,
+        })),
+    });
+  }
+
+  // Class
+  if (classCounts.size > 0) {
+    // Order: Neutral first, then alphabetically
+    groups.push({
+      id: 'cardClass',
+      label: 'Class',
+      distributions: Array.from(classCounts.entries())
+        .sort((a, b) => {
+          if (a[0] === 'Neutral') return -1;
+          if (b[0] === 'Neutral') return 1;
+          return b[1] - a[1];
+        })
+        .map(([label, count]) => ({
+          label,
+          value: label.toUpperCase(),
+          count,
+          color: HS_CLASS_COLORS[label.toUpperCase()],
+        })),
+    });
+  }
+
+  // Rarity
+  if (rarityCounts.size > 0) {
+    const rarityOrder = ['Free', 'Common', 'Rare', 'Epic', 'Legendary'];
+    groups.push({
+      id: 'rarity',
+      label: 'Rarity',
+      distributions: Array.from(rarityCounts.entries())
+        .sort((a, b) => rarityOrder.indexOf(a[0]) - rarityOrder.indexOf(b[0]))
+        .map(([label, count]) => ({
+          label,
+          value: label.toUpperCase(),
+          count,
+          color: HS_RARITY_COLORS[label.toUpperCase()],
+        })),
+    });
+  }
+
+  // Mechanics (show top ones)
+  if (mechanicsCounts.size > 0) {
+    groups.push({
+      id: 'mechanics',
+      label: 'Mechanics',
+      distributions: Array.from(mechanicsCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([label, count]) => ({
+          label,
+          value: label.toUpperCase().replace(/ /g, '_'),
+          count,
+        })),
     });
   }
 
