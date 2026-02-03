@@ -126,12 +126,22 @@ function getSkillIconsArray(card: { skill_willpower?: number; skill_intellect?: 
 type SortField = 'name' | 'type' | 'faction' | 'cost' | 'xp';
 type SortDirection = 'asc' | 'desc';
 
+export interface ArkhamCardFilters {
+  cost?: number | null;
+  faction?: ArkhamFaction | null;
+  type?: ArkhamCardType | null;
+  slot?: string | null;
+  skillIcon?: 'willpower' | 'intellect' | 'combat' | 'agility' | 'wild' | null;
+}
+
 interface ArkhamCardTableProps {
   onCardSelect?: (card: ArkhamCard) => void;
   selectedCard?: ArkhamCard | null;
+  externalFilters?: ArkhamCardFilters;
+  onClearExternalFilters?: () => void;
 }
 
-export function ArkhamCardTable({ onCardSelect, selectedCard }: ArkhamCardTableProps) {
+export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, onClearExternalFilters }: ArkhamCardTableProps) {
   const {
     state,
     addCard,
@@ -211,9 +221,52 @@ export function ArkhamCardTable({ onCardSelect, selectedCard }: ArkhamCardTableP
         if (levelFilter === '3+' && xp < 3) return false;
       }
 
+      // External filters from DeckStats
+      if (externalFilters) {
+        // Cost filter (exact match, null cost cards excluded)
+        if (externalFilters.cost !== undefined && externalFilters.cost !== null) {
+          const cardCost = card.cost ?? -1;
+          if (externalFilters.cost === 6) {
+            // 6+ means cost >= 6
+            if (cardCost < 6) return false;
+          } else {
+            if (cardCost !== externalFilters.cost) return false;
+          }
+        }
+
+        // Faction filter (from external)
+        if (externalFilters.faction && card.faction_code !== externalFilters.faction && card.faction2_code !== externalFilters.faction) {
+          return false;
+        }
+
+        // Type filter (from external)
+        if (externalFilters.type && card.type_code !== externalFilters.type) {
+          return false;
+        }
+
+        // Slot filter
+        if (externalFilters.slot && card.slot !== externalFilters.slot) {
+          return false;
+        }
+
+        // Skill icon filter (card must have at least one of this icon)
+        if (externalFilters.skillIcon) {
+          const iconMap: Record<string, number | undefined> = {
+            willpower: card.skill_willpower,
+            intellect: card.skill_intellect,
+            combat: card.skill_combat,
+            agility: card.skill_agility,
+            wild: card.skill_wild,
+          };
+          if (!iconMap[externalFilters.skillIcon] || iconMap[externalFilters.skillIcon]! < 1) {
+            return false;
+          }
+        }
+      }
+
       return true;
     });
-  }, [state.investigator, state.isInitialized, query, factionFilter, typeFilter, levelFilter, canAddCard]);
+  }, [state.investigator, state.isInitialized, query, factionFilter, typeFilter, levelFilter, externalFilters, canAddCard]);
 
   // Sort cards
   const sortedCards = useMemo(() => {
@@ -290,6 +343,35 @@ export function ArkhamCardTable({ onCardSelect, selectedCard }: ArkhamCardTableP
   const types: ArkhamCardType[] = ['asset', 'event', 'skill'];
   const levels = ['0', '1-2', '3+'] as const;
   const hasActiveFilters = factionFilter || typeFilter || levelFilter;
+  const hasExternalFilters = externalFilters && (
+    externalFilters.cost !== undefined && externalFilters.cost !== null ||
+    externalFilters.faction ||
+    externalFilters.type ||
+    externalFilters.slot ||
+    externalFilters.skillIcon
+  );
+
+  // Generate external filter description
+  const getExternalFilterLabel = () => {
+    if (!externalFilters) return '';
+    const parts: string[] = [];
+    if (externalFilters.cost !== undefined && externalFilters.cost !== null) {
+      parts.push(`Cost ${externalFilters.cost === 6 ? '6+' : externalFilters.cost}`);
+    }
+    if (externalFilters.faction) {
+      parts.push(FACTION_NAMES[externalFilters.faction]);
+    }
+    if (externalFilters.type) {
+      parts.push(externalFilters.type.charAt(0).toUpperCase() + externalFilters.type.slice(1) + 's');
+    }
+    if (externalFilters.slot) {
+      parts.push(externalFilters.slot);
+    }
+    if (externalFilters.skillIcon) {
+      parts.push(externalFilters.skillIcon.charAt(0).toUpperCase() + externalFilters.skillIcon.slice(1));
+    }
+    return parts.join(' + ');
+  };
 
   if (!state.isInitialized || !state.investigator) {
     return null;
@@ -410,6 +492,22 @@ export function ArkhamCardTable({ onCardSelect, selectedCard }: ArkhamCardTableP
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* External filter indicator (from deck stats) */}
+        {hasExternalFilters && (
+          <div className="flex items-center gap-2 p-2 bg-blue-600/20 border border-blue-500/30 rounded-lg mb-2">
+            <span className="text-blue-300 text-xs flex-1">
+              Filtering: <span className="font-medium text-white">{getExternalFilterLabel()}</span>
+            </span>
+            <button
+              onClick={onClearExternalFilters}
+              className="p-1 text-blue-300 hover:text-white transition-colors"
+              title="Clear filter"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 

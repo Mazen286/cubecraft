@@ -1,24 +1,29 @@
 import { useMemo } from 'react';
-import { X, BarChart3 } from 'lucide-react';
+import { X, BarChart3, Filter } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
 import { SingleSkillIcon } from './ArkhamCardTable';
 import { FACTION_COLORS, FACTION_NAMES } from '../../config/games/arkham';
-import type { ArkhamFaction } from '../../types/arkham';
+import type { ArkhamFaction, ArkhamCardType } from '../../types/arkham';
+
+export interface DeckStatsFilter {
+  cost?: number | null;
+  faction?: ArkhamFaction | null;
+  type?: ArkhamCardType | null;
+  slot?: string | null;
+  skillIcon?: 'willpower' | 'intellect' | 'combat' | 'agility' | 'wild' | null;
+}
 
 interface DeckStatsProps {
   isOpen: boolean;
   onClose: () => void;
+  onFilter?: (filter: DeckStatsFilter) => void;
 }
 
 interface DeckAnalysis {
-  // Cost distribution (0-6+)
   costCurve: number[];
-  // Type distribution
   typeDistribution: Record<string, number>;
-  // Faction distribution
   factionDistribution: Record<ArkhamFaction, number>;
-  // Skill icons total
   skillIcons: {
     willpower: number;
     intellect: number;
@@ -26,20 +31,18 @@ interface DeckAnalysis {
     agility: number;
     wild: number;
   };
-  // Slot distribution for assets
   slotDistribution: Record<string, number>;
-  // Total cards (excluding weaknesses/permanents for some stats)
   totalCards: number;
   totalAssets: number;
   totalEvents: number;
   totalSkills: number;
 }
 
-export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
+export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
   const { state } = useArkhamDeckBuilder();
 
   const analysis = useMemo((): DeckAnalysis => {
-    const costCurve = [0, 0, 0, 0, 0, 0, 0]; // 0, 1, 2, 3, 4, 5, 6+
+    const costCurve = [0, 0, 0, 0, 0, 0, 0];
     const typeDistribution: Record<string, number> = {};
     const factionDistribution: Record<ArkhamFaction, number> = {
       guardian: 0,
@@ -68,13 +71,11 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
       const card = arkhamCardService.getCard(code);
       if (!card) continue;
 
-      // Skip weaknesses for most stats
       const isWeakness = card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness';
       if (isWeakness) continue;
 
       totalCards += quantity;
 
-      // Type distribution
       const typeName = card.type_code;
       typeDistribution[typeName] = (typeDistribution[typeName] || 0) + quantity;
 
@@ -82,27 +83,23 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
       if (typeName === 'event') totalEvents += quantity;
       if (typeName === 'skill') totalSkills += quantity;
 
-      // Faction distribution
       factionDistribution[card.faction_code] += quantity;
       if (card.faction2_code) {
         factionDistribution[card.faction2_code] += quantity;
       }
 
-      // Cost curve (only for assets and events)
       if ((typeName === 'asset' || typeName === 'event') && card.cost !== null && card.cost !== undefined) {
-        const cost = card.cost === -2 ? 0 : card.cost; // X cost treated as 0
+        const cost = card.cost === -2 ? 0 : card.cost;
         const bucket = Math.min(cost, 6);
         costCurve[bucket] += quantity;
       }
 
-      // Skill icons (from all cards that have them)
       skillIcons.willpower += (card.skill_willpower || 0) * quantity;
       skillIcons.intellect += (card.skill_intellect || 0) * quantity;
       skillIcons.combat += (card.skill_combat || 0) * quantity;
       skillIcons.agility += (card.skill_agility || 0) * quantity;
       skillIcons.wild += (card.skill_wild || 0) * quantity;
 
-      // Slot distribution (assets only)
       if (typeName === 'asset' && card.slot) {
         slotDistribution[card.slot] = (slotDistribution[card.slot] || 0) + quantity;
       }
@@ -121,6 +118,13 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
     };
   }, [state.slots]);
 
+  const handleFilter = (filter: DeckStatsFilter) => {
+    if (onFilter) {
+      onFilter(filter);
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   const maxCost = Math.max(...analysis.costCurve, 1);
@@ -133,19 +137,19 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
     1
   );
 
-  // Filter factions with cards
   const activeFactions = Object.entries(analysis.factionDistribution)
     .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1]);
 
   const maxFaction = activeFactions.length > 0 ? activeFactions[0][1] : 1;
 
-  // Filter slots with cards
   const activeSlots = Object.entries(analysis.slotDistribution)
     .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1]);
 
   const maxSlot = activeSlots.length > 0 ? activeSlots[0][1] : 1;
+
+  const isClickable = !!onFilter;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -171,6 +175,16 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
           </button>
         </div>
 
+        {/* Clickable hint */}
+        {isClickable && (
+          <div className="px-4 py-2 bg-blue-600/10 border-b border-blue-500/20">
+            <p className="text-xs text-blue-300 flex items-center gap-1">
+              <Filter className="w-3 h-3" />
+              Click any stat to filter the card browser
+            </p>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           {analysis.totalCards === 0 ? (
@@ -179,49 +193,88 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
             </div>
           ) : (
             <>
-              {/* Summary */}
+              {/* Summary - Clickable type cards */}
               <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-yugi-darker rounded-lg p-3">
+                <button
+                  onClick={() => handleFilter({ type: 'asset' })}
+                  disabled={!isClickable || analysis.totalAssets === 0}
+                  className={`bg-yugi-darker rounded-lg p-3 transition-all ${
+                    isClickable && analysis.totalAssets > 0
+                      ? 'hover:bg-yugi-border hover:ring-2 hover:ring-gold-500/50 cursor-pointer'
+                      : ''
+                  } disabled:opacity-50 disabled:cursor-default`}
+                >
                   <p className="text-2xl font-bold text-white">{analysis.totalAssets}</p>
                   <p className="text-xs text-gray-400">Assets</p>
-                </div>
-                <div className="bg-yugi-darker rounded-lg p-3">
+                </button>
+                <button
+                  onClick={() => handleFilter({ type: 'event' })}
+                  disabled={!isClickable || analysis.totalEvents === 0}
+                  className={`bg-yugi-darker rounded-lg p-3 transition-all ${
+                    isClickable && analysis.totalEvents > 0
+                      ? 'hover:bg-yugi-border hover:ring-2 hover:ring-gold-500/50 cursor-pointer'
+                      : ''
+                  } disabled:opacity-50 disabled:cursor-default`}
+                >
                   <p className="text-2xl font-bold text-white">{analysis.totalEvents}</p>
                   <p className="text-xs text-gray-400">Events</p>
-                </div>
-                <div className="bg-yugi-darker rounded-lg p-3">
+                </button>
+                <button
+                  onClick={() => handleFilter({ type: 'skill' })}
+                  disabled={!isClickable || analysis.totalSkills === 0}
+                  className={`bg-yugi-darker rounded-lg p-3 transition-all ${
+                    isClickable && analysis.totalSkills > 0
+                      ? 'hover:bg-yugi-border hover:ring-2 hover:ring-gold-500/50 cursor-pointer'
+                      : ''
+                  } disabled:opacity-50 disabled:cursor-default`}
+                >
                   <p className="text-2xl font-bold text-white">{analysis.totalSkills}</p>
                   <p className="text-xs text-gray-400">Skills</p>
-                </div>
+                </button>
               </div>
 
-              {/* Cost Curve */}
+              {/* Cost Curve - Clickable bars */}
               <div>
                 <h3 className="text-sm font-medium text-gray-400 mb-3">Cost Curve</h3>
                 <div className="flex items-end gap-2 h-32">
                   {analysis.costCurve.map((count, cost) => (
-                    <div key={cost} className="flex-1 flex flex-col items-center">
+                    <button
+                      key={cost}
+                      onClick={() => handleFilter({ cost })}
+                      disabled={!isClickable || count === 0}
+                      className={`flex-1 flex flex-col items-center group ${
+                        isClickable && count > 0 ? 'cursor-pointer' : 'cursor-default'
+                      }`}
+                    >
                       <div className="w-full flex flex-col items-center justify-end h-24">
                         {count > 0 && (
-                          <span className="text-xs text-gray-400 mb-1">{count}</span>
+                          <span className="text-xs text-gray-400 mb-1 group-hover:text-white transition-colors">
+                            {count}
+                          </span>
                         )}
                         <div
-                          className="w-full bg-gold-500/80 rounded-t transition-all"
+                          className={`w-full bg-gold-500/80 rounded-t transition-all ${
+                            isClickable && count > 0
+                              ? 'group-hover:bg-gold-400 group-hover:ring-2 group-hover:ring-gold-300/50'
+                              : ''
+                          }`}
                           style={{
                             height: `${(count / maxCost) * 100}%`,
                             minHeight: count > 0 ? '4px' : '0',
                           }}
                         />
                       </div>
-                      <span className="text-xs text-gray-500 mt-1">
+                      <span className={`text-xs mt-1 transition-colors ${
+                        isClickable && count > 0 ? 'text-gray-500 group-hover:text-gold-400' : 'text-gray-500'
+                      }`}>
                         {cost === 6 ? '6+' : cost}
                       </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
 
-              {/* Skill Icons */}
+              {/* Skill Icons - Clickable rows */}
               <div>
                 <h3 className="text-sm font-medium text-gray-400 mb-3">Skill Icons</h3>
                 <div className="space-y-2">
@@ -234,7 +287,16 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
                   ].map(({ key, label, color }) => {
                     const value = analysis.skillIcons[key as keyof typeof analysis.skillIcons];
                     return (
-                      <div key={key} className="flex items-center gap-2">
+                      <button
+                        key={key}
+                        onClick={() => handleFilter({ skillIcon: key as any })}
+                        disabled={!isClickable || value === 0}
+                        className={`w-full flex items-center gap-2 p-1 rounded transition-all ${
+                          isClickable && value > 0
+                            ? 'hover:bg-yugi-darker cursor-pointer'
+                            : 'cursor-default'
+                        } disabled:opacity-50`}
+                      >
                         <div className="w-20 flex items-center gap-1">
                           <SingleSkillIcon type={key as any} />
                           <span className="text-xs text-gray-400">{label}</span>
@@ -251,13 +313,13 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
                         <span className="w-8 text-right text-sm text-white font-medium">
                           {value}
                         </span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Faction Distribution */}
+              {/* Faction Distribution - Clickable rows */}
               {activeFactions.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-400 mb-3">Faction Distribution</h3>
@@ -266,7 +328,16 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
                       const color = FACTION_COLORS[faction as ArkhamFaction];
                       const name = FACTION_NAMES[faction as ArkhamFaction];
                       return (
-                        <div key={faction} className="flex items-center gap-2">
+                        <button
+                          key={faction}
+                          onClick={() => handleFilter({ faction: faction as ArkhamFaction })}
+                          disabled={!isClickable}
+                          className={`w-full flex items-center gap-2 p-1 rounded transition-all ${
+                            isClickable
+                              ? 'hover:bg-yugi-darker cursor-pointer'
+                              : 'cursor-default'
+                          }`}
+                        >
                           <div className="w-20">
                             <span className="text-xs" style={{ color }}>
                               {name}
@@ -284,20 +355,29 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
                           <span className="w-8 text-right text-sm text-white font-medium">
                             {count}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
                 </div>
               )}
 
-              {/* Slot Distribution */}
+              {/* Slot Distribution - Clickable rows */}
               {activeSlots.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-400 mb-3">Asset Slots</h3>
                   <div className="space-y-2">
                     {activeSlots.map(([slot, count]) => (
-                      <div key={slot} className="flex items-center gap-2">
+                      <button
+                        key={slot}
+                        onClick={() => handleFilter({ slot })}
+                        disabled={!isClickable}
+                        className={`w-full flex items-center gap-2 p-1 rounded transition-all ${
+                          isClickable
+                            ? 'hover:bg-yugi-darker cursor-pointer'
+                            : 'cursor-default'
+                        }`}
+                      >
                         <div className="w-20">
                           <span className="text-xs text-gray-400">{slot}</span>
                         </div>
@@ -312,7 +392,7 @@ export function DeckStats({ isOpen, onClose }: DeckStatsProps) {
                         <span className="w-8 text-right text-sm text-white font-medium">
                           {count}
                         </span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>

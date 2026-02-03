@@ -25,6 +25,7 @@ import { UpgradeDialog } from '../components/arkham/UpgradeDialog';
 import { ImportDeckModal } from '../components/arkham/ImportDeckModal';
 import { FACTION_COLORS, FACTION_NAMES } from '../config/games/arkham';
 import { arkhamCardService } from '../services/arkhamCardService';
+import type { ArkhamCardFilters } from '../components/arkham/ArkhamCardTable';
 
 export function ArkhamDeckBuilder() {
   const { deckId } = useParams<{ deckId?: string }>();
@@ -70,6 +71,19 @@ function ArkhamDeckBuilderContent() {
 
   // Mobile view state
   const [activeView, setActiveView] = useState<'browse' | 'deck'>('browse');
+
+  // Cross-filter state (from DeckStats to CardBrowser)
+  const [crossFilters, setCrossFilters] = useState<ArkhamCardFilters | null>(null);
+
+  const handleCrossFilter = (filters: ArkhamCardFilters) => {
+    setCrossFilters(filters);
+    // Switch to browse view on mobile when filtering
+    setActiveView('browse');
+  };
+
+  const clearCrossFilters = () => {
+    setCrossFilters(null);
+  };
 
   // Handle name editing
   useEffect(() => {
@@ -401,9 +415,12 @@ function ArkhamDeckBuilderContent() {
           {/* Mobile content */}
           <div className="flex-1 overflow-hidden">
             {activeView === 'browse' ? (
-              <ArkhamCardBrowser />
+              <ArkhamCardBrowser
+                externalFilters={crossFilters || undefined}
+                onClearExternalFilters={clearCrossFilters}
+              />
             ) : (
-              <ArkhamDeckPanel />
+              <ArkhamDeckPanel onCrossFilter={handleCrossFilter} />
             )}
           </div>
         </div>
@@ -411,10 +428,13 @@ function ArkhamDeckBuilderContent() {
         {/* Desktop: Side-by-side layout */}
         <div className="hidden md:flex md:flex-row w-full h-full">
           <div className="w-1/2 border-r border-yugi-border overflow-hidden">
-            <ArkhamCardBrowser />
+            <ArkhamCardBrowser
+              externalFilters={crossFilters || undefined}
+              onClearExternalFilters={clearCrossFilters}
+            />
           </div>
           <div className="w-1/2 overflow-hidden">
-            <ArkhamDeckPanel />
+            <ArkhamDeckPanel onCrossFilter={handleCrossFilter} />
           </div>
         </div>
       </div>

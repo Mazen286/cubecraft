@@ -2,9 +2,15 @@ import { useState } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { ArkhamCardTable, CardPreviewPanel } from './ArkhamCardTable';
+import type { ArkhamCardFilters } from './ArkhamCardTable';
 import type { ArkhamCard } from '../../types/arkham';
 
-export function ArkhamCardBrowser() {
+interface ArkhamCardBrowserProps {
+  externalFilters?: ArkhamCardFilters;
+  onClearExternalFilters?: () => void;
+}
+
+export function ArkhamCardBrowser({ externalFilters, onClearExternalFilters }: ArkhamCardBrowserProps) {
   const { state } = useArkhamDeckBuilder();
   const [selectedCard, setSelectedCard] = useState<ArkhamCard | null>(null);
 
@@ -31,6 +37,8 @@ export function ArkhamCardBrowser() {
       <ArkhamCardTable
         onCardSelect={setSelectedCard}
         selectedCard={selectedCard}
+        externalFilters={externalFilters}
+        onClearExternalFilters={onClearExternalFilters}
       />
 
       {selectedCard && (

@@ -6,10 +6,16 @@ import { calculateXpCost } from '../../services/arkhamDeckValidation';
 import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon } from './ArkhamCardTable';
 import { DrawSimulator } from './DrawSimulator';
 import { DeckStats } from './DeckStats';
+import type { DeckStatsFilter } from './DeckStats';
 import type { ArkhamCard, ArkhamCardType, Investigator } from '../../types/arkham';
 import { FACTION_COLORS } from '../../config/games/arkham';
+import type { ArkhamCardFilters } from './ArkhamCardTable';
 
-export function ArkhamDeckPanel() {
+interface ArkhamDeckPanelProps {
+  onCrossFilter?: (filters: ArkhamCardFilters) => void;
+}
+
+export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
   const {
     state,
     addCard,
@@ -26,6 +32,20 @@ export function ArkhamDeckPanel() {
 
   const totalCards = getTotalCardCount();
   const xpRequired = calculateXpCost(state.slots);
+
+  // Handle cross-filter from deck stats
+  const handleStatsFilter = (filter: DeckStatsFilter) => {
+    if (onCrossFilter) {
+      // Convert DeckStatsFilter to ArkhamCardFilters format
+      onCrossFilter({
+        cost: filter.cost,
+        faction: filter.faction,
+        type: filter.type,
+        slot: filter.slot,
+        skillIcon: filter.skillIcon,
+      });
+    }
+  };
 
   // Add random basic weakness
   const [drawnWeakness, setDrawnWeakness] = useState<ArkhamCard | null>(null);
@@ -402,6 +422,7 @@ export function ArkhamDeckPanel() {
       <DeckStats
         isOpen={showDeckStats}
         onClose={() => setShowDeckStats(false)}
+        onFilter={onCrossFilter ? handleStatsFilter : undefined}
       />
     </div>
   );
