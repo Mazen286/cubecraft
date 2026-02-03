@@ -58,8 +58,19 @@ function ArkhamDeckBuilderContent() {
   const [showImportModal, setShowImportModal] = useState(() => {
     // Read directly from window.location to avoid React Router timing issues
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('import') === 'true';
+    const hasImport = urlParams.get('import') === 'true';
+    console.log('=== IMPORT MODAL INIT ===');
+    console.log('window.location.search:', window.location.search);
+    console.log('hasImport:', hasImport);
+    return hasImport;
   });
+
+  // Debug logging
+  console.log('=== RENDER ===');
+  console.log('showImportModal:', showImportModal);
+  console.log('state.isInitialized:', state.isInitialized);
+  console.log('state.investigator:', state.investigator?.name || 'null');
+  console.log('state.isLoading:', state.isLoading);
 
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
