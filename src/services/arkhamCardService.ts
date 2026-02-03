@@ -432,12 +432,34 @@ function findCardByName(name: string, xp?: number): ArkhamCard | null {
     });
   }
 
-  // If XP is specified, filter by XP (even if only one match)
-  // This ensures we get the correct upgraded version
-  if (xp !== undefined) {
-    const xpMatches = matches.filter(card => (card.xp || 0) === xp);
-    if (xpMatches.length > 0) {
-      matches = xpMatches;
+  // If XP is specified, filter by XP
+  if (xp !== undefined && xp > 0) {
+    // First try exact XP match
+    const exactXpMatches = matches.filter(card => card.xp === xp);
+    if (exactXpMatches.length > 0) {
+      matches = exactXpMatches;
+    } else {
+      // If no exact match, try to find any upgraded version (xp > 0)
+      // This handles cases where the export shows a different XP than the card data
+      const upgradedMatches = matches.filter(card => card.xp && card.xp > 0);
+      if (upgradedMatches.length > 0) {
+        // Find the closest XP match among upgraded cards
+        upgradedMatches.sort((a, b) => {
+          const diffA = Math.abs((a.xp || 0) - xp);
+          const diffB = Math.abs((b.xp || 0) - xp);
+          return diffA - diffB;
+        });
+        matches = [upgradedMatches[0]];
+        console.warn(`Import: No exact XP match for "${name}" (${xp}), using closest: ${upgradedMatches[0].name} (${upgradedMatches[0].xp})`);
+      } else {
+        console.warn(`Import: No upgraded version found for "${name}" (${xp}), using base version`);
+      }
+    }
+  } else if (xp === 0) {
+    // Explicitly looking for level 0 version
+    const level0Matches = matches.filter(card => !card.xp || card.xp === 0);
+    if (level0Matches.length > 0) {
+      matches = level0Matches;
     }
   }
 
@@ -451,10 +473,15 @@ function findCardByName(name: string, xp?: number): ArkhamCard | null {
   }
 
   // Return the first match
-  // If XP was specified and matched, we already have the correct version
-  // Otherwise, prefer lowest code (original printing)
+  // Sort by XP descending if we're looking for upgraded, otherwise by code
   if (matches.length > 0) {
-    matches.sort((a, b) => a.code.localeCompare(b.code));
+    if (xp !== undefined && xp > 0) {
+      // For upgraded cards, prefer higher XP versions
+      matches.sort((a, b) => (b.xp || 0) - (a.xp || 0));
+    } else {
+      // For base cards or unspecified, prefer lowest code (original printing)
+      matches.sort((a, b) => a.code.localeCompare(b.code));
+    }
     return matches[0];
   }
 
