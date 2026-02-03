@@ -97,7 +97,7 @@ function ArkhamDeckBuilderContent() {
     setIsDeleting(false);
 
     if (result.success) {
-      navigate('/arkham/my-decks');
+      navigate('/my-decks?game=arkham');
     } else {
       alert(result.error || 'Failed to delete deck');
     }
@@ -165,7 +165,7 @@ function ArkhamDeckBuilderContent() {
         <InvestigatorSelector
           investigators={investigators}
           onSelect={setInvestigator}
-          onCancel={() => navigate('/arkham/my-decks')}
+          onCancel={() => navigate('/my-decks?game=arkham')}
           onImport={() => setShowImportModal(true)}
         />
         <ImportDeckModal
@@ -202,7 +202,7 @@ function ArkhamDeckBuilderContent() {
             {/* Left: Back button and investigator info */}
             <div className="flex items-center gap-3">
               <button
-                onClick={() => navigate('/arkham/my-decks')}
+                onClick={() => navigate('/my-decks?game=arkham')}
                 className="p-2 text-gray-400 hover:text-white transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />

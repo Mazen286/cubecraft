@@ -432,8 +432,9 @@ function findCardByName(name: string, xp?: number): ArkhamCard | null {
     });
   }
 
-  // If multiple matches and XP specified, filter by XP
-  if (matches.length > 1 && xp !== undefined) {
+  // If XP is specified, filter by XP (even if only one match)
+  // This ensures we get the correct upgraded version
+  if (xp !== undefined) {
     const xpMatches = matches.filter(card => (card.xp || 0) === xp);
     if (xpMatches.length > 0) {
       matches = xpMatches;
@@ -449,7 +450,9 @@ function findCardByName(name: string, xp?: number): ArkhamCard | null {
     }
   }
 
-  // Return the first match (lowest code = original printing)
+  // Return the first match
+  // If XP was specified and matched, we already have the correct version
+  // Otherwise, prefer lowest code (original printing)
   if (matches.length > 0) {
     matches.sort((a, b) => a.code.localeCompare(b.code));
     return matches[0];

@@ -30,7 +30,6 @@ const AuthCallback = lazy(() => import('./pages/AuthCallback').then(m => ({ defa
 
 // Arkham Horror LCG pages
 const ArkhamDeckBuilder = lazy(() => import('./pages/ArkhamDeckBuilder').then(m => ({ default: m.ArkhamDeckBuilder })));
-const MyArkhamDecks = lazy(() => import('./pages/MyArkhamDecks').then(m => ({ default: m.MyArkhamDecks })));
 
 // Loading fallback component
 function PageLoader() {
@@ -131,11 +130,6 @@ function App() {
                 <Route path="/arkham/deck-builder/:deckId" element={
                   <ProtectedRoute>
                     <ArkhamDeckBuilder />
-                  </ProtectedRoute>
-                } />
-                <Route path="/arkham/my-decks" element={
-                  <ProtectedRoute>
-                    <MyArkhamDecks />
                   </ProtectedRoute>
                 } />
               </Routes>

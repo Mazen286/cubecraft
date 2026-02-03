@@ -178,11 +178,36 @@ function tryExtractInvestigatorFromTitle(line: string): { code: string } | null 
 }
 
 /**
+ * Extract XP from card name that uses level dots (•, ●, or *)
+ * Returns [cleanName, xpLevel] or [originalName, undefined]
+ */
+function extractXpFromDots(name: string): [string, number | undefined] {
+  // Match bullet points: • (U+2022), ● (U+25CF), or * asterisks
+  // Pattern: card name followed by space and 1-5 dots/bullets
+  const dotPatterns = [
+    /^(.+?)\s+([•●*]{1,5})$/,      // "Shrivelling •••••"
+    /^(.+?)\s+\(([•●*]{1,5})\)$/,  // "Shrivelling (•••••)"
+  ];
+
+  for (const pattern of dotPatterns) {
+    const match = name.match(pattern);
+    if (match) {
+      const cleanName = match[1].trim();
+      const dots = match[2];
+      const xp = dots.length;
+      return [cleanName, xp];
+    }
+  }
+
+  return [name, undefined];
+}
+
+/**
  * Parse a single line of text format
  */
 function parseTextLine(line: string): { name: string; quantity: number; xp?: number; code?: string } | null {
   // Remove common prefixes/suffixes
-  let cleaned = line.trim();
+  const cleaned = line.trim();
 
   // Pattern 0: "2x 01060" or "2 01060" - quantity + card code
   let match = cleaned.match(/^(\d+)x?\s+(\d{5})$/i);
@@ -190,38 +215,101 @@ function parseTextLine(line: string): { name: string; quantity: number; xp?: num
     return { name: '', quantity: parseInt(match[1], 10), code: match[2] };
   }
 
-  // Pattern 1: "2x Card Name (Set)" or "2x Card Name" or "2x Card Name (5)"
-  match = cleaned.match(/^(\d+)x\s+(.+?)(?:\s+\((\d+)\))?(?:\s+\([^)]+\))?$/i);
+  // Pattern 1: "2x Card Name [4] (Set)" or "2x Card Name (5) (Set)" - with XP in brackets or parens
+  // Also handles "2x Card Name ••••• (Set)" with XP dots
+  match = cleaned.match(/^(\d+)x\s+(.+?)(?:\s+[\[(](\d+)[\])])?(?:\s+\([^)]+\))?$/i);
   if (match) {
-    const xp = match[3] ? parseInt(match[3], 10) : undefined;
-    return { name: match[2].trim(), quantity: parseInt(match[1], 10), xp };
+    let cardName = match[2].trim();
+    let xp = match[3] ? parseInt(match[3], 10) : undefined;
+
+    // Check for XP in square brackets within the card name (e.g., "Sixth Sense [4]")
+    const bracketMatch = cardName.match(/^(.+?)\s+\[(\d+)\]$/);
+    if (bracketMatch && parseInt(bracketMatch[2], 10) <= 5) {
+      cardName = bracketMatch[1].trim();
+      xp = parseInt(bracketMatch[2], 10);
+    }
+
+    // Check for XP dots in the card name
+    const [cleanName, dotXp] = extractXpFromDots(cardName);
+    if (dotXp !== undefined) {
+      cardName = cleanName;
+      xp = dotXp;
+    }
+
+    return { name: cardName, quantity: parseInt(match[1], 10), xp };
   }
 
   // Pattern 2: "Card Name x2" or "Card Name (Set) x2"
   match = cleaned.match(/^(.+?)\s+x(\d+)$/i);
   if (match) {
-    // Extract XP from name if present, e.g., "Shrivelling (5) x2"
-    const nameWithXp = match[1].trim();
-    const xpMatch = nameWithXp.match(/^(.+?)\s+\((\d+)\)$/);
-    if (xpMatch) {
-      return { name: xpMatch[1].trim(), quantity: parseInt(match[2], 10), xp: parseInt(xpMatch[2], 10) };
+    // Extract XP from name if present, e.g., "Shrivelling (5) x2" or "Shrivelling [4] x2" or "Shrivelling ••••• x2"
+    let nameWithXp = match[1].trim();
+    const quantity = parseInt(match[2], 10);
+
+    // Check for XP dots first
+    const [dotCleanName, dotXp] = extractXpFromDots(nameWithXp);
+    if (dotXp !== undefined) {
+      return { name: dotCleanName, quantity, xp: dotXp };
     }
+
+    // Check for numeric XP in square brackets [4]
+    const bracketMatch = nameWithXp.match(/^(.+?)\s+\[(\d+)\](?:\s+\([^)]+\))?$/);
+    if (bracketMatch && parseInt(bracketMatch[2], 10) <= 5) {
+      return { name: bracketMatch[1].trim(), quantity, xp: parseInt(bracketMatch[2], 10) };
+    }
+
+    // Check for numeric XP in parentheses (5)
+    const xpMatch = nameWithXp.match(/^(.+?)\s+\((\d+)\)$/);
+    if (xpMatch && parseInt(xpMatch[2], 10) <= 5) {
+      return { name: xpMatch[1].trim(), quantity, xp: parseInt(xpMatch[2], 10) };
+    }
+
+    // Remove set name in parentheses
     const name = nameWithXp.replace(/\s*\([^)]*\)\s*$/, '').trim();
-    return { name, quantity: parseInt(match[2], 10) };
+    return { name, quantity };
   }
 
-  // Pattern 3: "Card Name (5)" - with XP level only
+  // Pattern 3: "Card Name (5)" or "Card Name [4]" - with XP level only, or "Card Name •••••"
+  // First check for XP dots
+  const [dotCleanName, dotXpLevel] = extractXpFromDots(cleaned);
+  if (dotXpLevel !== undefined) {
+    return { name: dotCleanName, quantity: 1, xp: dotXpLevel };
+  }
+
+  // Check for XP in square brackets [4]
+  match = cleaned.match(/^(.+?)\s+\[(\d+)\](?:\s+\([^)]+\))?$/);
+  if (match && parseInt(match[2], 10) <= 5) {
+    return { name: match[1].trim(), quantity: 1, xp: parseInt(match[2], 10) };
+  }
+
+  // Check for XP in parentheses (5)
   match = cleaned.match(/^(.+?)\s+\((\d+)\)$/);
   if (match && parseInt(match[2], 10) <= 5) {
     // Only treat as XP if the number is 0-5 (valid XP range)
     return { name: match[1].trim(), quantity: 1, xp: parseInt(match[2], 10) };
   }
 
-  // Pattern 4: "2 Card Name" or "2 Card Name (5)" - number at start (but not 5 digits)
-  match = cleaned.match(/^(\d{1,2})\s+(.+?)(?:\s+\((\d+)\))?(?:\s+\([^)]+\))?$/);
+  // Pattern 4: "2 Card Name" or "2 Card Name (5)" or "2 Card Name [4]" - number at start (but not 5 digits)
+  match = cleaned.match(/^(\d{1,2})\s+(.+?)(?:\s+[\[(](\d+)[\])])?(?:\s+\([^)]+\))?$/);
   if (match) {
-    const xp = match[3] ? parseInt(match[3], 10) : undefined;
-    return { name: match[2].trim(), quantity: parseInt(match[1], 10), xp };
+    let cardName = match[2].trim();
+    let xp = match[3] ? parseInt(match[3], 10) : undefined;
+
+    // Check for XP in square brackets within the card name
+    const bracketMatch = cardName.match(/^(.+?)\s+\[(\d+)\]$/);
+    if (bracketMatch && parseInt(bracketMatch[2], 10) <= 5) {
+      cardName = bracketMatch[1].trim();
+      xp = parseInt(bracketMatch[2], 10);
+    }
+
+    // Check for XP dots in the card name
+    const [cleanName, dotXp] = extractXpFromDots(cardName);
+    if (dotXp !== undefined) {
+      cardName = cleanName;
+      xp = dotXp;
+    }
+
+    return { name: cardName, quantity: parseInt(match[1], 10), xp };
   }
 
   // Pattern 5: Just card name (with optional set info)
