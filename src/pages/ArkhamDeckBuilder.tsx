@@ -10,6 +10,8 @@ import {
   Redo,
   RefreshCw,
   Upload,
+  Layers,
+  Search,
 } from 'lucide-react';
 import {
   ArkhamDeckBuilderProvider,
@@ -68,7 +70,6 @@ function ArkhamDeckBuilderContent() {
 
   // Mobile view state
   const [activeView, setActiveView] = useState<'browse' | 'deck'>('browse');
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   // Handle name editing
   useEffect(() => {
@@ -361,57 +362,61 @@ function ArkhamDeckBuilderContent() {
           </div>
         </div>
 
-        {/* Mobile view tabs */}
-        {isMobile && (
-          <div className="flex border-t border-yugi-border">
+      </header>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Mobile: Tab-based layout */}
+        <div className="flex flex-col h-full md:hidden">
+          {/* Mobile tabs */}
+          <div className="flex-shrink-0 flex border-b border-yugi-border bg-yugi-darker">
             <button
               onClick={() => setActiveView('browse')}
-              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                 activeView === 'browse'
                   ? 'text-gold-400 border-b-2 border-gold-500'
                   : 'text-gray-400'
               }`}
             >
-              Browse
+              <span className="flex items-center justify-center gap-2">
+                <Search className="w-4 h-4" />
+                Browse
+              </span>
             </button>
             <button
               onClick={() => setActiveView('deck')}
-              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                 activeView === 'deck'
                   ? 'text-gold-400 border-b-2 border-gold-500'
                   : 'text-gray-400'
               }`}
             >
-              Deck ({totalCards})
+              <span className="flex items-center justify-center gap-2">
+                <Layers className="w-4 h-4" />
+                Deck ({totalCards}/{requiredSize})
+              </span>
             </button>
           </div>
-        )}
-      </header>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {isMobile ? (
-          // Mobile: Show one view at a time
-          activeView === 'browse' ? (
-            <div className="flex-1 overflow-hidden">
+          {/* Mobile content */}
+          <div className="flex-1 overflow-hidden">
+            {activeView === 'browse' ? (
               <ArkhamCardBrowser />
-            </div>
-          ) : (
-            <div className="flex-1 overflow-hidden">
+            ) : (
               <ArkhamDeckPanel />
-            </div>
-          )
-        ) : (
-          // Desktop: Side-by-side layout
-          <>
-            <div className="w-1/2 border-r border-yugi-border overflow-hidden">
-              <ArkhamCardBrowser />
-            </div>
-            <div className="w-1/2 overflow-hidden">
-              <ArkhamDeckPanel />
-            </div>
-          </>
-        )}
+            )}
+          </div>
+        </div>
+
+        {/* Desktop: Side-by-side layout */}
+        <div className="hidden md:flex md:flex-row w-full h-full">
+          <div className="w-1/2 border-r border-yugi-border overflow-hidden">
+            <ArkhamCardBrowser />
+          </div>
+          <div className="w-1/2 overflow-hidden">
+            <ArkhamDeckPanel />
+          </div>
+        </div>
       </div>
 
       {/* Upgrade Dialog */}

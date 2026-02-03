@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { X, Shuffle, RotateCcw, ChevronRight } from 'lucide-react';
+import { X, Shuffle, RotateCcw, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
 import type { ArkhamCard } from '../../types/arkham';
@@ -7,6 +7,17 @@ import type { ArkhamCard } from '../../types/arkham';
 interface DrawSimulatorProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+// Check if a card is a weakness
+function isWeakness(card: ArkhamCard): boolean {
+  return card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness';
+}
+
+// Check if weakness must stay in opening hand (e.g., The Tower XVI)
+function mustKeepInOpeningHand(card: ArkhamCard): boolean {
+  // The Tower XVI (05042) must stay in opening hand
+  return card.code === '05042';
 }
 
 export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
@@ -34,6 +45,7 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
   const [selectedForMulligan, setSelectedForMulligan] = useState<Set<number>>(new Set());
   const [phase, setPhase] = useState<'initial' | 'mulligan' | 'playing'>('initial');
   const [drawnThisTurn, setDrawnThisTurn] = useState<ArkhamCard | null>(null);
+  const [setAsideWeaknesses, setSetAsideWeaknesses] = useState<ArkhamCard[]>([]);
 
   // Shuffle function
   const shuffleDeck = useCallback((deck: ArkhamCard[]): ArkhamCard[] => {
@@ -45,19 +57,44 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
     return shuffled;
   }, []);
 
+  // Draw cards, setting aside weaknesses (except those that must stay)
+  const drawOpeningHand = useCallback((deck: ArkhamCard[], count: number): {
+    hand: ArkhamCard[];
+    remaining: ArkhamCard[];
+    setAside: ArkhamCard[];
+  } => {
+    const hand: ArkhamCard[] = [];
+    const setAside: ArkhamCard[] = [];
+    let remaining = [...deck];
+
+    while (hand.length < count && remaining.length > 0) {
+      const [card, ...rest] = remaining;
+      remaining = rest;
+
+      if (isWeakness(card) && !mustKeepInOpeningHand(card)) {
+        // Set aside weakness and continue drawing
+        setAside.push(card);
+      } else {
+        hand.push(card);
+      }
+    }
+
+    return { hand, remaining, setAside };
+  }, []);
+
   // Start new game
   const startNewGame = useCallback(() => {
     const shuffled = shuffleDeck(fullDeck);
-    const openingHand = shuffled.slice(0, 5);
-    const remaining = shuffled.slice(5);
+    const { hand: openingHand, remaining, setAside } = drawOpeningHand(shuffled, 5);
 
     setDrawPile(remaining);
     setHand(openingHand);
     setDiscardPile([]);
+    setSetAsideWeaknesses(setAside);
     setSelectedForMulligan(new Set());
     setPhase('mulligan');
     setDrawnThisTurn(null);
-  }, [fullDeck, shuffleDeck]);
+  }, [fullDeck, shuffleDeck, drawOpeningHand]);
 
   // Toggle card selection for mulligan
   const toggleMulliganSelection = useCallback((index: number) => {
@@ -74,12 +111,6 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
 
   // Perform mulligan
   const performMulligan = useCallback(() => {
-    if (selectedForMulligan.size === 0) {
-      // No mulligan, just start playing
-      setPhase('playing');
-      return;
-    }
-
     // Put selected cards back into deck
     const keptCards: ArkhamCard[] = [];
     const returnedCards: ArkhamCard[] = [];
@@ -92,16 +123,42 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
       }
     });
 
-    // Shuffle returned cards back into draw pile and draw new ones
-    const newDrawPile = shuffleDeck([...drawPile, ...returnedCards]);
-    const newCards = newDrawPile.slice(0, returnedCards.length);
-    const remainingPile = newDrawPile.slice(returnedCards.length);
+    if (returnedCards.length === 0) {
+      // No mulligan, shuffle set-aside weaknesses back and start playing
+      const finalDrawPile = shuffleDeck([...drawPile, ...setAsideWeaknesses]);
+      setDrawPile(finalDrawPile);
+      setSetAsideWeaknesses([]);
+      setPhase('playing');
+      return;
+    }
+
+    // Shuffle returned cards into draw pile (not the set-aside weaknesses yet)
+    let newDrawPile = shuffleDeck([...drawPile, ...returnedCards]);
+
+    // Draw replacement cards, setting aside any weaknesses
+    const newSetAside: ArkhamCard[] = [...setAsideWeaknesses];
+    const newCards: ArkhamCard[] = [];
+
+    while (newCards.length < returnedCards.length && newDrawPile.length > 0) {
+      const [card, ...rest] = newDrawPile;
+      newDrawPile = rest;
+
+      if (isWeakness(card) && !mustKeepInOpeningHand(card)) {
+        newSetAside.push(card);
+      } else {
+        newCards.push(card);
+      }
+    }
+
+    // Now shuffle ALL set-aside weaknesses back into the deck
+    const finalDrawPile = shuffleDeck([...newDrawPile, ...newSetAside]);
 
     setHand([...keptCards, ...newCards]);
-    setDrawPile(remainingPile);
+    setDrawPile(finalDrawPile);
+    setSetAsideWeaknesses([]);
     setSelectedForMulligan(new Set());
     setPhase('playing');
-  }, [hand, drawPile, selectedForMulligan, shuffleDeck]);
+  }, [hand, drawPile, selectedForMulligan, setAsideWeaknesses, shuffleDeck]);
 
   // Skip mulligan
   const skipMulligan = useCallback(() => {
@@ -126,6 +183,7 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
     setDrawPile([]);
     setHand([]);
     setDiscardPile([]);
+    setSetAsideWeaknesses([]);
     setSelectedForMulligan(new Set());
     setPhase('initial');
     setDrawnThisTurn(null);
@@ -133,9 +191,7 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
 
   if (!isOpen) return null;
 
-  const weaknessesInHand = hand.filter(card =>
-    card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness'
-  );
+  const weaknessesInHand = hand.filter(card => isWeakness(card));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -196,11 +252,19 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
                     Hand: <span className="text-white font-medium">{hand.length}</span>
                   </span>
                 </div>
-                {weaknessesInHand.length > 0 && (
-                  <span className="text-red-400">
-                    {weaknessesInHand.length} weakness{weaknessesInHand.length !== 1 ? 'es' : ''} in hand!
-                  </span>
-                )}
+                <div className="flex items-center gap-4">
+                  {setAsideWeaknesses.length > 0 && phase === 'mulligan' && (
+                    <span className="text-purple-400">
+                      {setAsideWeaknesses.length} weakness{setAsideWeaknesses.length !== 1 ? 'es' : ''} set aside
+                    </span>
+                  )}
+                  {weaknessesInHand.length > 0 && (
+                    <span className="text-red-400 flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4" />
+                      {weaknessesInHand.length} weakness{weaknessesInHand.length !== 1 ? 'es' : ''} in hand!
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Mulligan phase instructions */}
@@ -319,8 +383,9 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
         {/* Footer */}
         <div className="p-4 border-t border-yugi-border bg-yugi-darker">
           <p className="text-xs text-gray-500 text-center">
-            This simulator includes all cards in your deck, including weaknesses.
-            In Arkham Horror LCG, you draw 5 cards and may mulligan any number once.
+            Follows official rules: Weaknesses drawn during setup are set aside and replaced.
+            After mulligan, all set-aside weaknesses are shuffled back into the deck.
+            Exception: The Tower XVI must stay in your opening hand if drawn.
           </p>
         </div>
       </div>

@@ -77,12 +77,13 @@ export function ArkhamDeckPanel() {
   const requiredSize = state.investigator?.deck_requirements?.size || 30;
   const xpAvailable = state.xpEarned - state.xpSpent;
 
-  // Group cards by type (with weaknesses as separate category)
+  // Group cards by type (with weaknesses and permanents as separate categories)
   const groupedCards = useMemo(() => {
-    const groups: Record<ArkhamCardType | 'weakness', { card: ArkhamCard; quantity: number }[]> = {
+    const groups: Record<ArkhamCardType | 'weakness' | 'permanent', { card: ArkhamCard; quantity: number }[]> = {
       asset: [],
       event: [],
       skill: [],
+      permanent: [], // Separate permanent category
       weakness: [], // Separate weakness category
       investigator: [],
       treachery: [],
@@ -98,13 +99,16 @@ export function ArkhamDeckPanel() {
       // Check if it's a weakness (subtype_code = 'weakness' or 'basicweakness')
       if (card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness') {
         groups.weakness.push({ card, quantity });
+      } else if (card.permanent) {
+        // Permanent cards get their own section
+        groups.permanent.push({ card, quantity });
       } else if (groups[card.type_code]) {
         groups[card.type_code].push({ card, quantity });
       }
     }
 
     // Sort each group by name
-    for (const type of Object.keys(groups) as (ArkhamCardType | 'weakness')[]) {
+    for (const type of Object.keys(groups) as (ArkhamCardType | 'weakness' | 'permanent')[]) {
       groups[type].sort((a, b) => a.card.name.localeCompare(b.card.name));
     }
 
@@ -318,6 +322,20 @@ export function ArkhamDeckPanel() {
               />
             )}
 
+            {/* Permanents */}
+            {typeCounts.permanent > 0 && (
+              <CardTypeSection
+                title="Permanents"
+                count={typeCounts.permanent}
+                cards={groupedCards.permanent}
+                signatureCodes={signatureCodes}
+                onAdd={addCard}
+                onRemove={removeCard}
+                onCardClick={setSelectedCard}
+                isPermanent
+              />
+            )}
+
             {/* Weaknesses */}
             {typeCounts.weakness > 0 && (
               <CardTypeSection
@@ -456,6 +474,7 @@ function CardTypeSection({
   onRemove,
   onCardClick,
   isWeakness = false,
+  isPermanent = false,
 }: {
   title: string;
   count: number;
@@ -465,6 +484,7 @@ function CardTypeSection({
   onRemove: (code: string) => void;
   onCardClick: (card: ArkhamCard) => void;
   isWeakness?: boolean;
+  isPermanent?: boolean;
 }) {
   const dragImageRef = useRef<HTMLImageElement>(null);
 
@@ -534,6 +554,11 @@ function CardTypeSection({
                     {isSignature && (
                       <span className="text-[10px] px-1 py-0.5 bg-purple-500/30 text-purple-300 rounded">
                         Signature
+                      </span>
+                    )}
+                    {isPermanent && (
+                      <span className="text-[10px] px-1 py-0.5 bg-cyan-500/30 text-cyan-300 rounded">
+                        Permanent
                       </span>
                     )}
                     {card.is_unique && (
