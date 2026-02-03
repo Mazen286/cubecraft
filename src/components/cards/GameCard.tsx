@@ -130,29 +130,29 @@ export const GameCard = memo(function GameCard({
           />
         )}
 
-        {/* Card indicators from game config */}
-        {activeIndicators.map((indicator, index) => (
-          <div
-            key={index}
-            className="absolute top-1 right-1 w-2 h-2 rounded-full shadow-lg"
-            style={{
-              backgroundColor: indicator.color,
-              boxShadow: `0 0 8px ${indicator.color}80`,
-              right: `${4 + index * 10}px`,
-            }}
-            title={indicator.tooltip}
-          />
-        ))}
-
-        {/* Tier badge */}
+        {/* Tier badge - positioned top-right to avoid covering mana costs */}
         {tierInfo && (
           <div className={cn(
-            'absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-lg',
+            'absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-lg',
             tierInfo.color
           )}>
             {tierInfo.tier}
           </div>
         )}
+
+        {/* Card indicators from game config - offset if tier badge is shown */}
+        {activeIndicators.map((indicator, index) => (
+          <div
+            key={index}
+            className="absolute top-1 w-2 h-2 rounded-full shadow-lg"
+            style={{
+              backgroundColor: indicator.color,
+              boxShadow: `0 0 8px ${indicator.color}80`,
+              right: `${(tierInfo ? 28 : 4) + index * 10}px`,
+            }}
+            title={indicator.tooltip}
+          />
+        ))}
       </div>
 
       {/* Tooltip on hover - high z-index to appear above everything */}

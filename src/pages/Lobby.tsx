@@ -379,14 +379,14 @@ export function Lobby() {
         )}
 
         {/* Actions */}
-        <div className="flex gap-4">
-          <Button variant="secondary" onClick={handleLeave}>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <Button variant="secondary" onClick={handleLeave} className="sm:flex-none">
             Leave
           </Button>
           {isHost && (
             <Button
               variant="secondary"
-              className="text-red-400 border-red-500/50 hover:text-red-300 hover:bg-red-500/10 hover:border-red-500"
+              className="text-red-400 border-red-500/50 hover:text-red-300 hover:bg-red-500/10 hover:border-red-500 sm:flex-none"
               onClick={handleCancelSession}
               disabled={isCancelling}
             >
@@ -403,7 +403,7 @@ export function Lobby() {
                 ? 'Starting...'
                 : canStart
                   ? 'Start Draft'
-                  : `Waiting for ${waitingFor} more player${waitingFor > 1 ? 's' : ''}`}
+                  : `Waiting for ${waitingFor} more`}
             </Button>
           )}
           {!isHost && (
