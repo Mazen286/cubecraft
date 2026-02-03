@@ -8,10 +8,10 @@ import {
   MoreVertical,
   Undo,
   Redo,
-  RefreshCw,
   Upload,
   Layers,
   Search,
+  Trash2,
 } from 'lucide-react';
 import {
   ArkhamDeckBuilderProvider,
@@ -25,6 +25,7 @@ import { UpgradeDialog } from '../components/arkham/UpgradeDialog';
 import { ImportDeckModal } from '../components/arkham/ImportDeckModal';
 import { FACTION_COLORS, FACTION_NAMES } from '../config/games/arkham';
 import { arkhamCardService } from '../services/arkhamCardService';
+import { arkhamDeckService } from '../services/arkhamDeckService';
 import type { ArkhamCardFilters } from '../components/arkham/ArkhamCardTable';
 
 export function ArkhamDeckBuilder() {
@@ -56,6 +57,8 @@ function ArkhamDeckBuilderContent() {
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Check for import query param
   useEffect(() => {
@@ -83,6 +86,22 @@ function ArkhamDeckBuilderContent() {
 
   const clearCrossFilters = () => {
     setCrossFilters(null);
+  };
+
+  // Handle deck deletion
+  const handleDeleteDeck = async () => {
+    if (!state.deckId) return;
+
+    setIsDeleting(true);
+    const result = await arkhamDeckService.deleteDeck(state.deckId);
+    setIsDeleting(false);
+
+    if (result.success) {
+      navigate('/arkham/my-decks');
+    } else {
+      alert(result.error || 'Failed to delete deck');
+    }
+    setShowDeleteConfirm(false);
   };
 
   // Handle name editing
@@ -331,16 +350,18 @@ function ArkhamDeckBuilderContent() {
                       <ChevronUp className="w-4 h-4" />
                       Upgrade Deck
                     </button>
-                    <button
-                      onClick={() => {
-                        setInvestigator(investigator);
-                        setShowMenu(false);
-                      }}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-yugi-border transition-colors"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Change Investigator
-                    </button>
+                    {state.deckId && (
+                      <button
+                        onClick={() => {
+                          setShowDeleteConfirm(true);
+                          setShowMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-red-900/30 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Deck
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -451,6 +472,37 @@ function ArkhamDeckBuilderContent() {
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
       />
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowDeleteConfirm(false)}
+          />
+          <div className="relative bg-yugi-card border border-yugi-border rounded-xl shadow-2xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-white mb-2">Delete Deck?</h3>
+            <p className="text-gray-400 mb-4">
+              Are you sure you want to delete "{state.deckName}"? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteDeck}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
