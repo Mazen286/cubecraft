@@ -6,7 +6,7 @@ import { arkhamCardService } from '../../services/arkhamCardService';
 
 interface ImportDeckModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (imported?: boolean) => void;
 }
 
 export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
@@ -63,7 +63,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
 
     if (importResult.success) {
       setTimeout(() => {
-        onClose();
+        onClose(true); // Pass true to indicate successful import
         setTextContent('');
         setResult(null);
       }, 1500);
@@ -107,7 +107,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
 
       if (importResult.success) {
         setTimeout(() => {
-          onClose();
+          onClose(true); // Pass true to indicate successful import
           setTextContent('');
           setResult(null);
         }, 1500);

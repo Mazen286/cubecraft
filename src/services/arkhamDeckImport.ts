@@ -116,9 +116,6 @@ export function parseArkhamDBText(text: string): ImportedDeck {
 
     const { name, quantity, xp, code } = parsed;
 
-    // Debug logging to see what was parsed
-    console.log(`Import parsed: "${line}" -> name="${name}", qty=${quantity}, xp=${xp}, code=${code || 'none'}`);
-
     // If we got a code, use it directly
     if (code) {
       const card = arkhamCardService.getCard(code);
@@ -140,10 +137,6 @@ export function parseArkhamDBText(text: string): ImportedDeck {
       continue;
     }
 
-    // Log if we're importing an upgraded card to help with debugging
-    if (xp !== undefined && xp > 0) {
-      console.log(`Import: "${name}" XP=${xp} -> found "${card.name}" (${card.code}) XP=${card.xp}`);
-    }
 
     // Check if it's an investigator
     if (card.type_code === 'investigator') {

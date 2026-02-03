@@ -450,9 +450,6 @@ function findCardByName(name: string, xp?: number): ArkhamCard | null {
           return diffA - diffB;
         });
         matches = [upgradedMatches[0]];
-        console.warn(`Import: No exact XP match for "${name}" (${xp}), using closest: ${upgradedMatches[0].name} (${upgradedMatches[0].xp})`);
-      } else {
-        console.warn(`Import: No upgraded version found for "${name}" (${xp}), using base version`);
       }
     }
   } else if (xp === 0) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Save,
@@ -54,23 +54,27 @@ function ArkhamDeckBuilderContent() {
     getTotalCardCount,
   } = useArkhamDeckBuilder();
 
-  // Check for import param from URL directly (before React Router processes it)
-  const [showImportModal, setShowImportModal] = useState(() => {
-    // Read directly from window.location to avoid React Router timing issues
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasImport = urlParams.get('import') === 'true';
-    console.log('=== IMPORT MODAL INIT ===');
-    console.log('window.location.search:', window.location.search);
-    console.log('hasImport:', hasImport);
-    return hasImport;
-  });
+  const [showImportModal, setShowImportModal] = useState(false);
+  const importCheckedRef = useRef(false);
 
-  // Debug logging
-  console.log('=== RENDER ===');
-  console.log('showImportModal:', showImportModal);
-  console.log('state.isInitialized:', state.isInitialized);
-  console.log('state.investigator:', state.investigator?.name || 'null');
-  console.log('state.isLoading:', state.isLoading);
+  // Check for import param - do this synchronously on render to avoid flash
+  if (!importCheckedRef.current && searchParams.get('import') === 'true') {
+    importCheckedRef.current = true;
+    // Use setTimeout to avoid setState during render
+    setTimeout(() => {
+      setShowImportModal(true);
+      // Clear the param
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('import');
+      setSearchParams(newParams, { replace: true });
+    }, 0);
+  }
+
+  // Also check window.location directly as backup
+  if (!importCheckedRef.current && window.location.search.includes('import=true')) {
+    importCheckedRef.current = true;
+    setTimeout(() => setShowImportModal(true), 0);
+  }
 
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -191,10 +195,10 @@ function ArkhamDeckBuilderContent() {
         <div className="min-h-screen bg-yugi-dark">
           <ImportDeckModal
             isOpen={true}
-            onClose={() => {
+            onClose={(imported?: boolean) => {
               setShowImportModal(false);
-              // If no investigator after closing import, go back to deck list
-              if (!state.investigator) {
+              // Only navigate away if user cancelled (not if import succeeded)
+              if (!imported) {
                 navigate('/my-decks?game=arkham');
               }
             }}
