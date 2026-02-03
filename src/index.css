@@ -270,3 +270,49 @@
 .animate-slide-up {
   animation: slide-up 0.3s ease-out forwards;
 }
+
+/* Gold slider for score editor */
+.slider-gold {
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(to right, #2a2a4a, #2a2a4a);
+  border-radius: 0.5rem;
+}
+
+.slider-gold::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(to bottom, #fcd34d, #d97706);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s ease;
+}
+
+.slider-gold::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.slider-gold::-webkit-slider-thumb:active {
+  transform: scale(0.95);
+}
+
+.slider-gold::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(to bottom, #fcd34d, #d97706);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slider-gold:focus {
+  outline: none;
+}
+
+.slider-gold:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.3);
+}

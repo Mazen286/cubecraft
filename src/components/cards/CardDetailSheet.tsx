@@ -47,7 +47,22 @@ export function CardDetailSheet({
 
   const genericCard = toCardWithAttributes(card);
   // Handle both desc (YuGiOhCard) and description (Card) for robustness
-  const cardDescription = card.desc ?? (card as unknown as { description?: string }).description;
+  // Access the raw object to get description regardless of TypeScript type
+  const cardObj = card as unknown as Record<string, unknown>;
+
+  // Debug: log the card object keys to see what fields are present
+  if (import.meta.env.DEV && !cardObj._debugLogged) {
+    console.log('[CardDetailSheet] Card fields:', Object.keys(cardObj));
+    console.log('[CardDetailSheet] description:', cardObj.description);
+    console.log('[CardDetailSheet] desc:', cardObj.desc);
+    (cardObj as Record<string, unknown>)._debugLogged = true;
+  }
+
+  const cardDescription =
+    (typeof cardObj.description === 'string' && cardObj.description) ||
+    (typeof cardObj.desc === 'string' && cardObj.desc) ||
+    (typeof card.desc === 'string' && card.desc) ||
+    '';
 
   return (
     <BottomSheet

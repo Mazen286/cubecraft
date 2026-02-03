@@ -36,6 +36,8 @@ export interface CubeData {
   // Derived at load time from cardMap
   cards: YuGiOhCard[];
   hasScores: boolean;       // Whether any card in the cube has a score
+  // Cube builder settings
+  duplicateLimit?: number | null; // null = unlimited, number = max copies per card
 }
 
 /**
@@ -49,6 +51,8 @@ interface RawCubeData {
   gameId?: string;          // Optional in legacy format
   version?: string;         // Optional version field
   cardMap: Record<string | number, unknown>;
+  // Cube builder settings (stored as _metadata in cardMap for DB cubes)
+  duplicateLimit?: number | null;
 }
 
 /**
@@ -77,11 +81,14 @@ function normalizeYuGiOhCard(raw: Record<string, unknown>, cardId: number): YuGi
  */
 function genericCardToYuGiOh(card: Card): YuGiOhCard {
   const attrs = card.attributes as Record<string, unknown>;
+  // Check both 'description' (Card interface) and 'desc' (YuGiOh/saved format)
+  const rawCard = card as unknown as Record<string, unknown>;
+  const desc = card.description || (typeof rawCard.desc === 'string' ? rawCard.desc : '') || '';
   return {
     id: typeof card.id === 'number' ? card.id : parseInt(String(card.id), 10),
     name: card.name,
     type: card.type,
-    desc: card.description || '',
+    desc,
     atk: typeof attrs.atk === 'number' ? attrs.atk : undefined,
     def: typeof attrs.def === 'number' ? attrs.def : undefined,
     level: typeof attrs.level === 'number' ? attrs.level : undefined,
@@ -102,37 +109,60 @@ function genericCardToYuGiOh(card: Card): YuGiOhCard {
  */
 function processCubeData(rawData: RawCubeData): CubeData {
   const cardMap: Record<number, YuGiOhCard> = {};
+  const cards: YuGiOhCard[] = [];
 
   // Process each card in the map
+  // Keys can be either numeric card IDs (legacy) or instanceIds (new format: "cardId_timestamp_random")
   for (const [key, value] of Object.entries(rawData.cardMap)) {
-    const cardId = parseInt(key, 10);
-    if (isNaN(cardId)) continue;
+    // Skip metadata key
+    if (key === '_metadata') continue;
 
     const rawCard = value as Record<string, unknown>;
+
+    // Extract the actual card ID from the key
+    // For instanceId format "12345_1706889600000_abc12", extract "12345"
+    // For legacy format "12345", just use as-is
+    const cardIdStr = key.includes('_') ? key.split('_')[0] : key;
+    const cardId = parseInt(cardIdStr, 10);
+    if (isNaN(cardId)) continue;
+
+    let card: YuGiOhCard;
 
     // Check if it's new format (has 'attributes' field) or legacy format
     if (rawCard.attributes && typeof rawCard.attributes === 'object') {
       // New generic format - convert to YuGiOhCard for backward compatibility
-      cardMap[cardId] = genericCardToYuGiOh(rawCard as unknown as Card);
+      card = genericCardToYuGiOh(rawCard as unknown as Card);
     } else {
       // Legacy format - normalize directly
-      cardMap[cardId] = normalizeYuGiOhCard(rawCard, cardId);
+      card = normalizeYuGiOhCard(rawCard, cardId);
+    }
+
+    // Always add to cards array (preserves duplicates)
+    cards.push(card);
+
+    // cardMap stores one entry per unique card ID (for lookup)
+    if (!cardMap[cardId]) {
+      cardMap[cardId] = card;
     }
   }
 
-  const cards = Object.values(cardMap);
   const hasScores = cards.some(card => card.score !== undefined);
+
+  // Extract duplicateLimit from _metadata key if present
+  const metadata = rawData.cardMap._metadata as { duplicateLimit?: number | null } | undefined;
+  const duplicateLimit = rawData.duplicateLimit ?? metadata?.duplicateLimit ?? null;
 
   return {
     id: rawData.id,
     name: rawData.name,
-    cardCount: rawData.cardCount,
+    cardCount: cards.length, // Use actual count including duplicates
     generatedAt: rawData.generatedAt,
     gameId: rawData.gameId || DEFAULT_GAME_ID,
     version: rawData.version,
     cardMap,
     cards,
     hasScores,
+    duplicateLimit,
   };
 }
 
@@ -659,11 +689,22 @@ export const cubeService = {
     options?: {
       isPublic?: boolean;
       creatorId?: string;
+      duplicateLimit?: number | null;
     }
   ): Promise<{ id: string; error?: string }> {
     try {
       const supabase = getSupabase();
-      const cardCount = Object.keys(cardMap).length;
+
+      // Store metadata (including duplicateLimit) in a special _metadata key
+      const cardMapWithMetadata = {
+        ...cardMap,
+        _metadata: {
+          duplicateLimit: options?.duplicateLimit ?? null,
+        },
+      };
+
+      // Count cards excluding _metadata
+      const cardCount = Object.keys(cardMap).filter(k => k !== '_metadata').length;
 
       // Generate UUID on client side since table may not have default
       const cubeId = crypto.randomUUID();
@@ -674,7 +715,7 @@ export const cubeService = {
         description,
         game_id: gameId,
         card_count: cardCount,
-        card_data: cardMap as Record<string, unknown>,
+        card_data: cardMapWithMetadata as Record<string, unknown>,
         is_public: options?.isPublic ?? false,
         creator_id: options?.creatorId || null,
       };
@@ -708,6 +749,7 @@ export const cubeService = {
       description?: string;
       cardMap?: Record<string | number, unknown>;
       isPublic?: boolean;
+      duplicateLimit?: number | null;
     }
   ): Promise<{ success: boolean; error?: string }> {
     const dbId = cubeId.startsWith('db:') ? cubeId.slice(3) : cubeId;
@@ -720,8 +762,27 @@ export const cubeService = {
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.isPublic !== undefined) updateData.is_public = updates.isPublic;
       if (updates.cardMap !== undefined) {
-        updateData.card_data = updates.cardMap;
-        updateData.card_count = Object.keys(updates.cardMap).length;
+        // Store metadata (including duplicateLimit) in a special _metadata key
+        const cardMapWithMetadata = {
+          ...updates.cardMap,
+          _metadata: {
+            duplicateLimit: updates.duplicateLimit ?? null,
+          },
+        };
+        updateData.card_data = cardMapWithMetadata;
+        // Count cards excluding _metadata
+        updateData.card_count = Object.keys(updates.cardMap).filter(k => k !== '_metadata').length;
+      } else if (updates.duplicateLimit !== undefined) {
+        // If only duplicateLimit is being updated without cardMap, we need to fetch and update
+        const existingCube = await this.loadCubeFromDatabase(cubeId);
+        const existingCardMap = existingCube.cardMap as Record<string | number, unknown>;
+        const cardMapWithMetadata = {
+          ...existingCardMap,
+          _metadata: {
+            duplicateLimit: updates.duplicateLimit,
+          },
+        };
+        updateData.card_data = cardMapWithMetadata;
       }
 
       const { error } = await supabase

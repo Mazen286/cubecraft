@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Boxes } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Boxes, Plus, Pencil, Upload } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getSupabase } from '../lib/supabase';
@@ -18,6 +19,7 @@ interface CubeItem {
 }
 
 export function MyCubes() {
+  const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const [cubes, setCubes] = useState<CubeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,15 +117,22 @@ export function MyCubes() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-gold-400">My Cubes</h1>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="px-4 py-2 bg-gold-600 hover:bg-gold-500 text-black font-medium rounded-lg transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Upload Cube
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/cube-builder')}
+              className="px-4 py-2 bg-gold-600 hover:bg-gold-500 text-black font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create Cube
+            </button>
+            <button
+              onClick={() => setShowUpload(true)}
+              className="px-4 py-2 bg-yugi-dark hover:bg-yugi-border text-gray-300 font-medium rounded-lg transition-colors flex items-center gap-2 border border-yugi-border"
+            >
+              <Upload className="w-5 h-5" />
+              Import
+            </button>
+          </div>
         </div>
 
         {cubes.length === 0 ? (
@@ -133,14 +142,24 @@ export function MyCubes() {
             </div>
             <h2 className="text-xl font-semibold text-white mb-2">No Cubes Yet</h2>
             <p className="text-gray-400 mb-6">
-              Upload your first cube to get started drafting with custom card pools.
+              Create your first cube to get started drafting with custom card pools.
             </p>
-            <button
-              onClick={() => setShowUpload(true)}
-              className="px-6 py-3 bg-gold-600 hover:bg-gold-500 text-black font-medium rounded-lg transition-colors"
-            >
-              Upload Your First Cube
-            </button>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => navigate('/cube-builder')}
+                className="px-6 py-3 bg-gold-600 hover:bg-gold-500 text-black font-medium rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Create Your First Cube
+              </button>
+              <button
+                onClick={() => setShowUpload(true)}
+                className="px-6 py-3 bg-yugi-darker hover:bg-yugi-border text-gray-300 font-medium rounded-lg transition-colors flex items-center gap-2 border border-yugi-border"
+              >
+                <Upload className="w-5 h-5" />
+                Import from File
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -178,6 +197,13 @@ export function MyCubes() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate(`/cube-builder/${cube.id}`)}
+                      className="p-2 text-gray-400 hover:text-gold-400 transition-colors"
+                      title="Edit cube"
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </button>
                     <button
                       onClick={() => togglePublic(cube.id, cube.is_public)}
                       className="p-2 text-gray-400 hover:text-white transition-colors"
