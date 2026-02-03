@@ -1,0 +1,431 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Save,
+  ArrowLeft,
+  Loader2,
+  ChevronUp,
+  MoreVertical,
+  Undo,
+  Redo,
+  RefreshCw,
+  Upload,
+} from 'lucide-react';
+import {
+  ArkhamDeckBuilderProvider,
+  useArkhamDeckBuilder,
+} from '../context/ArkhamDeckBuilderContext';
+import { InvestigatorSelector } from '../components/arkham/InvestigatorSelector';
+import { ArkhamCardBrowser } from '../components/arkham/ArkhamCardBrowser';
+import { ArkhamDeckPanel } from '../components/arkham/ArkhamDeckPanel';
+import { XPTracker } from '../components/arkham/XPTracker';
+import { UpgradeDialog } from '../components/arkham/UpgradeDialog';
+import { ImportDeckModal } from '../components/arkham/ImportDeckModal';
+import { FACTION_COLORS, FACTION_NAMES } from '../config/games/arkham';
+import { arkhamCardService } from '../services/arkhamCardService';
+
+export function ArkhamDeckBuilder() {
+  const { deckId } = useParams<{ deckId?: string }>();
+
+  return (
+    <ArkhamDeckBuilderProvider initialDeckId={deckId}>
+      <ArkhamDeckBuilderContent />
+    </ArkhamDeckBuilderProvider>
+  );
+}
+
+function ArkhamDeckBuilderContent() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const {
+    state,
+    investigators,
+    setInvestigator,
+    setMetadata,
+    saveDeck,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    getTotalCardCount,
+  } = useArkhamDeckBuilder();
+
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Check for import query param
+  useEffect(() => {
+    if (searchParams.get('import') === 'true' && state.isInitialized) {
+      setShowImportModal(true);
+      // Remove the query param
+      searchParams.delete('import');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, state.isInitialized, setSearchParams]);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+
+  // Mobile view state
+  const [activeView, setActiveView] = useState<'browse' | 'deck'>('browse');
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // Handle name editing
+  useEffect(() => {
+    setNameInput(state.deckName);
+  }, [state.deckName]);
+
+  const handleSaveName = () => {
+    if (nameInput.trim()) {
+      setMetadata({ name: nameInput.trim() });
+    }
+    setIsEditingName(false);
+  };
+
+  const handleSave = async () => {
+    const result = await saveDeck();
+    if (!result.success) {
+      alert(result.error || 'Failed to save deck');
+    }
+  };
+
+  const handleUpgradeComplete = (newDeckId: string) => {
+    navigate(`/arkham/deck-builder/${newDeckId}`);
+  };
+
+  // Show loading state
+  if (!state.isInitialized) {
+    return (
+      <div className="min-h-screen bg-yugi-dark flex items-center justify-center">
+        <div className="text-center">
+          {state.error ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">!</span>
+              </div>
+              <p className="text-red-400 mb-2">Failed to load card data</p>
+              <p className="text-gray-500 text-sm max-w-md">{state.error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-gold-600 hover:bg-gold-500 text-black font-medium rounded-lg transition-colors"
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            <>
+              <Loader2 className="w-10 h-10 text-gold-400 animate-spin mx-auto mb-4" />
+              <p className="text-gray-300">Loading Arkham Horror cards...</p>
+              <p className="text-gray-500 text-sm mt-2">Fetching from ArkhamDB...</p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Show investigator selector if no investigator selected
+  if (!state.investigator && !state.isLoading) {
+    return (
+      <>
+        <InvestigatorSelector
+          investigators={investigators}
+          onSelect={setInvestigator}
+          onCancel={() => navigate('/arkham/my-decks')}
+          onImport={() => setShowImportModal(true)}
+        />
+        <ImportDeckModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+        />
+      </>
+    );
+  }
+
+  // Show loading while loading deck
+  if (state.isLoading) {
+    return (
+      <div className="min-h-screen bg-yugi-dark flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-gold-400 animate-spin mx-auto mb-4" />
+          <p className="text-gray-300">Loading deck...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const investigator = state.investigator!;
+  const factionColor = FACTION_COLORS[investigator.faction_code];
+  const totalCards = getTotalCardCount();
+  const requiredSize = investigator.deck_requirements?.size || 30;
+
+  return (
+    <div className="min-h-screen bg-yugi-dark flex flex-col">
+      {/* Header */}
+      <header className="flex-shrink-0 bg-yugi-darker border-b border-yugi-border">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            {/* Left: Back button and investigator info */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/arkham/my-decks')}
+                className="p-2 text-gray-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+
+              {/* Investigator portrait */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-lg overflow-hidden border-2"
+                  style={{ borderColor: factionColor }}
+                >
+                  <img
+                    src={arkhamCardService.getArkhamCardImageUrl(investigator.code)}
+                    alt={investigator.name}
+                    className="w-full h-full object-cover object-top"
+                  />
+                </div>
+
+                <div className="hidden sm:block">
+                  {isEditingName ? (
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      onBlur={handleSaveName}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveName();
+                        if (e.key === 'Escape') {
+                          setNameInput(state.deckName);
+                          setIsEditingName(false);
+                        }
+                      }}
+                      autoFocus
+                      className="bg-transparent border-b border-gold-500 text-white font-medium focus:outline-none"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setIsEditingName(true)}
+                      className="text-white font-medium hover:text-gold-400 transition-colors text-left"
+                    >
+                      {state.deckName || 'Untitled Deck'}
+                    </button>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <span style={{ color: factionColor }}>
+                      {FACTION_NAMES[investigator.faction_code]}
+                    </span>
+                    <span>•</span>
+                    <span>{investigator.name}</span>
+                    {state.version > 1 && (
+                      <>
+                        <span>•</span>
+                        <span className="text-purple-400">v{state.version}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Stats and actions */}
+            <div className="flex items-center gap-2">
+              {/* XP display */}
+              {state.xpEarned > 0 && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-yugi-dark rounded-lg">
+                  <XPTracker compact />
+                </div>
+              )}
+
+              {/* Card count */}
+              <div
+                className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                  totalCards === requiredSize
+                    ? 'bg-green-500/20 text-green-400'
+                    : totalCards > requiredSize
+                    ? 'bg-red-500/20 text-red-400'
+                    : 'bg-yellow-500/20 text-yellow-400'
+                }`}
+              >
+                {totalCards}/{requiredSize}
+              </div>
+
+              {/* Undo/Redo */}
+              <div className="hidden sm:flex items-center gap-1">
+                <button
+                  onClick={undo}
+                  disabled={!canUndo}
+                  className="p-2 text-gray-400 hover:text-white transition-colors disabled:opacity-30"
+                  title="Undo (Ctrl+Z)"
+                >
+                  <Undo className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={redo}
+                  disabled={!canRedo}
+                  className="p-2 text-gray-400 hover:text-white transition-colors disabled:opacity-30"
+                  title="Redo (Ctrl+Shift+Z)"
+                >
+                  <Redo className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Save button */}
+              <button
+                onClick={handleSave}
+                disabled={state.isSaving || !state.isDirty}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gold-600 hover:bg-gold-500 text-black text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {state.isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">Save</span>
+              </button>
+
+              {/* Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="p-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+
+                {showMenu && (
+                  <div className="absolute right-0 top-full mt-1 bg-yugi-darker border border-yugi-border rounded-lg shadow-lg z-50 min-w-[160px]">
+                    <button
+                      onClick={() => {
+                        setShowImportModal(true);
+                        setShowMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-yugi-border transition-colors"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Import Deck
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowUpgradeDialog(true);
+                        setShowMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-yugi-border transition-colors"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                      Upgrade Deck
+                    </button>
+                    <button
+                      onClick={() => {
+                        setInvestigator(investigator);
+                        setShowMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-yugi-border transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Change Investigator
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile deck name */}
+          <div className="sm:hidden mt-2">
+            {isEditingName ? (
+              <input
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveName();
+                  if (e.key === 'Escape') {
+                    setNameInput(state.deckName);
+                    setIsEditingName(false);
+                  }
+                }}
+                autoFocus
+                className="w-full bg-transparent border-b border-gold-500 text-white font-medium focus:outline-none"
+              />
+            ) : (
+              <button
+                onClick={() => setIsEditingName(true)}
+                className="text-white font-medium hover:text-gold-400 transition-colors text-left truncate block w-full"
+              >
+                {state.deckName || 'Untitled Deck'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile view tabs */}
+        {isMobile && (
+          <div className="flex border-t border-yugi-border">
+            <button
+              onClick={() => setActiveView('browse')}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                activeView === 'browse'
+                  ? 'text-gold-400 border-b-2 border-gold-500'
+                  : 'text-gray-400'
+              }`}
+            >
+              Browse
+            </button>
+            <button
+              onClick={() => setActiveView('deck')}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                activeView === 'deck'
+                  ? 'text-gold-400 border-b-2 border-gold-500'
+                  : 'text-gray-400'
+              }`}
+            >
+              Deck ({totalCards})
+            </button>
+          </div>
+        )}
+      </header>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {isMobile ? (
+          // Mobile: Show one view at a time
+          activeView === 'browse' ? (
+            <div className="flex-1 overflow-hidden">
+              <ArkhamCardBrowser />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-hidden">
+              <ArkhamDeckPanel />
+            </div>
+          )
+        ) : (
+          // Desktop: Side-by-side layout
+          <>
+            <div className="w-1/2 border-r border-yugi-border overflow-hidden">
+              <ArkhamCardBrowser />
+            </div>
+            <div className="w-1/2 overflow-hidden">
+              <ArkhamDeckPanel />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Upgrade Dialog */}
+      <UpgradeDialog
+        isOpen={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        onComplete={handleUpgradeComplete}
+      />
+
+      {/* Import Modal */}
+      <ImportDeckModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
+    </div>
+  );
+}

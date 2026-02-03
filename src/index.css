@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Arkham Horror LCG icon font */
+@font-face {
+  font-family: 'ArkhamIcons';
+  src: url('/icons/arkham/arkhamicons.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   /* Game-agnostic color palette (can be overridden per game) */
   --color-gold-50: #fffbeb;

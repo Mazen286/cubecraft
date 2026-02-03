@@ -420,8 +420,9 @@ const mtgDeckZones: DeckZone[] = [
   {
     id: 'main',
     name: 'Main Deck',
-    minCards: 40,
+    minCards: 60,
     maxCards: undefined,
+    copyLimit: 4,
     cardBelongsTo: () => true,
   },
   {
@@ -429,6 +430,8 @@ const mtgDeckZones: DeckZone[] = [
     name: 'Sideboard',
     minCards: 0,
     maxCards: 15,
+    copyLimit: 4,
+    isOptional: true,
     cardBelongsTo: () => false, // Cards must be manually moved here
   },
 ];

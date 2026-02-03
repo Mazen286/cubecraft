@@ -61,6 +61,37 @@ export interface PokemonCardAttributes {
 }
 
 /**
+ * Arkham Horror LCG specific card attributes
+ */
+export interface ArkhamCardAttributes {
+  code: string;                  // Card code for API
+  faction_code: string;          // guardian, seeker, rogue, mystic, survivor, neutral
+  faction2_code?: string;        // Secondary faction for multi-class
+  type_code: string;             // asset, event, skill, investigator
+  cost?: number | null;          // Resource cost (-2 = X cost)
+  xp?: number;                   // Experience level (0-5)
+  slot?: string;                 // Hand, Ally, Arcane, etc.
+  traits?: string;               // Card traits
+  skill_willpower?: number;      // Willpower icons
+  skill_intellect?: number;      // Intellect icons
+  skill_combat?: number;         // Combat icons
+  skill_agility?: number;        // Agility icons
+  skill_wild?: number;           // Wild icons
+  health?: number;               // For assets with health
+  sanity?: number;               // For assets with sanity
+  is_unique?: boolean;           // Unique card
+  permanent?: boolean;           // Permanent card
+  deck_limit?: number;           // Max copies allowed (usually 2)
+  restrictions?: {               // Investigator restrictions
+    investigator?: Record<string, string>;
+  };
+  pack_code?: string;            // Expansion code
+  bonded_to?: string;            // For bonded cards
+  hidden?: boolean;              // Hidden from search
+  subname?: string;              // Card subtitle
+}
+
+/**
  * Helper type to create a typed card with specific attributes
  */
 export type TypedCard<T> = Omit<Card, 'attributes'> & { attributes: T };

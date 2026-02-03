@@ -3,6 +3,7 @@ import { yugiohConfig } from './yugioh';
 import { mtgConfig } from './mtg';
 import { pokemonConfig } from './pokemon';
 import { hearthstoneConfig } from './hearthstone';
+import { arkhamConfig } from './arkham';
 
 /**
  * Registry of all available game configurations
@@ -14,6 +15,7 @@ gameConfigs.set(yugiohConfig.id, yugiohConfig);
 gameConfigs.set(mtgConfig.id, mtgConfig);
 gameConfigs.set(pokemonConfig.id, pokemonConfig);
 gameConfigs.set(hearthstoneConfig.id, hearthstoneConfig);
+gameConfigs.set(arkhamConfig.id, arkhamConfig);
 
 /**
  * Get a game configuration by ID
@@ -89,3 +91,4 @@ export { yugiohConfig } from './yugioh';
 export { mtgConfig } from './mtg';
 export { pokemonConfig } from './pokemon';
 export { hearthstoneConfig } from './hearthstone';
+export { arkhamConfig } from './arkham';

@@ -406,6 +406,8 @@ const pokemonDeckZones: DeckZone[] = [
     name: 'Deck',
     minCards: 60,
     maxCards: 60,
+    exactCards: 60,
+    copyLimit: 4,
     cardBelongsTo: () => true,
   },
 ];

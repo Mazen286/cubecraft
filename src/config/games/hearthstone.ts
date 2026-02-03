@@ -203,6 +203,8 @@ const deckZones: DeckZone[] = [
     name: 'Deck',
     minCards: 30,
     maxCards: 30,
+    exactCards: 30,
+    copyLimit: 2, // 2 copies max (1 for legendary handled by card-level check)
     cardBelongsTo: () => true,
   },
 ];

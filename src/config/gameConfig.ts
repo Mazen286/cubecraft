@@ -25,6 +25,12 @@ export interface DeckZone {
   name: string;
   minCards?: number;
   maxCards?: number;
+  /** Exact number of cards required (e.g., 60 for Pokemon, 30 for Hearthstone) */
+  exactCards?: number;
+  /** Maximum copies of a single card allowed in this zone (e.g., 3 for YGO, 4 for MTG, 2 for HS) */
+  copyLimit?: number;
+  /** Whether this zone is optional (e.g., Side Deck) */
+  isOptional?: boolean;
   /** Function to determine if a card belongs in this zone */
   cardBelongsTo: (card: Card) => boolean;
 }

@@ -401,6 +401,7 @@ const yugiohDeckZones: DeckZone[] = [
     name: 'Main Deck',
     minCards: 40,
     maxCards: 60,
+    copyLimit: 3,
     cardBelongsTo: (card) => !isExtraDeckCard(card),
   },
   {
@@ -408,6 +409,8 @@ const yugiohDeckZones: DeckZone[] = [
     name: 'Extra Deck',
     minCards: 0,
     maxCards: 15,
+    copyLimit: 3,
+    isOptional: true,
     cardBelongsTo: isExtraDeckCard,
   },
   {
@@ -415,6 +418,8 @@ const yugiohDeckZones: DeckZone[] = [
     name: 'Side Deck',
     minCards: 0,
     maxCards: 15,
+    copyLimit: 3,
+    isOptional: true,
     cardBelongsTo: () => false, // Cards must be manually moved here
   },
 ];

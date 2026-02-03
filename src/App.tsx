@@ -22,9 +22,15 @@ const Rulebook = lazy(() => import('./pages/Rulebook').then(m => ({ default: m.R
 const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
 const MyCubes = lazy(() => import('./pages/MyCubes').then(m => ({ default: m.MyCubes })));
 const CubeBuilder = lazy(() => import('./pages/CubeBuilder').then(m => ({ default: m.CubeBuilder })));
+const MyDecks = lazy(() => import('./pages/MyDecks').then(m => ({ default: m.MyDecks })));
+const DeckBuilder = lazy(() => import('./pages/DeckBuilder').then(m => ({ default: m.DeckBuilder })));
 const DraftHistory = lazy(() => import('./pages/DraftHistory').then(m => ({ default: m.DraftHistory })));
 const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })));
 const AuthCallback = lazy(() => import('./pages/AuthCallback').then(m => ({ default: m.AuthCallback })));
+
+// Arkham Horror LCG pages
+const ArkhamDeckBuilder = lazy(() => import('./pages/ArkhamDeckBuilder').then(m => ({ default: m.ArkhamDeckBuilder })));
+const MyArkhamDecks = lazy(() => import('./pages/MyArkhamDecks').then(m => ({ default: m.MyArkhamDecks })));
 
 // Loading fallback component
 function PageLoader() {
@@ -88,6 +94,21 @@ function App() {
                     <CubeBuilder />
                   </ProtectedRoute>
                 } />
+                <Route path="/my-decks" element={
+                  <ProtectedRoute>
+                    <MyDecks />
+                  </ProtectedRoute>
+                } />
+                <Route path="/deck-builder" element={
+                  <ProtectedRoute>
+                    <DeckBuilder />
+                  </ProtectedRoute>
+                } />
+                <Route path="/deck-builder/:deckId" element={
+                  <ProtectedRoute>
+                    <DeckBuilder />
+                  </ProtectedRoute>
+                } />
                 <Route path="/drafts" element={
                   <ProtectedRoute>
                     <DraftHistory />
@@ -98,6 +119,23 @@ function App() {
                 <Route path="/admin" element={
                   <ProtectedRoute requireAdmin>
                     <Admin />
+                  </ProtectedRoute>
+                } />
+
+                {/* Arkham Horror LCG routes */}
+                <Route path="/arkham/deck-builder" element={
+                  <ProtectedRoute>
+                    <ArkhamDeckBuilder />
+                  </ProtectedRoute>
+                } />
+                <Route path="/arkham/deck-builder/:deckId" element={
+                  <ProtectedRoute>
+                    <ArkhamDeckBuilder />
+                  </ProtectedRoute>
+                } />
+                <Route path="/arkham/my-decks" element={
+                  <ProtectedRoute>
+                    <MyArkhamDecks />
                   </ProtectedRoute>
                 } />
               </Routes>

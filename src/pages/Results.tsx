@@ -17,7 +17,12 @@ import { statisticsService } from '../services/statisticsService';
 import { draftService } from '../services/draftService';
 import { synergyService } from '../services/synergyService';
 import { generateDeckImage } from '../services/deckImageService';
+import { deckService } from '../services/deckService';
 import { useGameConfig } from '../context/GameContext';
+import { useAuth } from '../context/AuthContext';
+import { cubeService } from '../services/cubeService';
+import { SaveDeckModal } from '../components/ui/SaveDeckModal';
+import { AuthModal } from '../components/auth';
 import type { Card } from '../types/card';
 import type { BasicResource } from '../config/gameConfig';
 import type { DraftPlayerRow, SavedDeckRow, SavedDeckData } from '../lib/database.types';
@@ -35,7 +40,8 @@ export function Results() {
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
   const [searchParams] = useSearchParams();
-  const { gameConfig } = useGameConfig();
+  const { gameConfig, setGame } = useGameConfig();
+  const { user } = useAuth();
 
   // Check if viewing a specific player's results (from query param)
   const viewPlayerId = searchParams.get('player');
@@ -130,6 +136,17 @@ export function Results() {
     }
   }, [session?.cube_id, synergiesLoaded]);
 
+  // Set the game context based on the cube's game
+  // This ensures the correct card image URLs are generated
+  useEffect(() => {
+    if (session?.cube_id) {
+      const cubeGameId = cubeService.getCubeGameId(session.cube_id);
+      if (cubeGameId && cubeGameId !== gameConfig.id) {
+        setGame(cubeGameId);
+      }
+    }
+  }, [session?.cube_id, gameConfig.id, setGame]);
+
   const isLoading = sessionLoading || cardsLoading || isLoadingViewedPlayer;
 
   // Deck builder state - track which zone each card is in
@@ -210,6 +227,12 @@ export function Results() {
   const [savedDecks, setSavedDecks] = useState<SavedDeckRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // Save to My Decks state
+  const [showSaveDeckModal, setShowSaveDeckModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSavingToMyDecks, setIsSavingToMyDecks] = useState(false);
+  const [saveToMyDecksMessage, setSaveToMyDecksMessage] = useState<string | null>(null);
 
   // Track which player we've auto-loaded for to prevent re-applying on every render
   const autoLoadedForPlayer = useRef<string | null>(null);
@@ -746,6 +769,87 @@ export function Results() {
     setUseCustomStacks(data.useCustomStacks || false);
     setBasicResourceCounts(new Map(data.basicResourceCounts || []));
   }, [savedDecks]);
+
+  // Handle click on "Save to My Decks" button
+  const handleSaveToMyDecksClick = useCallback(() => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    setShowSaveDeckModal(true);
+  }, [user]);
+
+  // Transform Results data to DeckCard[] format and save to My Decks
+  const handleSaveToMyDecks = useCallback(async (name: string, description: string) => {
+    if (!user) {
+      throw new Error('You must be logged in to save decks');
+    }
+
+    setIsSavingToMyDecks(true);
+    setSaveToMyDecksMessage(null);
+
+    try {
+      // Transform allDraftedCards + deckAssignments into DeckCard[] format
+      const timestamp = Date.now();
+      const deckCards = allDraftedCards
+        .filter(({ index }) => {
+          const zone = deckAssignments.get(index);
+          // Skip cards in 'pool' zone - only save cards that are in the deck
+          return zone && zone !== 'pool';
+        })
+        .map(({ card, index }) => {
+          const zone = deckAssignments.get(index) || 'main';
+          const instanceId = `${card.id}_${index}_${timestamp}`;
+
+          return {
+            id: card.id,
+            name: card.name,
+            type: card.type,
+            description: card.desc,
+            score: card.score,
+            imageUrl: card.imageUrl,
+            attributes: {
+              atk: card.atk,
+              def: card.def,
+              level: card.level,
+              attribute: card.attribute,
+              race: card.race,
+              linkval: card.linkval,
+              archetype: card.archetype,
+              ...(card.attributes || {}),
+            },
+            instanceId,
+            zoneId: zone,
+            addedAt: timestamp,
+          };
+        });
+
+      // Save to database
+      // Only pass cubeId if it's a database cube (prefixed with "db:")
+      // Local cubes like "the-library" are not stored in the database
+      const dbCubeId = session?.cube_id?.startsWith('db:') ? session.cube_id : undefined;
+
+      const result = await deckService.saveDeck({
+        name,
+        description,
+        gameId: gameConfig.id,
+        cubeId: dbCubeId,
+        cards: deckCards,
+        creatorId: user.id,
+      });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      // Success - close modal and show message
+      setShowSaveDeckModal(false);
+      setSaveToMyDecksMessage('Saved to My Decks!');
+      setTimeout(() => setSaveToMyDecksMessage(null), 3000);
+    } finally {
+      setIsSavingToMyDecks(false);
+    }
+  }, [user, allDraftedCards, deckAssignments, gameConfig.id, session?.cube_id]);
 
   // Custom stack management
   const createCustomStack = useCallback((zone: DeckZone, name: string) => {
@@ -2047,6 +2151,17 @@ ${sideDeck}
                 <FolderOpen className="w-4 h-4" />
                 <span>Load</span>
               </button>
+
+              {/* Save to My Decks button */}
+              <button
+                onClick={handleSaveToMyDecksClick}
+                disabled={isSavingToMyDecks || allDraftedCards.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gold-600 hover:bg-gold-500 disabled:opacity-50 disabled:cursor-not-allowed border border-gold-500 rounded-lg text-sm text-white transition-colors"
+                title="Save deck to your personal collection"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span className="whitespace-nowrap">{saveToMyDecksMessage || 'Save to My Decks'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -2104,6 +2219,21 @@ ${sideDeck}
             ) : (
               /* Grid view - organized by deck zones */
               <>
+                {/* Sticky drop zone bar - always visible for easy dropping */}
+                <DropZoneBar
+                  zones={[
+                    { id: 'main', title: gameConfig.deckZones.find(z => z.id === 'main')?.name || 'Main Deck', color: 'blue', count: mainCount },
+                    ...(gameConfig.deckZones.some(z => z.id === 'extra')
+                      ? [{ id: 'extra', title: gameConfig.deckZones.find(z => z.id === 'extra')?.name || 'Extra Deck', color: 'purple', count: extraCount }]
+                      : []),
+                    { id: 'side', title: gameConfig.id === 'mtg' ? 'Sideboard' : 'Side Deck', color: 'orange', count: sideCount },
+                    ...(gameConfig.deckZones.some(z => z.id === 'pool')
+                      ? [{ id: 'pool', title: 'Unused Pool', color: 'gray', count: poolCount }]
+                      : []),
+                  ]}
+                  onDrop={moveCard}
+                />
+
                 {/* Shareable deck zones container */}
                 <div className="space-y-6 bg-yugi-darker p-4 rounded-lg">
                   <DeckZoneSection
@@ -2428,6 +2558,21 @@ ${sideDeck}
         )}
 
       </div>
+
+      {/* Save to My Decks Modal */}
+      <SaveDeckModal
+        isOpen={showSaveDeckModal}
+        onClose={() => setShowSaveDeckModal(false)}
+        onSave={handleSaveToMyDecks}
+        isLoading={isSavingToMyDecks}
+        defaultName={session?.cube_id ? `Draft from ${new Date().toLocaleDateString()}` : ''}
+      />
+
+      {/* Auth Modal for unauthenticated users */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </Layout>
   );
 }
@@ -2509,6 +2654,33 @@ function DeckZoneSection({
     }
   };
 
+  // Separate state for header drag over
+  const [isHeaderDragOver, setIsHeaderDragOver] = useState(false);
+
+  const handleHeaderDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setIsHeaderDragOver(true);
+  };
+
+  const handleHeaderDragLeave = (e: React.DragEvent) => {
+    e.stopPropagation();
+    setIsHeaderDragOver(false);
+  };
+
+  const handleHeaderDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsHeaderDragOver(false);
+    setIsDragOver(false);
+    const cardIndex = parseInt(e.dataTransfer.getData('cardIndex'), 10);
+    const fromZone = e.dataTransfer.getData('fromZone') as DeckZone;
+    if (fromZone !== zone && !isNaN(cardIndex)) {
+      onCardDrop(cardIndex, zone);
+    }
+  };
+
   return (
     <div
       onDragOver={handleDragOver}
@@ -2519,14 +2691,32 @@ function DeckZoneSection({
         isDragOver && 'ring-2 ring-gold-400 ring-offset-4 ring-offset-yugi-darker bg-gold-400/5'
       )}
     >
-      <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        {icon && <span className={color}>{icon}</span>}
-        <span className={color}>{title}</span>
-        <span className="text-gray-300">
-          ({count}{showFilteredCount && ` • ${filteredCount} shown`})
-        </span>
-        {isDragOver && <span className="text-gold-400 text-sm ml-2">Drop here</span>}
-      </h2>
+      {/* Sticky header that acts as a drop target */}
+      <div
+        onDragOver={handleHeaderDragOver}
+        onDragLeave={handleHeaderDragLeave}
+        onDrop={handleHeaderDrop}
+        className={cn(
+          'sticky top-0 z-20 py-2 px-3 -mx-3 mb-2 rounded-lg transition-all',
+          isHeaderDragOver
+            ? 'bg-gold-500/20 ring-2 ring-gold-400 shadow-lg shadow-gold-500/20'
+            : 'bg-yugi-darker/80 backdrop-blur-sm'
+        )}
+      >
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          {icon && <span className={color}>{icon}</span>}
+          <span className={color}>{title}</span>
+          <span className="text-gray-300">
+            ({count}{showFilteredCount && ` • ${filteredCount} shown`})
+          </span>
+          {isHeaderDragOver && (
+            <span className="text-gold-400 text-sm ml-auto flex items-center gap-1">
+              <Plus className="w-4 h-4" />
+              Drop to add
+            </span>
+          )}
+        </h2>
+      </div>
 
       {cards.length > 0 || isDragOver ? (
         /* Grid view */
@@ -2577,6 +2767,80 @@ function DeckZoneSection({
           {emptyMessage || 'No cards in this zone'}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Sticky drop zone bar that provides quick drop targets for all deck zones
+ */
+function DropZoneBar({
+  zones,
+  onDrop,
+}: {
+  zones: { id: string; title: string; color: string; count: number }[];
+  onDrop: (cardIndex: number, toZone: DeckZone) => void;
+}) {
+  const [dragOverZone, setDragOverZone] = useState<string | null>(null);
+
+  const colorClasses: Record<string, { bg: string; border: string; text: string; hover: string }> = {
+    blue: { bg: 'bg-blue-500/20', border: 'border-blue-400', text: 'text-blue-400', hover: 'hover:bg-blue-500/10' },
+    purple: { bg: 'bg-purple-500/20', border: 'border-purple-400', text: 'text-purple-400', hover: 'hover:bg-purple-500/10' },
+    orange: { bg: 'bg-orange-500/20', border: 'border-orange-400', text: 'text-orange-400', hover: 'hover:bg-orange-500/10' },
+    gray: { bg: 'bg-gray-500/20', border: 'border-gray-400', text: 'text-gray-400', hover: 'hover:bg-gray-500/10' },
+  };
+
+  const handleDragOver = (e: React.DragEvent, zoneId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverZone(zoneId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverZone(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, zoneId: string) => {
+    e.preventDefault();
+    setDragOverZone(null);
+    const cardIndex = parseInt(e.dataTransfer.getData('cardIndex'), 10);
+    const fromZone = e.dataTransfer.getData('fromZone') as DeckZone;
+    if (fromZone !== zoneId && !isNaN(cardIndex)) {
+      onDrop(cardIndex, zoneId as DeckZone);
+    }
+  };
+
+  return (
+    <div className="sticky top-0 z-30 mb-4 -mt-2 pt-2 pb-2 bg-yugi-darker/95 backdrop-blur-sm border-b border-yugi-border">
+      <div className="flex gap-2 justify-center flex-wrap">
+        {zones.map(zone => {
+          const colors = colorClasses[zone.color] || colorClasses.gray;
+          const isOver = dragOverZone === zone.id;
+
+          return (
+            <div
+              key={zone.id}
+              onDragOver={(e) => handleDragOver(e, zone.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, zone.id)}
+              className={cn(
+                'px-4 py-2 rounded-lg border-2 border-dashed transition-all cursor-default min-w-[100px] text-center',
+                colors.hover,
+                isOver
+                  ? `${colors.bg} ${colors.border} scale-105 shadow-lg`
+                  : 'border-yugi-border bg-yugi-card/50'
+              )}
+            >
+              <div className={cn('font-semibold text-sm', isOver ? colors.text : 'text-gray-300')}>
+                {zone.title}
+              </div>
+              <div className={cn('text-xs', isOver ? colors.text : 'text-gray-500')}>
+                {isOver ? 'Drop here' : `${zone.count} cards`}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
