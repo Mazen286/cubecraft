@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef } from 'react';
-import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3 } from 'lucide-react';
+import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3, ArrowRight, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
 import { calculateXpCost } from '../../services/arkhamDeckValidation';
@@ -22,6 +22,9 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     removeCard,
     getTotalCardCount,
     canAddCard,
+    moveToSide,
+    moveToMain,
+    removeFromSide,
   } = useArkhamDeckBuilder();
 
   const [selectedCard, setSelectedCard] = useState<ArkhamCard | null>(null);
@@ -29,6 +32,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
   const [showDeckStats, setShowDeckStats] = useState(false);
+  const [showSideDeck, setShowSideDeck] = useState(true);
 
   const totalCards = getTotalCardCount();
   const xpRequired = calculateXpCost(state.slots);
@@ -192,6 +196,23 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     if (!state.investigator?.deck_requirements?.card) return new Set<string>();
     return new Set(Object.keys(state.investigator.deck_requirements.card));
   }, [state.investigator]);
+
+  // Side deck cards
+  const sideCards = useMemo(() => {
+    const cards: { card: ArkhamCard; quantity: number }[] = [];
+    for (const [code, quantity] of Object.entries(state.sideSlots)) {
+      const card = arkhamCardService.getCard(code);
+      if (card) {
+        cards.push({ card, quantity });
+      }
+    }
+    cards.sort((a, b) => a.card.name.localeCompare(b.card.name));
+    return cards;
+  }, [state.sideSlots]);
+
+  const sideDeckCount = useMemo(() => {
+    return Object.values(state.sideSlots).reduce((sum, qty) => sum + qty, 0);
+  }, [state.sideSlots]);
 
   const validation = state.validationResult;
 
@@ -372,6 +393,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                       onAdd={addCard}
                       onRemove={removeCard}
                       onCardClick={setSelectedCard}
+                      onMoveToSide={moveToSide}
                       isSubsection
                     />
                   ))}
@@ -389,6 +411,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onAdd={addCard}
                 onRemove={removeCard}
                 onCardClick={setSelectedCard}
+                onMoveToSide={moveToSide}
               />
             )}
 
@@ -402,6 +425,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onAdd={addCard}
                 onRemove={removeCard}
                 onCardClick={setSelectedCard}
+                onMoveToSide={moveToSide}
               />
             )}
 
@@ -415,6 +439,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onAdd={addCard}
                 onRemove={removeCard}
                 onCardClick={setSelectedCard}
+                onMoveToSide={moveToSide}
                 isPermanent
               />
             )}
@@ -448,6 +473,94 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
             )}
           </div>
         )}
+
+        {/* Side Deck Section */}
+        <div className="mt-4 border-t border-yugi-border pt-4">
+          <button
+            onClick={() => setShowSideDeck(!showSideDeck)}
+            className="w-full flex items-center justify-between text-sm font-medium text-gray-400 hover:text-white transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              Side Deck
+              <span className="text-xs text-gray-500">({sideDeckCount} cards)</span>
+            </span>
+            {showSideDeck ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+
+          {showSideDeck && (
+            <div className="mt-3">
+              {sideCards.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">
+                  Use the arrow button on cards to move them to your side deck for future upgrades
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {sideCards.map(({ card, quantity }) => {
+                    const factionColor = FACTION_COLORS[card.faction_code];
+                    const xp = card.xp || 0;
+
+                    return (
+                      <div
+                        key={card.code}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-yugi-darker/50"
+                      >
+                        <button
+                          onClick={() => setSelectedCard(card)}
+                          className="flex items-center gap-2 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+                        >
+                          <div
+                            className="w-1.5 h-8 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: factionColor }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-white text-sm truncate">{card.name}</span>
+                              {card.is_unique && (
+                                <span className="text-yellow-400 text-xs">★</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              {card.type_code && <span className="capitalize">{card.type_code}</span>}
+                              {xp > 0 && (
+                                <span className="text-yellow-400">{xp} XP</span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Move to main button */}
+                        <button
+                          onClick={() => moveToMain(card.code)}
+                          className="p-1.5 text-green-400 hover:text-green-300 hover:bg-green-900/30 rounded transition-colors"
+                          title="Move to main deck"
+                        >
+                          <ArrowLeft className="w-4 h-4" />
+                        </button>
+
+                        <span className="w-6 text-center text-white text-sm font-medium">
+                          {quantity}
+                        </span>
+
+                        {/* Remove from side button */}
+                        <button
+                          onClick={() => removeFromSide(card.code)}
+                          className="p-1 text-gray-400 hover:text-white hover:bg-yugi-border rounded transition-colors"
+                          title="Remove from side deck"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Card preview panel */}
@@ -563,6 +676,7 @@ function CardTypeSection({
   onAdd,
   onRemove,
   onCardClick,
+  onMoveToSide,
   isWeakness = false,
   isPermanent = false,
   isSubsection = false,
@@ -574,6 +688,7 @@ function CardTypeSection({
   onAdd: (code: string) => void;
   onRemove: (code: string) => void;
   onCardClick: (card: ArkhamCard) => void;
+  onMoveToSide?: (code: string) => void;
   isWeakness?: boolean;
   isPermanent?: boolean;
   isSubsection?: boolean;
@@ -704,6 +819,17 @@ function CardTypeSection({
                 >
                   <Plus className="w-4 h-4" />
                 </button>
+
+                {/* Move to side deck button */}
+                {onMoveToSide && !isSignature && !isWeakness && (
+                  <button
+                    onClick={() => onMoveToSide(card.code)}
+                    className="p-1 ml-1 text-orange-400 hover:text-orange-300 hover:bg-orange-900/30 rounded transition-colors"
+                    title="Move to side deck"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           );

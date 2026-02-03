@@ -86,7 +86,12 @@ type ArkhamDeckBuilderAction =
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'VALIDATE' };
+  | { type: 'VALIDATE' }
+  // Side deck actions
+  | { type: 'ADD_TO_SIDE'; payload: { code: string; quantity?: number } }
+  | { type: 'REMOVE_FROM_SIDE'; payload: { code: string; quantity?: number } }
+  | { type: 'MOVE_TO_SIDE'; payload: { code: string } }
+  | { type: 'MOVE_TO_MAIN'; payload: { code: string } };
 
 const MAX_HISTORY = 50;
 
@@ -453,6 +458,101 @@ function arkhamDeckBuilderReducer(
       };
     }
 
+    // Side deck actions
+    case 'ADD_TO_SIDE': {
+      const { code, quantity = 1 } = action.payload;
+      const newSideSlots = { ...state.sideSlots };
+      newSideSlots[code] = (newSideSlots[code] || 0) + quantity;
+
+      return {
+        ...state,
+        sideSlots: newSideSlots,
+        isDirty: true,
+      };
+    }
+
+    case 'REMOVE_FROM_SIDE': {
+      const { code, quantity = 1 } = action.payload;
+      const newSideSlots = { ...state.sideSlots };
+      const currentQty = newSideSlots[code] || 0;
+
+      if (currentQty <= quantity) {
+        delete newSideSlots[code];
+      } else {
+        newSideSlots[code] = currentQty - quantity;
+      }
+
+      return {
+        ...state,
+        sideSlots: newSideSlots,
+        isDirty: true,
+      };
+    }
+
+    case 'MOVE_TO_SIDE': {
+      // Move one copy from main deck to side deck
+      const { code } = action.payload;
+      const mainQty = state.slots[code] || 0;
+      if (mainQty === 0) return state;
+
+      const newSlots = { ...state.slots };
+      const newSideSlots = { ...state.sideSlots };
+
+      // Remove from main
+      if (mainQty <= 1) {
+        delete newSlots[code];
+      } else {
+        newSlots[code] = mainQty - 1;
+      }
+
+      // Add to side
+      newSideSlots[code] = (newSideSlots[code] || 0) + 1;
+
+      const newState = pushHistory({
+        ...state,
+        slots: newSlots,
+        sideSlots: newSideSlots,
+        isDirty: true,
+      });
+
+      return {
+        ...newState,
+        validationResult: runValidation(newState),
+      };
+    }
+
+    case 'MOVE_TO_MAIN': {
+      // Move one copy from side deck to main deck
+      const { code } = action.payload;
+      const sideQty = state.sideSlots[code] || 0;
+      if (sideQty === 0) return state;
+
+      const newSlots = { ...state.slots };
+      const newSideSlots = { ...state.sideSlots };
+
+      // Remove from side
+      if (sideQty <= 1) {
+        delete newSideSlots[code];
+      } else {
+        newSideSlots[code] = sideQty - 1;
+      }
+
+      // Add to main
+      newSlots[code] = (newSlots[code] || 0) + 1;
+
+      const newState = pushHistory({
+        ...state,
+        slots: newSlots,
+        sideSlots: newSideSlots,
+        isDirty: true,
+      });
+
+      return {
+        ...newState,
+        validationResult: runValidation(newState),
+      };
+    }
+
     case 'UNDO': {
       if (state.historyIndex <= 0) return state;
 
@@ -561,6 +661,13 @@ interface ArkhamDeckBuilderContextValue {
   canAddCard: (code: string) => { allowed: boolean; reason?: string };
   getTotalCardCount: () => number;
   getCard: (code: string) => ArkhamCard | null;
+
+  // Side deck operations
+  addToSide: (code: string, quantity?: number) => void;
+  removeFromSide: (code: string, quantity?: number) => void;
+  moveToSide: (code: string) => void;
+  moveToMain: (code: string) => void;
+  getSideCardQuantity: (code: string) => number;
 
   // XP operations
   addXP: (amount: number) => void;
@@ -735,6 +842,27 @@ export function ArkhamDeckBuilderProvider({
   const getCard = useCallback((code: string): ArkhamCard | null => {
     return arkhamCardService.getCard(code);
   }, []);
+
+  // Side deck functions
+  const addToSide = useCallback((code: string, quantity: number = 1) => {
+    dispatch({ type: 'ADD_TO_SIDE', payload: { code, quantity } });
+  }, []);
+
+  const removeFromSide = useCallback((code: string, quantity: number = 1) => {
+    dispatch({ type: 'REMOVE_FROM_SIDE', payload: { code, quantity } });
+  }, []);
+
+  const moveToSide = useCallback((code: string) => {
+    dispatch({ type: 'MOVE_TO_SIDE', payload: { code } });
+  }, []);
+
+  const moveToMain = useCallback((code: string) => {
+    dispatch({ type: 'MOVE_TO_MAIN', payload: { code } });
+  }, []);
+
+  const getSideCardQuantity = useCallback((code: string): number => {
+    return state.sideSlots[code] || 0;
+  }, [state.sideSlots]);
 
   const addXP = useCallback((amount: number) => {
     dispatch({ type: 'ADD_XP', payload: amount });
@@ -914,6 +1042,11 @@ export function ArkhamDeckBuilderProvider({
     canAddCard,
     getTotalCardCount,
     getCard,
+    addToSide,
+    removeFromSide,
+    moveToSide,
+    moveToMain,
+    getSideCardQuantity,
     addXP,
     setXP,
     getAvailableXP,
