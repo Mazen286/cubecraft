@@ -55,20 +55,22 @@ function ArkhamDeckBuilderContent() {
   } = useArkhamDeckBuilder();
 
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(
-    () => searchParams.get('import') === 'true'
-  );
+  const [showImportModal, setShowImportModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Clear import query param after opening modal
+  // Check for import query param on mount only
   useEffect(() => {
     if (searchParams.get('import') === 'true') {
-      searchParams.delete('import');
-      setSearchParams(searchParams, { replace: true });
+      setShowImportModal(true);
+      // Clear the param from URL without triggering re-render issues
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('import');
+      setSearchParams(newParams, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
 
