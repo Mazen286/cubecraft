@@ -55,20 +55,20 @@ function ArkhamDeckBuilderContent() {
   } = useArkhamDeckBuilder();
 
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(
+    () => searchParams.get('import') === 'true'
+  );
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Check for import query param
+  // Clear import query param after opening modal
   useEffect(() => {
-    if (searchParams.get('import') === 'true' && state.isInitialized) {
-      setShowImportModal(true);
-      // Remove the query param
+    if (searchParams.get('import') === 'true') {
       searchParams.delete('import');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, state.isInitialized, setSearchParams]);
+  }, [searchParams, setSearchParams]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
 
@@ -127,34 +127,41 @@ function ArkhamDeckBuilderContent() {
     navigate(`/arkham/deck-builder/${newDeckId}`);
   };
 
-  // Show loading state
+  // Show loading state (but allow import modal to show on top)
   if (!state.isInitialized) {
     return (
-      <div className="min-h-screen bg-yugi-dark flex items-center justify-center">
-        <div className="text-center">
-          {state.error ? (
-            <>
-              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">!</span>
-              </div>
-              <p className="text-red-400 mb-2">Failed to load card data</p>
-              <p className="text-gray-500 text-sm max-w-md">{state.error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-4 px-4 py-2 bg-gold-600 hover:bg-gold-500 text-black font-medium rounded-lg transition-colors"
-              >
-                Retry
-              </button>
-            </>
-          ) : (
-            <>
-              <Loader2 className="w-10 h-10 text-gold-400 animate-spin mx-auto mb-4" />
-              <p className="text-gray-300">Loading Arkham Horror cards...</p>
-              <p className="text-gray-500 text-sm mt-2">Fetching from ArkhamDB...</p>
-            </>
-          )}
+      <>
+        <div className="min-h-screen bg-yugi-dark flex items-center justify-center">
+          <div className="text-center">
+            {state.error ? (
+              <>
+                <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">!</span>
+                </div>
+                <p className="text-red-400 mb-2">Failed to load card data</p>
+                <p className="text-gray-500 text-sm max-w-md">{state.error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 px-4 py-2 bg-gold-600 hover:bg-gold-500 text-black font-medium rounded-lg transition-colors"
+                >
+                  Retry
+                </button>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-10 h-10 text-gold-400 animate-spin mx-auto mb-4" />
+                <p className="text-gray-300">Loading Arkham Horror cards...</p>
+                <p className="text-gray-500 text-sm mt-2">Fetching from ArkhamDB...</p>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+        {/* Show import modal even during loading */}
+        <ImportDeckModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+        />
+      </>
     );
   }
 
