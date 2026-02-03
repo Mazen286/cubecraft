@@ -163,6 +163,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard }: ArkhamCardTableP
   const [isDragOver, setIsDragOver] = useState(false);
 
   const tableRef = useRef<HTMLDivElement>(null);
+  const dragImageRef = useRef<HTMLImageElement>(null);
 
   // Handle drag and drop for removing cards
   const handleDragOver = (e: React.DragEvent) => {
@@ -316,6 +317,13 @@ export function ArkhamCardTable({ onCardSelect, selectedCard }: ArkhamCardTableP
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Hidden drag preview image */}
+      <img
+        ref={dragImageRef}
+        alt=""
+        className="fixed -left-[9999px] w-[100px] h-[140px] object-cover rounded pointer-events-none"
+      />
+
       {/* Drop indicator for removing cards */}
       {isDragOver && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
@@ -463,9 +471,20 @@ export function ArkhamCardTable({ onCardSelect, selectedCard }: ArkhamCardTableP
                 key={card.code}
                 onClick={() => onCardSelect?.(card)}
                 draggable
+                onMouseEnter={() => {
+                  // Preload image on hover for smooth drag preview
+                  if (dragImageRef.current) {
+                    dragImageRef.current.src = arkhamCardService.getArkhamCardImageUrl(card.code);
+                  }
+                }}
                 onDragStart={(e) => {
                   e.dataTransfer.setData('application/arkham-card', card.code);
                   e.dataTransfer.effectAllowed = 'copy';
+
+                  // Set card image as drag preview
+                  if (dragImageRef.current) {
+                    e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
+                  }
                 }}
                 className={`absolute top-0 left-0 w-full grid grid-cols-[1fr_60px_50px_40px_70px_80px] gap-1 px-3 py-2 items-center cursor-grab active:cursor-grabbing transition-colors border-b border-yugi-border/50 text-sm ${
                   isSelected

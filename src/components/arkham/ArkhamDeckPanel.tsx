@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
-import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle } from 'lucide-react';
+import { useMemo, useState, useRef } from 'react';
+import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
 import { calculateXpCost } from '../../services/arkhamDeckValidation';
 import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon } from './ArkhamCardTable';
+import { DrawSimulator } from './DrawSimulator';
 import type { ArkhamCard, ArkhamCardType, Investigator } from '../../types/arkham';
 import { FACTION_COLORS } from '../../config/games/arkham';
 
@@ -19,6 +20,7 @@ export function ArkhamDeckPanel() {
   const [selectedCard, setSelectedCard] = useState<ArkhamCard | null>(null);
   const [showInvestigator, setShowInvestigator] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showDrawSimulator, setShowDrawSimulator] = useState(false);
 
   const totalCards = getTotalCardCount();
   const xpRequired = calculateXpCost(state.slots);
@@ -220,13 +222,24 @@ export function ArkhamDeckPanel() {
         )}
 
         {/* Random weakness button */}
-        <button
-          onClick={handleAddRandomWeakness}
-          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600/50 text-purple-300 text-sm font-medium rounded-lg transition-colors"
-        >
-          <Shuffle className="w-4 h-4" />
-          Draw Random Basic Weakness
-        </button>
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={handleAddRandomWeakness}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600/50 text-purple-300 text-sm font-medium rounded-lg transition-colors"
+          >
+            <Shuffle className="w-4 h-4" />
+            <span className="hidden sm:inline">Random Weakness</span>
+            <span className="sm:hidden">Weakness</span>
+          </button>
+          <button
+            onClick={() => setShowDrawSimulator(true)}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-600/50 text-green-300 text-sm font-medium rounded-lg transition-colors"
+          >
+            <PlayCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">Draw Simulator</span>
+            <span className="sm:hidden">Simulate</span>
+          </button>
+        </div>
       </div>
 
       {/* Validation errors */}
@@ -349,6 +362,12 @@ export function ArkhamDeckPanel() {
           onClose={() => setShowInvestigator(false)}
         />
       )}
+
+      {/* Draw simulator */}
+      <DrawSimulator
+        isOpen={showDrawSimulator}
+        onClose={() => setShowDrawSimulator(false)}
+      />
     </div>
   );
 }
@@ -447,8 +466,16 @@ function CardTypeSection({
   onCardClick: (card: ArkhamCard) => void;
   isWeakness?: boolean;
 }) {
+  const dragImageRef = useRef<HTMLImageElement>(null);
+
   return (
     <div>
+      {/* Hidden drag preview image */}
+      <img
+        ref={dragImageRef}
+        alt=""
+        className="fixed -left-[9999px] w-[100px] h-[140px] object-cover rounded pointer-events-none"
+      />
       <h4 className="text-sm font-medium text-gray-400 mb-2">
         {title} ({count})
       </h4>
@@ -466,6 +493,12 @@ function CardTypeSection({
             <div
               key={card.code}
               draggable={canDrag}
+              onMouseEnter={() => {
+                // Preload image on hover for smooth drag preview
+                if (dragImageRef.current && canDrag) {
+                  dragImageRef.current.src = arkhamCardService.getArkhamCardImageUrl(card.code);
+                }
+              }}
               onDragStart={(e) => {
                 if (!canDrag) {
                   e.preventDefault();
@@ -473,6 +506,11 @@ function CardTypeSection({
                 }
                 e.dataTransfer.setData('application/arkham-card-remove', card.code);
                 e.dataTransfer.effectAllowed = 'move';
+
+                // Set card image as drag preview
+                if (dragImageRef.current) {
+                  e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
+                }
               }}
               className={`flex items-center gap-2 p-2 rounded-lg bg-yugi-darker ${
                 isSignature ? 'border border-purple-500/50' : ''
