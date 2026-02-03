@@ -7,7 +7,7 @@ import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon } from './A
 import { DrawSimulator } from './DrawSimulator';
 import { DeckStats } from './DeckStats';
 import type { DeckStatsFilter } from './DeckStats';
-import type { ArkhamCard, ArkhamCardType, Investigator } from '../../types/arkham';
+import type { ArkhamCard, Investigator } from '../../types/arkham';
 import { FACTION_COLORS } from '../../config/games/arkham';
 import type { ArkhamCardFilters } from './ArkhamCardTable';
 
@@ -99,50 +99,91 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
   const requiredSize = state.investigator?.deck_requirements?.size || 30;
   const xpAvailable = state.xpEarned - state.xpSpent;
 
-  // Group cards by type (with weaknesses and permanents as separate categories)
-  const groupedCards = useMemo(() => {
-    const groups: Record<ArkhamCardType | 'weakness' | 'permanent', { card: ArkhamCard; quantity: number }[]> = {
-      asset: [],
-      event: [],
-      skill: [],
-      permanent: [], // Separate permanent category
-      weakness: [], // Separate weakness category
-      investigator: [],
-      treachery: [],
-      enemy: [],
-      location: [],
-      story: [],
-    };
+  // Asset slot order for display
+  const SLOT_ORDER = ['Hand', 'Hand x2', 'Arcane', 'Arcane x2', 'Accessory', 'Ally', 'Body', 'Tarot', 'Other'];
+
+  // Group cards by type (with assets split by slot, weaknesses and permanents separate)
+  const groupedCards = useMemo((): {
+    event: { card: ArkhamCard; quantity: number }[];
+    skill: { card: ArkhamCard; quantity: number }[];
+    permanent: { card: ArkhamCard; quantity: number }[];
+    weakness: { card: ArkhamCard; quantity: number }[];
+    treachery: { card: ArkhamCard; quantity: number }[];
+    assetsBySlot: Record<string, { card: ArkhamCard; quantity: number }[]>;
+  } => {
+    const event: { card: ArkhamCard; quantity: number }[] = [];
+    const skill: { card: ArkhamCard; quantity: number }[] = [];
+    const permanent: { card: ArkhamCard; quantity: number }[] = [];
+    const weakness: { card: ArkhamCard; quantity: number }[] = [];
+    const treachery: { card: ArkhamCard; quantity: number }[] = [];
+    const assetsBySlot: Record<string, { card: ArkhamCard; quantity: number }[]> = {};
 
     for (const [code, quantity] of Object.entries(state.slots)) {
       const card = arkhamCardService.getCard(code);
       if (!card) continue;
 
-      // Check if it's a weakness (subtype_code = 'weakness' or 'basicweakness')
+      // Check if it's a weakness
       if (card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness') {
-        groups.weakness.push({ card, quantity });
+        weakness.push({ card, quantity });
       } else if (card.permanent) {
         // Permanent cards get their own section
-        groups.permanent.push({ card, quantity });
-      } else if (groups[card.type_code]) {
-        groups[card.type_code].push({ card, quantity });
+        permanent.push({ card, quantity });
+      } else if (card.type_code === 'asset') {
+        // Group assets by slot
+        const slot = card.slot || 'Other';
+        if (!assetsBySlot[slot]) {
+          assetsBySlot[slot] = [];
+        }
+        assetsBySlot[slot].push({ card, quantity });
+      } else if (card.type_code === 'event') {
+        event.push({ card, quantity });
+      } else if (card.type_code === 'skill') {
+        skill.push({ card, quantity });
+      } else if (card.type_code === 'treachery') {
+        treachery.push({ card, quantity });
       }
     }
 
     // Sort each group by name
-    for (const type of Object.keys(groups) as (ArkhamCardType | 'weakness' | 'permanent')[]) {
-      groups[type].sort((a, b) => a.card.name.localeCompare(b.card.name));
+    event.sort((a, b) => a.card.name.localeCompare(b.card.name));
+    skill.sort((a, b) => a.card.name.localeCompare(b.card.name));
+    permanent.sort((a, b) => a.card.name.localeCompare(b.card.name));
+    weakness.sort((a, b) => a.card.name.localeCompare(b.card.name));
+    treachery.sort((a, b) => a.card.name.localeCompare(b.card.name));
+    for (const cards of Object.values(assetsBySlot)) {
+      cards.sort((a, b) => a.card.name.localeCompare(b.card.name));
     }
 
-    return groups;
+    return { event, skill, permanent, weakness, treachery, assetsBySlot };
   }, [state.slots]);
+
+  // Get sorted asset slots that have cards
+  const activeAssetSlots = useMemo(() => {
+    return SLOT_ORDER.filter(slot =>
+      groupedCards.assetsBySlot[slot] && groupedCards.assetsBySlot[slot].length > 0
+    );
+  }, [groupedCards.assetsBySlot]);
 
   // Count cards per type
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const [type, cards] of Object.entries(groupedCards)) {
-      counts[type] = cards.reduce((sum, c) => sum + c.quantity, 0);
+
+    // Count regular groups
+    counts.event = groupedCards.event.reduce((sum, c) => sum + c.quantity, 0);
+    counts.skill = groupedCards.skill.reduce((sum, c) => sum + c.quantity, 0);
+    counts.permanent = groupedCards.permanent.reduce((sum, c) => sum + c.quantity, 0);
+    counts.weakness = groupedCards.weakness.reduce((sum, c) => sum + c.quantity, 0);
+    counts.treachery = groupedCards.treachery.reduce((sum, c) => sum + c.quantity, 0);
+
+    // Count total assets and per-slot
+    let totalAssets = 0;
+    for (const [slot, cards] of Object.entries(groupedCards.assetsBySlot)) {
+      const slotCount = cards.reduce((sum, c) => sum + c.quantity, 0);
+      counts[`asset_${slot}`] = slotCount;
+      totalAssets += slotCount;
     }
+    counts.asset = totalAssets;
+
     return counts;
   }, [groupedCards]);
 
@@ -314,17 +355,28 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Assets */}
+            {/* Assets - grouped by slot */}
             {typeCounts.asset > 0 && (
-              <CardTypeSection
-                title="Assets"
-                count={typeCounts.asset}
-                cards={groupedCards.asset}
-                signatureCodes={signatureCodes}
-                onAdd={addCard}
-                onRemove={removeCard}
-                onCardClick={setSelectedCard}
-              />
+              <div>
+                <h4 className="text-sm font-medium text-gray-400 mb-2">
+                  Assets ({typeCounts.asset})
+                </h4>
+                <div className="space-y-3">
+                  {activeAssetSlots.map(slot => (
+                    <CardTypeSection
+                      key={slot}
+                      title={slot}
+                      count={typeCounts[`asset_${slot}`]}
+                      cards={groupedCards.assetsBySlot[slot]}
+                      signatureCodes={signatureCodes}
+                      onAdd={addCard}
+                      onRemove={removeCard}
+                      onCardClick={setSelectedCard}
+                      isSubsection
+                    />
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Events */}
@@ -513,6 +565,7 @@ function CardTypeSection({
   onCardClick,
   isWeakness = false,
   isPermanent = false,
+  isSubsection = false,
 }: {
   title: string;
   count: number;
@@ -523,6 +576,7 @@ function CardTypeSection({
   onCardClick: (card: ArkhamCard) => void;
   isWeakness?: boolean;
   isPermanent?: boolean;
+  isSubsection?: boolean;
 }) {
   const dragImageRef = useRef<HTMLImageElement>(null);
 
@@ -534,8 +588,12 @@ function CardTypeSection({
         alt=""
         className="fixed -left-[9999px] w-[100px] h-[140px] object-cover rounded pointer-events-none"
       />
-      <h4 className="text-sm font-medium text-gray-400 mb-2">
-        {title} ({count})
+      <h4 className={`font-medium mb-2 ${
+        isSubsection
+          ? 'text-xs text-gray-500'
+          : 'text-sm text-gray-400'
+      }`}>
+        {title}{!isSubsection && ` (${count})`}
       </h4>
       <div className="space-y-1">
         {cards.map(({ card, quantity }) => {
