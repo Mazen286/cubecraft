@@ -165,21 +165,33 @@ function ArkhamDeckBuilderContent() {
     );
   }
 
-  // Show investigator selector if no investigator selected
+  // Show investigator selector if no investigator selected (unless importing)
   if (!state.investigator && !state.isLoading) {
+    // If import modal is open, show it on a plain background instead of investigator selector
+    if (showImportModal) {
+      return (
+        <div className="min-h-screen bg-yugi-dark">
+          <ImportDeckModal
+            isOpen={showImportModal}
+            onClose={() => {
+              setShowImportModal(false);
+              // If no investigator after closing import, go back to deck list
+              if (!state.investigator) {
+                navigate('/my-decks?game=arkham');
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
     return (
-      <>
-        <InvestigatorSelector
-          investigators={investigators}
-          onSelect={setInvestigator}
-          onCancel={() => navigate('/my-decks?game=arkham')}
-          onImport={() => setShowImportModal(true)}
-        />
-        <ImportDeckModal
-          isOpen={showImportModal}
-          onClose={() => setShowImportModal(false)}
-        />
-      </>
+      <InvestigatorSelector
+        investigators={investigators}
+        onSelect={setInvestigator}
+        onCancel={() => navigate('/my-decks?game=arkham')}
+        onImport={() => setShowImportModal(true)}
+      />
     );
   }
 
