@@ -59,18 +59,22 @@ function ArkhamDeckBuilderContent() {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [importParamHandled, setImportParamHandled] = useState(false);
 
-  // Check for import query param on mount only
+  // Check URL directly - import mode if param is set OR modal is open
+  const isImportMode = showImportModal || (!importParamHandled && searchParams.get('import') === 'true');
+
+  // Handle import param on mount
   useEffect(() => {
-    if (searchParams.get('import') === 'true') {
+    if (!importParamHandled && searchParams.get('import') === 'true') {
       setShowImportModal(true);
-      // Clear the param from URL without triggering re-render issues
+      setImportParamHandled(true);
+      // Clear the param from URL
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('import');
       setSearchParams(newParams, { replace: true });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+  }, [searchParams, setSearchParams, importParamHandled]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
 
@@ -159,24 +163,30 @@ function ArkhamDeckBuilderContent() {
           </div>
         </div>
         {/* Show import modal even during loading */}
-        <ImportDeckModal
-          isOpen={showImportModal}
-          onClose={() => setShowImportModal(false)}
-        />
+        {isImportMode && (
+          <ImportDeckModal
+            isOpen={true}
+            onClose={() => {
+              setShowImportModal(false);
+              setImportParamHandled(true);
+            }}
+          />
+        )}
       </>
     );
   }
 
   // Show investigator selector if no investigator selected (unless importing)
   if (!state.investigator && !state.isLoading) {
-    // If import modal is open, show it on a plain background instead of investigator selector
-    if (showImportModal) {
+    // If in import mode, show modal on a plain background instead of investigator selector
+    if (isImportMode) {
       return (
         <div className="min-h-screen bg-yugi-dark">
           <ImportDeckModal
-            isOpen={showImportModal}
+            isOpen={true}
             onClose={() => {
               setShowImportModal(false);
+              setImportParamHandled(true);
               // If no investigator after closing import, go back to deck list
               if (!state.investigator) {
                 navigate('/my-decks?game=arkham');
