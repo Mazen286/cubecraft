@@ -41,7 +41,6 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
   // Simulation state
   const [drawPile, setDrawPile] = useState<ArkhamCard[]>([]);
   const [hand, setHand] = useState<ArkhamCard[]>([]);
-  const [discardPile, setDiscardPile] = useState<ArkhamCard[]>([]);
   const [selectedForMulligan, setSelectedForMulligan] = useState<Set<number>>(new Set());
   const [phase, setPhase] = useState<'initial' | 'mulligan' | 'playing'>('initial');
   const [drawnThisTurn, setDrawnThisTurn] = useState<ArkhamCard | null>(null);
@@ -89,7 +88,6 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
 
     setDrawPile(remaining);
     setHand(openingHand);
-    setDiscardPile([]);
     setSetAsideWeaknesses(setAside);
     setSelectedForMulligan(new Set());
     setPhase('mulligan');
@@ -182,7 +180,6 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
   const reset = useCallback(() => {
     setDrawPile([]);
     setHand([]);
-    setDiscardPile([]);
     setSetAsideWeaknesses([]);
     setSelectedForMulligan(new Set());
     setPhase('initial');

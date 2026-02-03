@@ -123,19 +123,6 @@ function getSkillIconsArray(card: { skill_willpower?: number; skill_intellect?: 
   return icons;
 }
 
-// Legacy SkillIcon for backward compatibility in preview panels
-function SkillIcon({ type, count }: { type: 'willpower' | 'intellect' | 'combat' | 'agility' | 'wild'; count: number }) {
-  if (count === 0) return null;
-
-  return (
-    <>
-      {Array.from({ length: count }).map((_, i) => (
-        <SingleSkillIcon key={i} type={type} />
-      ))}
-    </>
-  );
-}
-
 type SortField = 'name' | 'type' | 'faction' | 'cost' | 'xp';
 type SortDirection = 'asc' | 'desc';
 

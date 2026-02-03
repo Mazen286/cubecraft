@@ -1,10 +1,11 @@
 import { useMemo, useState, useRef } from 'react';
-import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle } from 'lucide-react';
+import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3 } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
 import { calculateXpCost } from '../../services/arkhamDeckValidation';
 import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon } from './ArkhamCardTable';
 import { DrawSimulator } from './DrawSimulator';
+import { DeckStats } from './DeckStats';
 import type { ArkhamCard, ArkhamCardType, Investigator } from '../../types/arkham';
 import { FACTION_COLORS } from '../../config/games/arkham';
 
@@ -21,6 +22,7 @@ export function ArkhamDeckPanel() {
   const [showInvestigator, setShowInvestigator] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
+  const [showDeckStats, setShowDeckStats] = useState(false);
 
   const totalCards = getTotalCardCount();
   const xpRequired = calculateXpCost(state.slots);
@@ -225,7 +227,7 @@ export function ArkhamDeckPanel() {
           </div>
         )}
 
-        {/* Random weakness button */}
+        {/* Action buttons */}
         <div className="flex gap-2 mt-2">
           <button
             onClick={handleAddRandomWeakness}
@@ -242,6 +244,15 @@ export function ArkhamDeckPanel() {
             <PlayCircle className="w-4 h-4" />
             <span className="hidden sm:inline">Draw Simulator</span>
             <span className="sm:hidden">Simulate</span>
+          </button>
+        </div>
+        <div className="mt-2">
+          <button
+            onClick={() => setShowDeckStats(true)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-600/50 text-blue-300 text-sm font-medium rounded-lg transition-colors"
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Deck Statistics</span>
           </button>
         </div>
       </div>
@@ -385,6 +396,12 @@ export function ArkhamDeckPanel() {
       <DrawSimulator
         isOpen={showDrawSimulator}
         onClose={() => setShowDrawSimulator(false)}
+      />
+
+      {/* Deck statistics */}
+      <DeckStats
+        isOpen={showDeckStats}
+        onClose={() => setShowDeckStats(false)}
       />
     </div>
   );

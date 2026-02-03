@@ -4,11 +4,7 @@ import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { ArkhamCardTable, CardPreviewPanel } from './ArkhamCardTable';
 import type { ArkhamCard } from '../../types/arkham';
 
-interface ArkhamCardBrowserProps {
-  onCardAdded?: (code: string) => void;
-}
-
-export function ArkhamCardBrowser({ onCardAdded }: ArkhamCardBrowserProps) {
+export function ArkhamCardBrowser() {
   const { state } = useArkhamDeckBuilder();
   const [selectedCard, setSelectedCard] = useState<ArkhamCard | null>(null);
 
