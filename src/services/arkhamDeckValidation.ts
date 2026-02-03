@@ -151,9 +151,18 @@ export function validateArkhamDeck(
   // Get required deck size
   const requiredSize = investigator.deck_requirements?.size || 30;
 
-  // Count total cards
+  // Count total cards (excluding permanents and weaknesses which don't count towards deck size)
   let deckSize = 0;
-  for (const quantity of Object.values(slots)) {
+  for (const [code, quantity] of Object.entries(slots)) {
+    const card = arkhamCardService.getCard(code);
+    if (!card) continue;
+
+    // Skip permanent cards - they don't count towards deck size
+    if (card.permanent) continue;
+
+    // Skip weaknesses - they don't count towards deck size
+    if (card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness') continue;
+
     deckSize += quantity;
   }
 
