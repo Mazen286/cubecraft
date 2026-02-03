@@ -116,6 +116,9 @@ export function parseArkhamDBText(text: string): ImportedDeck {
 
     const { name, quantity, xp, code } = parsed;
 
+    // Debug logging to see what was parsed
+    console.log(`Import parsed: "${line}" -> name="${name}", qty=${quantity}, xp=${xp}, code=${code || 'none'}`);
+
     // If we got a code, use it directly
     if (code) {
       const card = arkhamCardService.getCard(code);
