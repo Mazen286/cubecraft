@@ -54,27 +54,26 @@ function ArkhamDeckBuilderContent() {
     getTotalCardCount,
   } = useArkhamDeckBuilder();
 
+  // Check for import param from URL directly (before React Router processes it)
+  const [showImportModal, setShowImportModal] = useState(() => {
+    // Read directly from window.location to avoid React Router timing issues
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('import') === 'true';
+  });
+
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [importParamHandled, setImportParamHandled] = useState(false);
 
-  // Check URL directly - import mode if param is set OR modal is open
-  const isImportMode = showImportModal || (!importParamHandled && searchParams.get('import') === 'true');
-
-  // Handle import param on mount
+  // Clear import param from URL after reading it
   useEffect(() => {
-    if (!importParamHandled && searchParams.get('import') === 'true') {
-      setShowImportModal(true);
-      setImportParamHandled(true);
-      // Clear the param from URL
+    if (searchParams.get('import') === 'true') {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('import');
       setSearchParams(newParams, { replace: true });
     }
-  }, [searchParams, setSearchParams, importParamHandled]);
+  }, [searchParams, setSearchParams]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
 
@@ -163,13 +162,10 @@ function ArkhamDeckBuilderContent() {
           </div>
         </div>
         {/* Show import modal even during loading */}
-        {isImportMode && (
+        {showImportModal && (
           <ImportDeckModal
             isOpen={true}
-            onClose={() => {
-              setShowImportModal(false);
-              setImportParamHandled(true);
-            }}
+            onClose={() => setShowImportModal(false)}
           />
         )}
       </>
@@ -178,15 +174,14 @@ function ArkhamDeckBuilderContent() {
 
   // Show investigator selector if no investigator selected (unless importing)
   if (!state.investigator && !state.isLoading) {
-    // If in import mode, show modal on a plain background instead of investigator selector
-    if (isImportMode) {
+    // If import modal is open, show it on a plain background instead of investigator selector
+    if (showImportModal) {
       return (
         <div className="min-h-screen bg-yugi-dark">
           <ImportDeckModal
             isOpen={true}
             onClose={() => {
               setShowImportModal(false);
-              setImportParamHandled(true);
               // If no investigator after closing import, go back to deck list
               if (!state.investigator) {
                 navigate('/my-decks?game=arkham');
