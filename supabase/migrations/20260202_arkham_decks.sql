@@ -2,7 +2,7 @@
 -- Stores deck data with XP tracking and campaign progression support
 
 CREATE TABLE IF NOT EXISTS arkham_decks (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) NOT NULL,
   description TEXT,
 

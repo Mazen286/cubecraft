@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User } from 'lucide-react';
+import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
+import { calculateXpCost } from '../../services/arkhamDeckValidation';
 import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon } from './ArkhamCardTable';
 import type { ArkhamCard, ArkhamCardType, Investigator } from '../../types/arkham';
 import { FACTION_COLORS } from '../../config/games/arkham';
@@ -20,6 +21,29 @@ export function ArkhamDeckPanel() {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const totalCards = getTotalCardCount();
+  const xpRequired = calculateXpCost(state.slots);
+
+  // Add random basic weakness
+  const [drawnWeakness, setDrawnWeakness] = useState<ArkhamCard | null>(null);
+
+  const handleAddRandomWeakness = () => {
+    const weaknesses = arkhamCardService.getBasicWeaknesses();
+    if (weaknesses.length === 0) return;
+
+    // Pick a random weakness
+    const randomIndex = Math.floor(Math.random() * weaknesses.length);
+    const weakness = weaknesses[randomIndex];
+
+    // Add it to the deck
+    addCard(weakness.code);
+
+    // Show the drawn weakness in preview
+    setSelectedCard(weakness);
+    setDrawnWeakness(weakness);
+
+    // Clear the "drawn" indicator after a few seconds
+    setTimeout(() => setDrawnWeakness(null), 5000);
+  };
 
   // Handle drag and drop
   const handleDragOver = (e: React.DragEvent) => {
@@ -51,12 +75,13 @@ export function ArkhamDeckPanel() {
   const requiredSize = state.investigator?.deck_requirements?.size || 30;
   const xpAvailable = state.xpEarned - state.xpSpent;
 
-  // Group cards by type
+  // Group cards by type (with weaknesses as separate category)
   const groupedCards = useMemo(() => {
-    const groups: Record<ArkhamCardType, { card: ArkhamCard; quantity: number }[]> = {
+    const groups: Record<ArkhamCardType | 'weakness', { card: ArkhamCard; quantity: number }[]> = {
       asset: [],
       event: [],
       skill: [],
+      weakness: [], // Separate weakness category
       investigator: [],
       treachery: [],
       enemy: [],
@@ -66,13 +91,18 @@ export function ArkhamDeckPanel() {
 
     for (const [code, quantity] of Object.entries(state.slots)) {
       const card = arkhamCardService.getCard(code);
-      if (card && groups[card.type_code]) {
+      if (!card) continue;
+
+      // Check if it's a weakness (subtype_code = 'weakness' or 'basicweakness')
+      if (card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness') {
+        groups.weakness.push({ card, quantity });
+      } else if (groups[card.type_code]) {
         groups[card.type_code].push({ card, quantity });
       }
     }
 
     // Sort each group by name
-    for (const type of Object.keys(groups) as ArkhamCardType[]) {
+    for (const type of Object.keys(groups) as (ArkhamCardType | 'weakness')[]) {
       groups[type].sort((a, b) => a.card.name.localeCompare(b.card.name));
     }
 
@@ -114,6 +144,23 @@ export function ArkhamDeckPanel() {
         </div>
       )}
 
+      {/* Drawn weakness notification */}
+      {drawnWeakness && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 animate-pulse">
+          <div className="bg-purple-900/95 border border-purple-500 text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3">
+            <img
+              src={arkhamCardService.getArkhamCardImageUrl(drawnWeakness.code)}
+              alt={drawnWeakness.name}
+              className="w-12 h-16 object-cover rounded"
+            />
+            <div>
+              <p className="text-purple-300 text-xs font-medium">Weakness Drawn!</p>
+              <p className="text-white font-semibold">{drawnWeakness.name}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-yugi-border">
         <div className="flex items-center justify-between mb-2">
@@ -133,14 +180,21 @@ export function ArkhamDeckPanel() {
         </div>
 
         {/* XP display */}
-        {state.xpEarned > 0 && (
+        {state.xpEarned > 0 ? (
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-gray-400">XP Budget</span>
             <span className={xpAvailable >= 0 ? 'text-green-400' : 'text-red-400'}>
               {state.xpSpent} / {state.xpEarned} ({xpAvailable >= 0 ? '+' : ''}{xpAvailable} available)
             </span>
           </div>
-        )}
+        ) : xpRequired > 0 ? (
+          <div className="flex items-center justify-between text-sm mb-2">
+            <span className="text-gray-400">XP Required</span>
+            <span className="text-yellow-400 font-medium">
+              {xpRequired} XP
+            </span>
+          </div>
+        ) : null}
 
         {/* Validation summary */}
         {validation && (
@@ -164,6 +218,15 @@ export function ArkhamDeckPanel() {
             )}
           </div>
         )}
+
+        {/* Random weakness button */}
+        <button
+          onClick={handleAddRandomWeakness}
+          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600/50 text-purple-300 text-sm font-medium rounded-lg transition-colors"
+        >
+          <Shuffle className="w-4 h-4" />
+          Draw Random Basic Weakness
+        </button>
       </div>
 
       {/* Validation errors */}
@@ -242,10 +305,24 @@ export function ArkhamDeckPanel() {
               />
             )}
 
-            {/* Treacheries (weaknesses) */}
-            {typeCounts.treachery > 0 && (
+            {/* Weaknesses */}
+            {typeCounts.weakness > 0 && (
               <CardTypeSection
                 title="Weaknesses"
+                count={typeCounts.weakness}
+                cards={groupedCards.weakness}
+                signatureCodes={signatureCodes}
+                onAdd={addCard}
+                onRemove={removeCard}
+                onCardClick={setSelectedCard}
+                isWeakness
+              />
+            )}
+
+            {/* Treacheries (encounter cards - rare in player decks) */}
+            {typeCounts.treachery > 0 && (
+              <CardTypeSection
+                title="Treacheries"
                 count={typeCounts.treachery}
                 cards={groupedCards.treachery}
                 signatureCodes={signatureCodes}
@@ -334,6 +411,14 @@ function InvestigatorRow({
         <span className="flex items-center gap-0.5">
           <span className="text-white text-sm font-bold">{investigator.skill_agility}</span>
           <SingleSkillIcon type="agility" />
+        </span>
+        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-600/80 text-white rounded text-xs">
+          <span className="font-bold">{investigator.health}</span>
+          <span className="text-red-200">HP</span>
+        </span>
+        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-600/80 text-white rounded text-xs">
+          <span className="font-bold">{investigator.sanity}</span>
+          <span className="text-blue-200">SAN</span>
         </span>
       </div>
     </button>
@@ -433,7 +518,7 @@ function CardTypeSection({
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
                   onClick={() => onRemove(card.code)}
-                  disabled={isSignature || isWeakness}
+                  disabled={isSignature}
                   className="p-1 text-gray-400 hover:text-white hover:bg-yugi-border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   title={isSignature ? 'Cannot remove signature cards' : 'Remove copy'}
                 >
@@ -453,6 +538,8 @@ function CardTypeSection({
                       ? 'Maximum copies reached'
                       : isSignature
                       ? 'Cannot add more signature cards'
+                      : isWeakness
+                      ? 'Use random draw to add weaknesses'
                       : 'Add copy'
                   }
                 >

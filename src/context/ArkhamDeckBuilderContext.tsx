@@ -717,7 +717,16 @@ export function ArkhamDeckBuilderProvider({
 
   const getTotalCardCount = useCallback((): number => {
     let total = 0;
-    for (const qty of Object.values(state.slots)) {
+    for (const [code, qty] of Object.entries(state.slots)) {
+      const card = arkhamCardService.getCard(code);
+      if (!card) continue;
+
+      // Skip permanent cards - they don't count towards deck size
+      if (card.permanent) continue;
+
+      // Skip weaknesses - they don't count towards deck size
+      if (card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness') continue;
+
       total += qty;
     }
     return total;

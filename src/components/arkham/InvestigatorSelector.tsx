@@ -351,11 +351,13 @@ export function InvestigatorSelector({
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="px-2 py-0.5 bg-red-600/80 text-white rounded font-medium">
-                  ❤️ {currentInvestigator.health}
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-red-600/80 text-white rounded font-medium">
+                  <span className="font-bold">{currentInvestigator.health}</span>
+                  <span className="text-red-200 text-xs">HP</span>
                 </span>
-                <span className="px-2 py-0.5 bg-blue-600/80 text-white rounded font-medium">
-                  🧠 {currentInvestigator.sanity}
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-600/80 text-white rounded font-medium">
+                  <span className="font-bold">{currentInvestigator.sanity}</span>
+                  <span className="text-blue-200 text-xs">SAN</span>
                 </span>
               </div>
             </div>

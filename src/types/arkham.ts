@@ -171,6 +171,7 @@ export interface ArkhamCard {
 
   // Deck building
   deck_limit?: number;
+  subtype_code?: 'weakness' | 'basicweakness';
   restrictions?: {
     investigator?: Record<string, string>;
   };
@@ -346,6 +347,7 @@ export interface ArkhamCardAttributes {
   is_unique?: boolean;
   permanent?: boolean;
   deck_limit?: number;
+  subtype_code?: 'weakness' | 'basicweakness';
   restrictions?: {
     investigator?: Record<string, string>;
   };
