@@ -1,8 +1,8 @@
 import { useMemo, useState, useRef } from 'react';
-import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3, ArrowRight, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Award } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
-import { calculateXpCost, isExceptional, isMyriad } from '../../services/arkhamDeckValidation';
+import { isExceptional, isMyriad } from '../../services/arkhamDeckValidation';
 import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon, getSkillIconsArray } from './ArkhamCardTable';
 import { DrawSimulator } from './DrawSimulator';
 import { DeckStats } from './DeckStats';
@@ -55,6 +55,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     addToSide,
     getXpDiscount,
     getIgnoreDeckSizeCount,
+    addXP,
   } = useArkhamDeckBuilder();
 
   const [selectedCard, setSelectedCard] = useState<ArkhamCard | null>(null);
@@ -64,12 +65,13 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
   const [showDeckStats, setShowDeckStats] = useState(false);
   const [showSideDeck, setShowSideDeck] = useState(true);
+  const [showAddXP, setShowAddXP] = useState(false);
+  const [xpToAdd, setXpToAdd] = useState(0);
 
   // Drag image ref for side deck cards
   const sideDragImageRef = useRef<HTMLImageElement>(null);
 
   const totalCards = getTotalCardCount();
-  const xpRequired = calculateXpCost(state.slots);
 
   // Handle cross-filter from deck stats
   const handleStatsFilter = (filter: DeckStatsFilter) => {
@@ -82,6 +84,15 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
         slot: filter.slot,
         skillIcon: filter.skillIcon,
       });
+    }
+  };
+
+  // Handle adding XP
+  const handleAddXP = () => {
+    if (xpToAdd > 0) {
+      addXP(xpToAdd);
+      setXpToAdd(0);
+      setShowAddXP(false);
     }
   };
 
@@ -355,31 +366,92 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
         </div>
 
         {/* XP display */}
-        {state.xpEarned > 0 ? (
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-gray-300">XP Budget</span>
-            <span className={xpAvailable >= 0 ? 'text-green-400' : 'text-red-400'}>
-              {state.xpSpent} / {state.xpEarned} ({xpAvailable >= 0 ? '+' : ''}{xpAvailable} available)
-              {state.xpSpent !== xpRequired && (
-                <span className="text-green-400 text-xs ml-1">
-                  (saved {xpRequired - state.xpSpent})
+        <div className="mb-2">
+          {state.xpEarned > 0 ? (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-300 flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-yellow-400" />
+                XP Budget
+              </span>
+              <div className="flex items-center gap-2">
+                <span className={xpAvailable >= 0 ? 'text-green-400' : 'text-red-400'}>
+                  {state.xpSpent} / {state.xpEarned} ({xpAvailable >= 0 ? '+' : ''}{xpAvailable} available)
                 </span>
-              )}
-            </span>
-          </div>
-        ) : state.xpSpent > 0 ? (
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-gray-300">XP Required</span>
-            <span className="text-yellow-400 font-medium">
-              {state.xpSpent} XP
-              {state.xpSpent !== xpRequired && (
-                <span className="text-green-400 text-xs ml-1">
-                  (saved {xpRequired - state.xpSpent} XP from discounts)
-                </span>
-              )}
-            </span>
-          </div>
-        ) : null}
+                <button
+                  onClick={() => setShowAddXP(!showAddXP)}
+                  className="text-xs text-gold-400 hover:text-gold-300 transition-colors"
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+          ) : state.xpSpent > 0 ? (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-300 flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-yellow-400" />
+                XP Required
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-yellow-400 font-medium">{state.xpSpent} XP</span>
+                <button
+                  onClick={() => setShowAddXP(!showAddXP)}
+                  className="text-xs text-gold-400 hover:text-gold-300 transition-colors"
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-300 flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-yellow-400" />
+                Experience
+              </span>
+              <button
+                onClick={() => setShowAddXP(!showAddXP)}
+                className="text-xs text-gold-400 hover:text-gold-300 transition-colors"
+              >
+                + Add XP
+              </button>
+            </div>
+          )}
+
+          {/* Add XP form */}
+          {showAddXP && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-cc-dark rounded-lg border border-cc-border">
+              <span className="text-sm text-gray-400">Scenario XP:</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setXpToAdd(Math.max(0, xpToAdd - 1))}
+                  className="p-1 text-gray-400 hover:text-white hover:bg-cc-border rounded transition-colors"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  max="99"
+                  value={xpToAdd}
+                  onChange={(e) => setXpToAdd(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-12 text-center px-2 py-1 bg-cc-darker border border-cc-border rounded text-white text-sm"
+                />
+                <button
+                  onClick={() => setXpToAdd(xpToAdd + 1)}
+                  className="p-1 text-gray-400 hover:text-white hover:bg-cc-border rounded transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <button
+                onClick={handleAddXP}
+                disabled={xpToAdd === 0}
+                className="px-3 py-1 bg-gold-600 hover:bg-gold-500 text-black text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Validation summary */}
         {validation && (
