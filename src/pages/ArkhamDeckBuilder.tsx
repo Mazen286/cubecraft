@@ -13,6 +13,7 @@ import {
   Search,
   Trash2,
   Cloud,
+  HelpCircle,
 } from 'lucide-react';
 import {
   ArkhamDeckBuilderProvider,
@@ -27,6 +28,7 @@ import { ImportDeckModal } from '../components/arkham/ImportDeckModal';
 import { ArkhamDBConnectionStatus } from '../components/arkham/ArkhamDBConnectionStatus';
 import { SyncDeckModal } from '../components/arkham/SyncDeckModal';
 import { ExportDeckModal } from '../components/arkham/ExportDeckModal';
+import { KeywordReferenceModal } from '../components/arkham/KeywordReferenceModal';
 import { FACTION_COLORS, FACTION_NAMES } from '../config/games/arkham';
 import { isOAuthConfigured } from '../services/arkhamDBAuth';
 import { arkhamCardService } from '../services/arkhamCardService';
@@ -88,6 +90,7 @@ function ArkhamDeckBuilderContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showKeywordReference, setShowKeywordReference] = useState(false);
   const [isArkhamDBConnected, setIsArkhamDBConnected] = useState(false);
 
   // Clear import param from URL after reading it
@@ -362,6 +365,15 @@ function ArkhamDeckBuilderContent() {
                   <Redo className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* Rules Reference */}
+              <button
+                onClick={() => setShowKeywordReference(true)}
+                className="p-2 text-gray-400 hover:text-white transition-colors"
+                title="Rules Reference"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </button>
 
               {/* Save button */}
               <button
@@ -651,6 +663,12 @@ function ArkhamDeckBuilderContent() {
           }}
         />
       )}
+
+      {/* Keyword Reference Modal */}
+      <KeywordReferenceModal
+        isOpen={showKeywordReference}
+        onClose={() => setShowKeywordReference(false)}
+      />
     </div>
   );
 }
