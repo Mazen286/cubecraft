@@ -56,6 +56,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     getXpDiscount,
     getIgnoreDeckSizeCount,
     addXP,
+    setXP,
   } = useArkhamDeckBuilder();
 
   const [selectedCard, setSelectedCard] = useState<ArkhamCard | null>(null);
@@ -67,6 +68,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
   const [showSideDeck, setShowSideDeck] = useState(true);
   const [showAddXP, setShowAddXP] = useState(false);
   const [xpToAdd, setXpToAdd] = useState(0);
+  const [showEditXP, setShowEditXP] = useState(false);
+  const [editXpEarned, setEditXpEarned] = useState(0);
 
   // Drag image ref for side deck cards
   const sideDragImageRef = useRef<HTMLImageElement>(null);
@@ -94,6 +97,18 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
       setXpToAdd(0);
       setShowAddXP(false);
     }
+  };
+
+  // Handle editing XP directly
+  const handleEditXP = () => {
+    setXP(editXpEarned, undefined);
+    setShowEditXP(false);
+  };
+
+  const openEditXP = () => {
+    setEditXpEarned(state.xpEarned);
+    setShowEditXP(true);
+    setShowAddXP(false);
   };
 
   // Add random basic weakness
@@ -378,10 +393,16 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                   {state.xpSpent} / {state.xpEarned} ({xpAvailable >= 0 ? '+' : ''}{xpAvailable} available)
                 </span>
                 <button
-                  onClick={() => setShowAddXP(!showAddXP)}
+                  onClick={() => { setShowAddXP(!showAddXP); setShowEditXP(false); }}
                   className="text-xs text-gold-400 hover:text-gold-300 transition-colors"
                 >
                   + Add
+                </button>
+                <button
+                  onClick={openEditXP}
+                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+                >
+                  Edit
                 </button>
               </div>
             </div>
@@ -394,10 +415,16 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
               <div className="flex items-center gap-2">
                 <span className="text-yellow-400 font-medium">{state.xpSpent} XP</span>
                 <button
-                  onClick={() => setShowAddXP(!showAddXP)}
+                  onClick={() => { setShowAddXP(!showAddXP); setShowEditXP(false); }}
                   className="text-xs text-gold-400 hover:text-gold-300 transition-colors"
                 >
                   + Add
+                </button>
+                <button
+                  onClick={openEditXP}
+                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+                >
+                  Edit
                 </button>
               </div>
             </div>
@@ -407,12 +434,20 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 <Award className="w-4 h-4 text-yellow-400" />
                 Experience
               </span>
-              <button
-                onClick={() => setShowAddXP(!showAddXP)}
-                className="text-xs text-gold-400 hover:text-gold-300 transition-colors"
-              >
-                + Add XP
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setShowAddXP(!showAddXP); setShowEditXP(false); }}
+                  className="text-xs text-gold-400 hover:text-gold-300 transition-colors"
+                >
+                  + Add XP
+                </button>
+                <button
+                  onClick={openEditXP}
+                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+                >
+                  Edit
+                </button>
+              </div>
             </div>
           )}
 
@@ -448,6 +483,47 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 className="px-3 py-1 bg-gold-600 hover:bg-gold-500 text-black text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add
+              </button>
+            </div>
+          )}
+
+          {/* Edit XP form */}
+          {showEditXP && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-cc-dark rounded-lg border border-cc-border">
+              <span className="text-sm text-gray-400">Total Earned:</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setEditXpEarned(Math.max(0, editXpEarned - 1))}
+                  className="p-1 text-gray-400 hover:text-white hover:bg-cc-border rounded transition-colors"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  max="999"
+                  value={editXpEarned}
+                  onChange={(e) => setEditXpEarned(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-14 text-center px-2 py-1 bg-cc-darker border border-cc-border rounded text-white text-sm"
+                />
+                <button
+                  onClick={() => setEditXpEarned(editXpEarned + 1)}
+                  className="p-1 text-gray-400 hover:text-white hover:bg-cc-border rounded transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <button
+                onClick={handleEditXP}
+                className="px-3 py-1 bg-gold-600 hover:bg-gold-500 text-black text-sm font-medium rounded transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setShowEditXP(false)}
+                className="px-2 py-1 text-gray-400 hover:text-white text-sm transition-colors"
+              >
+                Cancel
               </button>
             </div>
           )}
