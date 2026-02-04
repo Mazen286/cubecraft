@@ -3,7 +3,7 @@ import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCi
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
 import { calculateXpCost } from '../../services/arkhamDeckValidation';
-import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon } from './ArkhamCardTable';
+import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon, getSkillIconsArray } from './ArkhamCardTable';
 import { DrawSimulator } from './DrawSimulator';
 import { DeckStats } from './DeckStats';
 import type { DeckStatsFilter } from './DeckStats';
@@ -13,6 +13,33 @@ import type { ArkhamCardFilters } from './ArkhamCardTable';
 
 interface ArkhamDeckPanelProps {
   onCrossFilter?: (filters: ArkhamCardFilters) => void;
+}
+
+// Responsive skill icons display - compact mode for many icons
+function SkillIconsDisplay({ card }: { card: ArkhamCard }) {
+  const icons: { type: 'willpower' | 'intellect' | 'combat' | 'agility' | 'wild'; count: number }[] = [];
+
+  if (card.skill_willpower) icons.push({ type: 'willpower', count: card.skill_willpower });
+  if (card.skill_intellect) icons.push({ type: 'intellect', count: card.skill_intellect });
+  if (card.skill_combat) icons.push({ type: 'combat', count: card.skill_combat });
+  if (card.skill_agility) icons.push({ type: 'agility', count: card.skill_agility });
+  if (card.skill_wild) icons.push({ type: 'wild', count: card.skill_wild });
+
+  if (icons.length === 0) {
+    return <span className="text-gray-500 text-xs">—</span>;
+  }
+
+  // Always use compact grouped format (e.g., "2🔮 3?")
+  return (
+    <div className="flex items-center gap-0.5">
+      {icons.map(({ type, count }) => (
+        <div key={type} className="flex items-center">
+          {count > 1 && <span className="text-[10px] text-gray-400">{count}</span>}
+          <SingleSkillIcon type={type} size="sm" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
@@ -25,14 +52,21 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     moveToSide,
     moveToMain,
     removeFromSide,
+    addToSide,
+    getXpDiscount,
+    getIgnoreDeckSizeCount,
   } = useArkhamDeckBuilder();
 
   const [selectedCard, setSelectedCard] = useState<ArkhamCard | null>(null);
   const [showInvestigator, setShowInvestigator] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isSideDragOver, setIsSideDragOver] = useState(false);
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
   const [showDeckStats, setShowDeckStats] = useState(false);
   const [showSideDeck, setShowSideDeck] = useState(true);
+
+  // Drag image ref for side deck cards
+  const sideDragImageRef = useRef<HTMLImageElement>(null);
 
   const totalCards = getTotalCardCount();
   const xpRequired = calculateXpCost(state.slots);
@@ -73,31 +107,97 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     setTimeout(() => setDrawnWeakness(null), 5000);
   };
 
-  // Handle drag and drop
+  // Handle drag and drop for main deck
   const handleDragOver = (e: React.DragEvent) => {
-    if (e.dataTransfer.types.includes('application/arkham-card')) {
+    const hasArkhamCard = e.dataTransfer.types.includes('application/arkham-card');
+    const hasSideCard = e.dataTransfer.types.includes('application/arkham-side-card');
+
+    if (hasArkhamCard || hasSideCard) {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = hasSideCard ? 'move' : 'copy';
       setIsDragOver(true);
     }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    // Only trigger if leaving the container, not entering a child
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    // Only trigger if actually leaving the container
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return; // Still inside the bounds
+    }
     setIsDragOver(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(false);
 
+    // Handle drop from side deck first (more specific)
+    const sideCardCode = e.dataTransfer.getData('application/arkham-side-card');
+    if (sideCardCode) {
+      moveToMain(sideCardCode);
+      return;
+    }
+
+    // Handle drop from card browser
     const cardCode = e.dataTransfer.getData('application/arkham-card');
     if (cardCode) {
       const eligibility = canAddCard(cardCode);
       if (eligibility.allowed) {
         addCard(cardCode);
       }
+      return;
+    }
+  };
+
+  // Handle drag and drop for side deck
+  // Accept cards from: card browser (arkham-card) or main deck (arkham-card-remove)
+  // Does NOT accept drops from side deck itself (arkham-side-card)
+  const handleSideDragOver = (e: React.DragEvent) => {
+    const isFromBrowser = e.dataTransfer.types.includes('application/arkham-card');
+    const isFromMainDeck = e.dataTransfer.types.includes('application/arkham-card-remove');
+
+    if (isFromBrowser || isFromMainDeck) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      setIsSideDragOver(true);
+    }
+    // For arkham-side-card drags, we intentionally do NOT preventDefault
+    // so the drag can be handled by the main deck drop zone
+  };
+
+  const handleSideDragLeave = (e: React.DragEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return;
+    }
+    setIsSideDragOver(false);
+  };
+
+  const handleSideDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsSideDragOver(false);
+
+    // Handle drop from main deck - move to side deck
+    const mainCardCode = e.dataTransfer.getData('application/arkham-card-remove');
+    if (mainCardCode) {
+      moveToSide(mainCardCode);
+      return;
+    }
+
+    // Handle drop from card browser - add directly to side deck
+    const cardCode = e.dataTransfer.getData('application/arkham-card');
+    if (cardCode) {
+      addToSide(cardCode);
+      return;
     }
   };
   const requiredSize = state.investigator?.deck_requirements?.size || 30;
@@ -217,22 +317,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
   const validation = state.validationResult;
 
   return (
-    <div
-      className={`relative flex flex-col h-full transition-colors ${
-        isDragOver ? 'bg-green-900/20 ring-2 ring-green-500/50 ring-inset' : ''
-      }`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      {/* Drop indicator */}
-      {isDragOver && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="bg-green-600/90 text-white px-4 py-2 rounded-lg font-medium shadow-lg">
-            Drop to add card
-          </div>
-        </div>
-      )}
+    <div className="relative flex flex-col h-full min-h-0">
 
       {/* Drawn weakness notification */}
       {drawnWeakness && (
@@ -252,7 +337,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
       )}
 
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-yugi-border">
+      <div className="flex-shrink-0 p-4 border-b border-cc-border">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-semibold text-white">Current Deck</h3>
           <div className="flex items-center gap-3">
@@ -272,16 +357,26 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
         {/* XP display */}
         {state.xpEarned > 0 ? (
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-gray-400">XP Budget</span>
+            <span className="text-gray-300">XP Budget</span>
             <span className={xpAvailable >= 0 ? 'text-green-400' : 'text-red-400'}>
               {state.xpSpent} / {state.xpEarned} ({xpAvailable >= 0 ? '+' : ''}{xpAvailable} available)
+              {state.xpSpent !== xpRequired && (
+                <span className="text-green-400 text-xs ml-1">
+                  (saved {xpRequired - state.xpSpent})
+                </span>
+              )}
             </span>
           </div>
-        ) : xpRequired > 0 ? (
+        ) : state.xpSpent > 0 ? (
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-gray-400">XP Required</span>
+            <span className="text-gray-300">XP Required</span>
             <span className="text-yellow-400 font-medium">
-              {xpRequired} XP
+              {state.xpSpent} XP
+              {state.xpSpent !== xpRequired && (
+                <span className="text-green-400 text-xs ml-1">
+                  (saved {xpRequired - state.xpSpent} XP from discounts)
+                </span>
+              )}
             </span>
           </div>
         ) : null}
@@ -341,7 +436,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
 
       {/* Validation errors */}
       {validation && (validation.errors.length > 0 || validation.warnings.length > 0) && (
-        <div className="flex-shrink-0 px-4 py-2 bg-yugi-darker border-b border-yugi-border">
+        <div className="flex-shrink-0 px-4 py-2 bg-cc-darker border-b border-cc-border">
           {validation.errors.map((error, i) => (
             <p key={`error-${i}`} className="text-xs text-red-400 mb-1">
               {error.message}
@@ -355,12 +450,29 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
         </div>
       )}
 
-      {/* Card list */}
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Scrollable container for main deck and side deck */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {/* Main Deck Section */}
+        <div
+          className={`p-3 min-h-[200px] transition-colors ${
+            isDragOver ? 'bg-green-900/20 ring-2 ring-green-500/50 ring-inset' : ''
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Drop indicator */}
+          {isDragOver && (
+            <div className="flex items-center justify-center py-2 mb-2">
+              <div className="bg-green-600/90 text-white px-3 py-1 rounded-lg text-sm font-medium shadow-lg">
+                Drop to add card
+              </div>
+            </div>
+          )}
         {/* Investigator section */}
         {state.investigator && (
-          <div className="mb-4">
-            <h4 className="text-sm font-medium text-gray-400 mb-2">
+          <div className="mb-3">
+            <h4 className="text-xs font-medium text-gray-300 mb-1.5">
               Investigator
             </h4>
             <InvestigatorRow
@@ -371,18 +483,27 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
         )}
 
         {totalCards === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Add cards from the browser</p>
+          <div className="text-center py-6">
+            <p className="text-gray-500 text-sm">Add cards from the browser</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
+            {/* Column headers - sticky at top, responsive */}
+            <div className="grid grid-cols-[28px_1fr_auto] md:grid-cols-[32px_1fr_44px_72px_auto] gap-2 px-2 py-1.5 text-xs text-gray-400 font-medium bg-cc-darker border-b border-cc-border rounded-t sticky top-0 z-10">
+              <span></span>
+              <span>Card</span>
+              <span className="hidden md:block text-center">XP</span>
+              <span className="hidden md:block text-center">Icons</span>
+              <span className="text-right">Qty</span>
+            </div>
+
             {/* Assets - grouped by slot */}
             {typeCounts.asset > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-gray-400 mb-2">
+                <h4 className="text-xs font-medium text-gray-300 mb-1.5">
                   Assets ({typeCounts.asset})
                 </h4>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {activeAssetSlots.map(slot => (
                     <CardTypeSection
                       key={slot}
@@ -394,6 +515,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                       onRemove={removeCard}
                       onCardClick={setSelectedCard}
                       onMoveToSide={moveToSide}
+                      getXpDiscount={getXpDiscount}
+                      getIgnoreDeckSizeCount={getIgnoreDeckSizeCount}
                       isSubsection
                     />
                   ))}
@@ -412,6 +535,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onRemove={removeCard}
                 onCardClick={setSelectedCard}
                 onMoveToSide={moveToSide}
+                getXpDiscount={getXpDiscount}
+                getIgnoreDeckSizeCount={getIgnoreDeckSizeCount}
               />
             )}
 
@@ -426,6 +551,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onRemove={removeCard}
                 onCardClick={setSelectedCard}
                 onMoveToSide={moveToSide}
+                getXpDiscount={getXpDiscount}
+                getIgnoreDeckSizeCount={getIgnoreDeckSizeCount}
               />
             )}
 
@@ -440,6 +567,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onRemove={removeCard}
                 onCardClick={setSelectedCard}
                 onMoveToSide={moveToSide}
+                getXpDiscount={getXpDiscount}
+                getIgnoreDeckSizeCount={getIgnoreDeckSizeCount}
                 isPermanent
               />
             )}
@@ -473,85 +602,144 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
             )}
           </div>
         )}
+        </div>
+        {/* End of Main Deck Section */}
 
-        {/* Side Deck Section */}
-        <div className="mt-4 border-t border-yugi-border pt-4">
+        {/* Side Deck Section - sibling of main deck, not nested */}
+        <div
+          className={`p-3 border-t border-cc-border min-h-[80px] transition-colors ${
+            isSideDragOver ? 'bg-orange-900/20 ring-2 ring-orange-500/50 ring-inset' : ''
+          }`}
+          onDragOver={handleSideDragOver}
+          onDragLeave={handleSideDragLeave}
+          onDrop={handleSideDrop}
+        >
+          {/* Drop indicator for side deck */}
+          {isSideDragOver && (
+            <div className="flex items-center justify-center py-1.5 mb-1.5">
+              <div className="bg-orange-600/90 text-white px-2 py-0.5 rounded text-xs font-medium shadow-lg">
+                Drop to add to side deck
+              </div>
+            </div>
+          )}
+
           <button
             onClick={() => setShowSideDeck(!showSideDeck)}
-            className="w-full flex items-center justify-between text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            className="w-full flex items-center justify-between text-xs font-medium text-gray-400 hover:text-white transition-colors"
           >
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5">
               Side Deck
-              <span className="text-xs text-gray-500">({sideDeckCount} cards)</span>
+              <span className="text-[10px] text-gray-500">({sideDeckCount})</span>
             </span>
             {showSideDeck ? (
-              <ChevronUp className="w-4 h-4" />
+              <ChevronUp className="w-3 h-3" />
             ) : (
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-3 h-3" />
             )}
           </button>
 
           {showSideDeck && (
-            <div className="mt-3">
+            <div className="mt-2">
+              {/* Hidden drag preview image for side deck */}
+              <img
+                ref={sideDragImageRef}
+                alt=""
+                className="fixed -left-[9999px] w-[100px] h-[140px] object-cover rounded pointer-events-none"
+              />
+
               {sideCards.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-4">
-                  Use the arrow button on cards to move them to your side deck for future upgrades
+                <p className="text-gray-500 text-xs text-center py-3">
+                  Drag cards here or use the arrow button
                 </p>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {sideCards.map(({ card, quantity }) => {
                     const factionColor = FACTION_COLORS[card.faction_code];
                     const xp = card.xp || 0;
+                    const skillIcons = getSkillIconsArray(card);
 
                     return (
                       <div
                         key={card.code}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-yugi-darker/50"
+                        draggable
+                        onMouseEnter={() => {
+                          // Preload image on hover for smooth drag preview
+                          if (sideDragImageRef.current) {
+                            sideDragImageRef.current.src = arkhamCardService.getArkhamCardImageUrl(card.code);
+                          }
+                        }}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('application/arkham-side-card', card.code);
+                          e.dataTransfer.effectAllowed = 'move';
+
+                          // Set card image as drag preview
+                          if (sideDragImageRef.current) {
+                            e.dataTransfer.setDragImage(sideDragImageRef.current, 50, 70);
+                          }
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 rounded bg-cc-darker/50 cursor-grab active:cursor-grabbing"
                       >
                         <button
                           onClick={() => setSelectedCard(card)}
-                          className="flex items-center gap-2 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+                          className="flex items-center gap-1 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
                         >
+                          {/* Faction indicator */}
                           <div
-                            className="w-1.5 h-8 rounded-full flex-shrink-0"
+                            className="w-1 h-5 rounded-full flex-shrink-0"
                             style={{ backgroundColor: factionColor }}
                           />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-white text-sm truncate">{card.name}</span>
-                              {card.is_unique && (
-                                <span className="text-yellow-400 text-xs">★</span>
+
+                          {/* Cost */}
+                          <span className="w-4 text-center text-[10px] text-gray-400 flex-shrink-0">
+                            {card.cost === null || card.cost === undefined ? '—' : card.cost === -2 ? 'X' : card.cost}
+                          </span>
+
+                          {/* Card name */}
+                          <span className="text-white text-xs truncate flex-1 min-w-0">{card.name}</span>
+
+                          {/* Unique and XP */}
+                          {card.is_unique && (
+                            <span className="text-yellow-400 text-[10px] flex-shrink-0">★</span>
+                          )}
+                          {xp > 0 && (
+                            <span className="text-yellow-400 text-[10px] flex-shrink-0">({xp})</span>
+                          )}
+
+                          {/* Skill icons - compact */}
+                          {skillIcons.length > 0 && (
+                            <div className="flex gap-0 flex-shrink-0">
+                              {skillIcons.slice(0, 3).map(({ type, key }) => (
+                                <div key={key} className="w-3.5 h-3.5">
+                                  <SingleSkillIcon type={type} />
+                                </div>
+                              ))}
+                              {skillIcons.length > 3 && (
+                                <span className="text-[9px] text-gray-500">+{skillIcons.length - 3}</span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                              {card.type_code && <span className="capitalize">{card.type_code}</span>}
-                              {xp > 0 && (
-                                <span className="text-yellow-400">{xp} XP</span>
-                              )}
-                            </div>
-                          </div>
+                          )}
                         </button>
 
                         {/* Move to main button */}
                         <button
                           onClick={() => moveToMain(card.code)}
-                          className="p-1.5 text-green-400 hover:text-green-300 hover:bg-green-900/30 rounded transition-colors"
+                          className="p-0.5 text-green-400 hover:text-green-300 hover:bg-green-900/30 rounded transition-colors"
                           title="Move to main deck"
                         >
-                          <ArrowLeft className="w-4 h-4" />
+                          <ArrowLeft className="w-3 h-3" />
                         </button>
 
-                        <span className="w-6 text-center text-white text-sm font-medium">
+                        <span className="w-4 text-center text-white text-xs font-medium">
                           {quantity}
                         </span>
 
                         {/* Remove from side button */}
                         <button
                           onClick={() => removeFromSide(card.code)}
-                          className="p-1 text-gray-400 hover:text-white hover:bg-yugi-border rounded transition-colors"
+                          className="p-0.5 text-gray-400 hover:text-white hover:bg-cc-border rounded transition-colors"
                           title="Remove from side deck"
                         >
-                          <Minus className="w-4 h-4" />
+                          <Minus className="w-3 h-3" />
                         </button>
                       </div>
                     );
@@ -608,57 +796,50 @@ function InvestigatorRow({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2 p-2 rounded-lg bg-yugi-darker hover:bg-yugi-dark transition-colors text-left"
+      className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded bg-cc-darker hover:bg-cc-dark transition-colors text-left"
     >
       {/* Faction indicator */}
       <div
-        className="w-1.5 h-8 rounded-full flex-shrink-0"
+        className="w-1 h-5 rounded-full flex-shrink-0"
         style={{ backgroundColor: factionColor }}
       />
 
       {/* Icon */}
       <div
-        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
         style={{ backgroundColor: factionColor + '40' }}
       >
-        <User className="w-4 h-4" style={{ color: factionColor }} />
+        <User className="w-3 h-3" style={{ color: factionColor }} />
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-white text-sm font-medium truncate">{investigator.name}</span>
-        </div>
-        {investigator.subname && (
-          <p className="text-xs text-gray-500 truncate">{investigator.subname}</p>
-        )}
+        <span className="text-white text-xs font-medium truncate block">{investigator.name}</span>
       </div>
 
-      {/* Stats - number + icon format */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <span className="flex items-center gap-0.5">
-          <span className="text-white text-sm font-bold">{investigator.skill_willpower}</span>
+      {/* Stats - compact */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <span className="flex items-center">
+          <span className="text-white text-[10px] font-bold">{investigator.skill_willpower}</span>
           <SingleSkillIcon type="willpower" />
         </span>
-        <span className="flex items-center gap-0.5">
-          <span className="text-white text-sm font-bold">{investigator.skill_intellect}</span>
+        <span className="flex items-center">
+          <span className="text-white text-[10px] font-bold">{investigator.skill_intellect}</span>
           <SingleSkillIcon type="intellect" />
         </span>
-        <span className="flex items-center gap-0.5">
-          <span className="text-white text-sm font-bold">{investigator.skill_combat}</span>
+        <span className="flex items-center">
+          <span className="text-white text-[10px] font-bold">{investigator.skill_combat}</span>
           <SingleSkillIcon type="combat" />
         </span>
-        <span className="flex items-center gap-0.5">
-          <span className="text-white text-sm font-bold">{investigator.skill_agility}</span>
+        <span className="flex items-center">
+          <span className="text-white text-[10px] font-bold">{investigator.skill_agility}</span>
           <SingleSkillIcon type="agility" />
         </span>
-        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-600/80 text-white rounded text-xs">
-          <span className="font-bold">{investigator.health}</span>
-          <span className="text-red-200">HP</span>
+        <span className="px-1 bg-red-600/80 text-white rounded text-[10px] font-bold">
+          {investigator.health}
         </span>
-        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-600/80 text-white rounded text-xs">
-          <span className="font-bold">{investigator.sanity}</span>
-          <span className="text-blue-200">SAN</span>
+        <span className="px-1 bg-blue-600/80 text-white rounded text-[10px] font-bold">
+          {investigator.sanity}
         </span>
       </div>
     </button>
@@ -666,7 +847,7 @@ function InvestigatorRow({
 }
 
 /**
- * Section for a card type
+ * Section for a card type - uses shared column header from parent
  */
 function CardTypeSection({
   title,
@@ -677,6 +858,8 @@ function CardTypeSection({
   onRemove,
   onCardClick,
   onMoveToSide,
+  getXpDiscount,
+  getIgnoreDeckSizeCount,
   isWeakness = false,
   isPermanent = false,
   isSubsection = false,
@@ -689,11 +872,22 @@ function CardTypeSection({
   onRemove: (code: string) => void;
   onCardClick: (card: ArkhamCard) => void;
   onMoveToSide?: (code: string) => void;
+  getXpDiscount?: (code: string) => number;
+  getIgnoreDeckSizeCount?: (code: string) => number;
   isWeakness?: boolean;
   isPermanent?: boolean;
   isSubsection?: boolean;
 }) {
   const dragImageRef = useRef<HTMLImageElement>(null);
+
+  // Sort cards by XP descending (highest level first), then by name
+  const sortedCards = useMemo(() => {
+    return [...cards].sort((a, b) => {
+      const xpDiff = (b.card.xp || 0) - (a.card.xp || 0);
+      if (xpDiff !== 0) return xpDiff;
+      return a.card.name.localeCompare(b.card.name);
+    });
+  }, [cards]);
 
   return (
     <div>
@@ -703,20 +897,28 @@ function CardTypeSection({
         alt=""
         className="fixed -left-[9999px] w-[100px] h-[140px] object-cover rounded pointer-events-none"
       />
-      <h4 className={`font-medium mb-2 ${
+
+      {/* Section title */}
+      <h4 className={`font-medium mb-1.5 ${
         isSubsection
-          ? 'text-xs text-gray-500'
-          : 'text-sm text-gray-400'
+          ? 'text-[11px] text-gray-400 pl-2'
+          : 'text-xs text-gray-300'
       }`}>
         {title}{!isSubsection && ` (${count})`}
       </h4>
-      <div className="space-y-1">
-        {cards.map(({ card, quantity }) => {
+
+      {/* Card rows */}
+      <div className="space-y-0.5">
+        {sortedCards.map(({ card, quantity }) => {
           const isSignature = signatureCodes.has(card.code);
           const deckLimit = card.deck_limit ?? 2;
           const isAtLimit = quantity >= deckLimit;
           const factionColor = FACTION_COLORS[card.faction_code];
           const xp = card.xp || 0;
+          const xpDiscount = getXpDiscount?.(card.code) || 0;
+          const maxXp = xp * quantity;
+          const effectiveXp = Math.max(0, maxXp - xpDiscount);
+          const excludedCount = getIgnoreDeckSizeCount?.(card.code) || 0;
 
           const canDrag = !isSignature && !isWeakness;
 
@@ -724,8 +926,8 @@ function CardTypeSection({
             <div
               key={card.code}
               draggable={canDrag}
+              onClick={() => onCardClick(card)}
               onMouseEnter={() => {
-                // Preload image on hover for smooth drag preview
                 if (dragImageRef.current && canDrag) {
                   dragImageRef.current.src = arkhamCardService.getArkhamCardImageUrl(card.code);
                 }
@@ -737,76 +939,95 @@ function CardTypeSection({
                 }
                 e.dataTransfer.setData('application/arkham-card-remove', card.code);
                 e.dataTransfer.effectAllowed = 'move';
-
-                // Set card image as drag preview
                 if (dragImageRef.current) {
                   e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
                 }
               }}
-              className={`flex items-center gap-2 p-2 rounded-lg bg-yugi-darker ${
+              className={`grid grid-cols-[28px_1fr_auto] md:grid-cols-[32px_1fr_44px_72px_auto] gap-2 px-2 py-1.5 items-center rounded bg-cc-darker hover:bg-cc-dark transition-colors cursor-pointer ${
                 isSignature ? 'border border-purple-500/50' : ''
-              } ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
+              } ${xpDiscount > 0 ? 'ring-1 ring-green-500/30' : ''} ${excludedCount > 0 ? 'ring-1 ring-orange-500/30' : ''} ${canDrag ? 'active:cursor-grabbing' : ''}`}
             >
-              {/* Clickable card info area */}
-              <button
-                onClick={() => onCardClick(card)}
-                className="flex items-center gap-2 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
-              >
-                {/* Faction indicator */}
+              {/* Cost column with faction indicator */}
+              <div className="flex items-center gap-1">
                 <div
-                  className="w-1.5 h-8 rounded-full flex-shrink-0"
+                  className="w-1 h-5 rounded-full flex-shrink-0"
                   style={{ backgroundColor: factionColor }}
                 />
+                <span className="text-xs text-gray-300 font-medium w-4 text-center">
+                  {card.cost === null || card.cost === undefined ? '—' : card.cost === -2 ? 'X' : card.cost}
+                </span>
+              </div>
 
-                {/* Card info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white text-sm truncate">{card.name}</span>
-                    {isSignature && (
-                      <span className="text-[10px] px-1 py-0.5 bg-purple-500/30 text-purple-300 rounded">
-                        Signature
-                      </span>
-                    )}
-                    {isPermanent && (
-                      <span className="text-[10px] px-1 py-0.5 bg-cyan-500/30 text-cyan-300 rounded">
-                        Permanent
-                      </span>
-                    )}
-                    {card.is_unique && (
-                      <span className="text-yellow-400 text-xs">★</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    {card.slot && <span>{card.slot}</span>}
-                    {card.cost !== null && card.cost !== undefined && (
-                      <span>Cost: {card.cost === -2 ? 'X' : card.cost}</span>
-                    )}
-                    {xp > 0 && (
-                      <span className="text-yellow-400">{xp} XP</span>
-                    )}
-                  </div>
-                </div>
-              </button>
+              {/* Name column with inline badges (mobile shows XP badge, desktop hides it) */}
+              <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                <span className="text-white text-sm truncate">{card.name}</span>
+                {card.is_unique && (
+                  <span className="text-yellow-400 text-[10px] flex-shrink-0">★</span>
+                )}
+                {/* XP badge - only on mobile */}
+                {xp > 0 && (
+                  <span className={`md:hidden text-[10px] px-1 rounded flex-shrink-0 ${
+                    xpDiscount > 0
+                      ? 'bg-green-500/30 text-green-400'
+                      : 'bg-yellow-500/30 text-yellow-400'
+                  }`}>
+                    {xpDiscount > 0 ? `${effectiveXp}xp` : `${maxXp}xp`}
+                  </span>
+                )}
+                {isSignature && (
+                  <span className="text-[9px] px-1 bg-purple-500/30 text-purple-300 rounded flex-shrink-0">
+                    Sig
+                  </span>
+                )}
+                {isPermanent && (
+                  <span className="text-[9px] px-1 bg-cyan-500/30 text-cyan-300 rounded flex-shrink-0">
+                    Perm
+                  </span>
+                )}
+                {excludedCount > 0 && (
+                  <span className="text-[9px] px-1 bg-orange-500/30 text-orange-400 rounded flex-shrink-0">
+                    NC
+                  </span>
+                )}
+              </div>
 
-              {/* Quantity controls */}
-              <div className="flex items-center gap-1 flex-shrink-0">
+              {/* XP column - desktop only */}
+              <div className="hidden md:flex items-center justify-center">
+                {xp > 0 ? (
+                  <span className={`text-sm font-bold ${
+                    xpDiscount > 0 ? 'text-green-400' : 'text-yellow-400'
+                  }`}>
+                    {xpDiscount > 0 ? effectiveXp : maxXp}
+                  </span>
+                ) : (
+                  <span className="text-gray-500 text-sm">—</span>
+                )}
+              </div>
+
+              {/* Icons column - desktop only */}
+              <div className="hidden md:flex justify-center items-center">
+                <SkillIconsDisplay card={card} />
+              </div>
+
+              {/* Quantity controls - compact */}
+              <div className="flex items-center gap-0.5 flex-shrink-0">
                 <button
-                  onClick={() => onRemove(card.code)}
+                  onClick={(e) => { e.stopPropagation(); onRemove(card.code); }}
                   disabled={isSignature}
-                  className="p-1 text-gray-400 hover:text-white hover:bg-yugi-border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-1 text-gray-400 hover:text-white hover:bg-cc-border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   title={isSignature ? 'Cannot remove signature cards' : 'Remove copy'}
                 >
-                  <Minus className="w-4 h-4" />
+                  <Minus className="w-3 h-3" />
                 </button>
 
-                <span className="w-6 text-center text-white text-sm font-medium">
+                <span className="w-4 text-center text-white text-xs font-bold">
                   {quantity}
                 </span>
 
                 <button
-                  onClick={() => onAdd(card.code)}
+                  onClick={(e) => { e.stopPropagation(); onAdd(card.code); }}
                   disabled={isAtLimit || isSignature || isWeakness}
-                  className="p-1 text-gray-400 hover:text-white hover:bg-yugi-border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-1 text-gray-400 hover:text-white hover:bg-cc-border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   title={
                     isAtLimit
                       ? 'Maximum copies reached'
@@ -817,17 +1038,16 @@ function CardTypeSection({
                       : 'Add copy'
                   }
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3 h-3" />
                 </button>
 
-                {/* Move to side deck button */}
                 {onMoveToSide && !isSignature && !isWeakness && (
                   <button
-                    onClick={() => onMoveToSide(card.code)}
-                    className="p-1 ml-1 text-orange-400 hover:text-orange-300 hover:bg-orange-900/30 rounded transition-colors"
+                    onClick={(e) => { e.stopPropagation(); onMoveToSide(card.code); }}
+                    className="p-1 text-orange-400 hover:text-orange-300 hover:bg-orange-900/30 rounded transition-colors"
                     title="Move to side deck"
                   >
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3 h-3" />
                   </button>
                 )}
               </div>

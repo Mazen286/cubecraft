@@ -65,16 +65,21 @@ function formatCardText(text: string): string {
 }
 
 // Single skill icon component - renders one icon
-export function SingleSkillIcon({ type }: { type: 'willpower' | 'intellect' | 'combat' | 'agility' | 'wild' }) {
+// size: 'sm' = 16px, 'md' = 20px (default)
+export function SingleSkillIcon({ type, size = 'md' }: { type: 'willpower' | 'intellect' | 'combat' | 'agility' | 'wild'; size?: 'sm' | 'md' }) {
+  const sizeClass = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
+  const fontSize = size === 'sm' ? '16px' : '20px';
+  const lineHeight = size === 'sm' ? '16px' : '20px';
+
   if (type === 'wild') {
     return (
       <span
-        className="inline-block w-5 h-5 text-center"
+        className={`inline-block ${sizeClass} text-center`}
         style={{
           fontFamily: 'ArkhamIcons',
-          fontSize: '20px',
+          fontSize,
           color: '#fff',
-          lineHeight: '20px',
+          lineHeight,
         }}
         title="wild"
       >
@@ -94,14 +99,14 @@ export function SingleSkillIcon({ type }: { type: 'willpower' | 'intellect' | 'c
     <img
       src={iconPaths[type]}
       alt={type}
-      className="w-5 h-5"
+      className={sizeClass}
       title={type}
     />
   );
 }
 
 // Helper to generate flat array of skill icons for a card
-function getSkillIconsArray(card: { skill_willpower?: number; skill_intellect?: number; skill_combat?: number; skill_agility?: number; skill_wild?: number }) {
+export function getSkillIconsArray(card: { skill_willpower?: number; skill_intellect?: number; skill_combat?: number; skill_agility?: number; skill_wild?: number }) {
   const icons: { type: 'willpower' | 'intellect' | 'combat' | 'agility' | 'wild'; key: string }[] = [];
 
   for (let i = 0; i < (card.skill_willpower || 0); i++) {
@@ -121,6 +126,19 @@ function getSkillIconsArray(card: { skill_willpower?: number; skill_intellect?: 
   }
 
   return icons;
+}
+
+// Group skill icons by type with counts (for compact display)
+export function getGroupedSkillIcons(card: { skill_willpower?: number; skill_intellect?: number; skill_combat?: number; skill_agility?: number; skill_wild?: number }): { type: 'willpower' | 'intellect' | 'combat' | 'agility' | 'wild'; count: number }[] {
+  const groups: { type: 'willpower' | 'intellect' | 'combat' | 'agility' | 'wild'; count: number }[] = [];
+
+  if (card.skill_willpower) groups.push({ type: 'willpower', count: card.skill_willpower });
+  if (card.skill_intellect) groups.push({ type: 'intellect', count: card.skill_intellect });
+  if (card.skill_combat) groups.push({ type: 'combat', count: card.skill_combat });
+  if (card.skill_agility) groups.push({ type: 'agility', count: card.skill_agility });
+  if (card.skill_wild) groups.push({ type: 'wild', count: card.skill_wild });
+
+  return groups;
 }
 
 type SortField = 'name' | 'type' | 'faction' | 'cost' | 'xp';
@@ -333,8 +351,8 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
     >
       {children}
       <span className="flex flex-col -space-y-1">
-        <ChevronUp className={`w-3 h-3 ${sortField === field && sortDirection === 'asc' ? 'text-gold-400' : 'text-gray-600'}`} />
-        <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-gold-400' : 'text-gray-600'}`} />
+        <ChevronUp className={`w-3 h-3 ${sortField === field && sortDirection === 'asc' ? 'text-gold-400' : 'text-gray-400'}`} />
+        <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-gold-400' : 'text-gray-400'}`} />
       </span>
     </button>
   );
@@ -379,7 +397,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
 
   return (
     <div
-      className={`relative flex flex-col h-full transition-colors ${
+      className={`relative flex flex-col h-full min-h-0 transition-colors ${
         isDragOver ? 'bg-red-900/20 ring-2 ring-red-500/50 ring-inset' : ''
       }`}
       onDragOver={handleDragOver}
@@ -391,6 +409,9 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
         ref={dragImageRef}
         alt=""
         className="fixed -left-[9999px] w-[100px] h-[140px] object-cover rounded pointer-events-none"
+        onError={(e) => {
+          e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="140" viewBox="0 0 100 140"%3E%3Crect fill="%231a1a2e" width="100" height="140"/%3E%3Ctext fill="%23666" font-family="sans-serif" font-size="12" x="50" y="70" text-anchor="middle"%3ENo Image%3C/text%3E%3C/svg%3E';
+        }}
       />
 
       {/* Drop indicator for removing cards */}
@@ -403,7 +424,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
       )}
 
       {/* Search header */}
-      <div className="flex-shrink-0 p-3 border-b border-yugi-border">
+      <div className="flex-shrink-0 p-3 border-b border-cc-border">
         {/* Search input */}
         <div className="relative mb-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -412,7 +433,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
             placeholder="Search cards..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-9 pr-16 py-2 bg-yugi-darker border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50 text-sm"
+            className="w-full pl-9 pr-16 py-2 bg-cc-darker border border-cc-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50 text-sm"
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {query && (
@@ -444,7 +465,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
               <button
                 onClick={() => setFactionFilter(null)}
                 className={`px-2 py-1 rounded transition-colors ${
-                  !factionFilter ? 'bg-gold-600/20 text-gold-400' : 'bg-yugi-darker text-gray-400 hover:text-white'
+                  !factionFilter ? 'bg-gold-600/20 text-gold-400' : 'bg-cc-darker text-gray-400 hover:text-white'
                 }`}
               >
                 All
@@ -471,7 +492,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
                     key={type}
                     onClick={() => setTypeFilter(typeFilter === type ? null : type)}
                     className={`px-2 py-1 rounded transition-colors capitalize ${
-                      typeFilter === type ? 'bg-gold-600/20 text-gold-400' : 'bg-yugi-darker text-gray-400 hover:text-white'
+                      typeFilter === type ? 'bg-gold-600/20 text-gold-400' : 'bg-cc-darker text-gray-400 hover:text-white'
                     }`}
                   >
                     {type}
@@ -484,7 +505,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
                     key={level}
                     onClick={() => setLevelFilter(levelFilter === level ? null : level)}
                     className={`px-2 py-1 rounded transition-colors ${
-                      levelFilter === level ? 'bg-gold-600/20 text-gold-400' : 'bg-yugi-darker text-gray-400 hover:text-white'
+                      levelFilter === level ? 'bg-gold-600/20 text-gold-400' : 'bg-cc-darker text-gray-400 hover:text-white'
                     }`}
                   >
                     {level === '0' ? 'Lv0' : level === '1-2' ? 'Lv1-2' : 'Lv3+'}
@@ -526,7 +547,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
       </div>
 
       {/* Table header */}
-      <div className="flex-shrink-0 grid grid-cols-[1fr_60px_50px_40px_70px_80px] gap-1 px-3 py-2 bg-yugi-darker border-b border-yugi-border text-xs text-gray-400 font-medium">
+      <div className="flex-shrink-0 grid grid-cols-[1fr_60px_50px_40px_70px_80px] gap-1 px-3 py-2 bg-cc-darker border-b border-cc-border text-xs text-gray-400 font-medium">
         <SortHeader field="name">Name</SortHeader>
         <SortHeader field="type">Type</SortHeader>
         <SortHeader field="cost">Cost</SortHeader>
@@ -571,12 +592,12 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
                     e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
                   }
                 }}
-                className={`absolute top-0 left-0 w-full grid grid-cols-[1fr_60px_50px_40px_70px_80px] gap-1 px-3 py-2 items-center cursor-grab active:cursor-grabbing transition-colors border-b border-yugi-border/50 text-sm ${
+                className={`absolute top-0 left-0 w-full grid grid-cols-[1fr_60px_50px_40px_70px_80px] gap-1 px-3 py-2 items-center cursor-grab active:cursor-grabbing transition-colors border-b border-cc-border/50 text-sm ${
                   isSelected
                     ? 'bg-gold-600/20'
                     : quantity > 0
                     ? 'bg-green-900/20 hover:bg-green-900/30'
-                    : 'hover:bg-yugi-darker'
+                    : 'hover:bg-cc-darker'
                 }`}
                 style={{
                   height: `${virtualRow.size}px`,
@@ -656,10 +677,32 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
 
 // Card preview panel component using BottomSheet
 export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; onClose: () => void }) {
+  const {
+    getCardQuantity,
+    getSideCardQuantity,
+    getIgnoreDeckSizeCount,
+    setIgnoreDeckSizeCount,
+    getXpDiscount,
+    setXpDiscount,
+    removeCard,
+    moveToSide,
+    moveToMain,
+    removeFromSide,
+  } = useArkhamDeckBuilder();
+
   if (!card) return null;
 
   const imageUrl = arkhamCardService.getArkhamCardImageUrl(card.code);
   const factionColor = FACTION_COLORS[card.faction_code];
+  const quantityInDeck = getCardQuantity(card.code);
+  const quantityInSide = getSideCardQuantity(card.code);
+  const isInMainDeck = quantityInDeck > 0;
+  const isInSideDeck = quantityInSide > 0;
+  const ignoredCount = getIgnoreDeckSizeCount(card.code);
+  const xpDiscount = getXpDiscount(card.code);
+  const cardXp = card.xp || 0;
+  const maxXp = cardXp * quantityInDeck;
+  const effectiveXp = Math.max(0, maxXp - xpDiscount);
 
   const title = (
     <>
@@ -668,6 +711,125 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
     </>
   );
 
+  // Footer with deck options and action buttons
+  const footer = (isInMainDeck || isInSideDeck) ? (
+    <div className="space-y-3">
+      {/* Action buttons */}
+      <div className="flex items-center justify-center gap-2">
+        {isInMainDeck && (
+          <>
+            <button
+              onClick={() => {
+                moveToSide(card.code);
+                onClose();
+              }}
+              className="px-4 py-2 bg-orange-600/20 text-orange-400 hover:bg-orange-600/40 rounded-lg text-sm font-medium transition-colors"
+            >
+              Move to Side Deck
+            </button>
+            <button
+              onClick={() => {
+                removeCard(card.code);
+                onClose();
+              }}
+              className="px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600/40 rounded-lg text-sm font-medium transition-colors"
+            >
+              Remove
+            </button>
+          </>
+        )}
+        {isInSideDeck && (
+          <>
+            <button
+              onClick={() => {
+                moveToMain(card.code);
+                onClose();
+              }}
+              className="px-4 py-2 bg-green-600/20 text-green-400 hover:bg-green-600/40 rounded-lg text-sm font-medium transition-colors"
+            >
+              Move to Main Deck
+            </button>
+            <button
+              onClick={() => {
+                removeFromSide(card.code);
+                onClose();
+              }}
+              className="px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600/40 rounded-lg text-sm font-medium transition-colors"
+            >
+              Remove from Side
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* XP Discount control - only for cards with XP > 0 in main deck */}
+      {isInMainDeck && cardXp > 0 && (
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-sm text-gray-300">XP Discount:</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setXpDiscount(card.code, Math.max(0, xpDiscount - 1))}
+                disabled={xpDiscount <= 0}
+                className="w-8 h-8 rounded-lg text-lg font-bold transition-colors bg-cc-darker text-gray-400 hover:text-white hover:bg-cc-border disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                −
+              </button>
+              <span className={`w-12 text-center text-lg font-bold ${xpDiscount > 0 ? 'text-green-400' : 'text-gray-400'}`}>
+                {xpDiscount}
+              </span>
+              <button
+                onClick={() => setXpDiscount(card.code, Math.min(maxXp, xpDiscount + 1))}
+                disabled={xpDiscount >= maxXp}
+                className="w-8 h-8 rounded-lg text-lg font-bold transition-colors bg-cc-darker text-gray-400 hover:text-white hover:bg-cc-border disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                +
+              </button>
+            </div>
+          </div>
+          {/* Show effective XP cost */}
+          <div className="text-xs text-gray-400">
+            {xpDiscount > 0 ? (
+              <span>
+                Total: <span className="line-through text-gray-500">{maxXp}</span>{' '}
+                <span className="text-green-400 font-bold">{effectiveXp} XP</span>
+                <span className="text-green-400 ml-1">(saved {xpDiscount})</span>
+              </span>
+            ) : (
+              <span>Total: {maxXp} XP</span>
+            )}
+          </div>
+          <span className="text-xs text-gray-500">(Arcane Research, Down the Rabbit Hole, etc.)</span>
+        </div>
+      )}
+
+      {/* Deck size exclusion control - per-copy, only for main deck cards */}
+      {isInMainDeck && (
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-sm text-gray-300">
+            Copies that don't count:
+          </span>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: quantityInDeck + 1 }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIgnoreDeckSizeCount(card.code, i)}
+                className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                  ignoredCount === i
+                    ? 'bg-orange-500 text-black'
+                    : 'bg-cc-darker text-gray-400 hover:text-white hover:bg-cc-border'
+                }`}
+              >
+                {i}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-gray-500">(story assets, bonded, etc.)</span>
+        </div>
+      )}
+    </div>
+  ) : undefined;
+
   return (
     <BottomSheet
       isOpen={true}
@@ -675,6 +837,7 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
       title={title}
       centerTitle
       dismissOnAnyKey
+      footer={footer}
     >
       <div className="p-4 pb-8 overflow-y-auto max-h-[80vh]">
         <div className="max-w-4xl mx-auto">
@@ -686,6 +849,9 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
               alt={card.name}
               className="rounded-lg shadow-2xl"
               style={{ width: 'min(85vw, 350px)', height: 'auto' }}
+              onError={(e) => {
+                e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="420" viewBox="0 0 300 420"%3E%3Crect fill="%231a1a2e" width="300" height="420" rx="8"/%3E%3Ctext fill="%23666" font-family="sans-serif" font-size="16" x="150" y="210" text-anchor="middle"%3EImage not available%3C/text%3E%3C/svg%3E';
+              }}
             />
 
             {/* Card info below */}
@@ -701,6 +867,9 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
                 alt={card.name}
                 className="rounded-lg shadow-2xl"
                 style={{ width: '300px', height: 'auto' }}
+                onError={(e) => {
+                  e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="420" viewBox="0 0 300 420"%3E%3Crect fill="%231a1a2e" width="300" height="420" rx="8"/%3E%3Ctext fill="%23666" font-family="sans-serif" font-size="16" x="150" y="210" text-anchor="middle"%3EImage not available%3C/text%3E%3C/svg%3E';
+                }}
               />
             </div>
 
@@ -731,11 +900,11 @@ function CardInfoSection({ card, factionColor }: { card: ArkhamCard; factionColo
         >
           {FACTION_NAMES[card.faction_code]}
         </span>
-        <span className="px-3 py-1 bg-yugi-card rounded text-sm text-gray-300 capitalize">
+        <span className="px-3 py-1 bg-cc-card rounded text-sm text-gray-300 capitalize">
           {card.type_code}
         </span>
         {card.slot && (
-          <span className="px-3 py-1 bg-yugi-card rounded text-sm text-gray-300">
+          <span className="px-3 py-1 bg-cc-card rounded text-sm text-gray-300">
             {card.slot}
           </span>
         )}
@@ -781,7 +950,7 @@ function CardInfoSection({ card, factionColor }: { card: ArkhamCard; factionColo
 
       {/* Card text */}
       {card.text && (
-        <div className="pt-3 border-t border-yugi-border">
+        <div className="pt-3 border-t border-cc-border">
           <div
             className="text-sm text-gray-300 leading-relaxed"
             dangerouslySetInnerHTML={{ __html: formatCardText(card.text) }}
@@ -872,7 +1041,7 @@ export function InvestigatorPreviewPanel({
 
             {/* Flip controls */}
             <div className="mt-4 flex items-center gap-4">
-              <span className="px-3 py-1 bg-yugi-darker rounded text-white text-sm font-medium">
+              <span className="px-3 py-1 bg-cc-darker rounded text-white text-sm font-medium">
                 {backImageFailed ? 'No back available' : showBack ? 'Back' : 'Front'}
               </span>
 
@@ -902,7 +1071,7 @@ export function InvestigatorPreviewPanel({
               >
                 {FACTION_NAMES[investigator.faction_code]}
               </span>
-              <span className="px-3 py-1 bg-yugi-card rounded text-sm text-gray-300">
+              <span className="px-3 py-1 bg-cc-card rounded text-sm text-gray-300">
                 Investigator
               </span>
             </div>
@@ -944,7 +1113,7 @@ export function InvestigatorPreviewPanel({
 
             {/* Card text */}
             {investigator.text && (
-              <div className="pt-4 border-t border-yugi-border">
+              <div className="pt-4 border-t border-cc-border">
                 <div
                   className="text-sm text-gray-300 leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: formatCardText(investigator.text) }}
@@ -954,7 +1123,7 @@ export function InvestigatorPreviewPanel({
 
             {/* Back text */}
             {investigator.back_text && (
-              <div className="pt-4 border-t border-yugi-border">
+              <div className="pt-4 border-t border-cc-border">
                 <p className="text-xs text-gray-500 mb-2">Back side:</p>
                 <div
                   className="text-sm text-gray-300 leading-relaxed"
