@@ -1,15 +1,81 @@
 import { useMemo, useState, useRef } from 'react';
-import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Award } from 'lucide-react';
+import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Award, FileText } from 'lucide-react';
+import { marked } from 'marked';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
 import { isExceptional, isMyriad } from '../../services/arkhamDeckValidation';
 import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon, getSkillIconsArray } from './ArkhamCardTable';
 import { DrawSimulator } from './DrawSimulator';
 import { DeckStats } from './DeckStats';
+import { BottomSheet } from '../ui/BottomSheet';
 import type { DeckStatsFilter } from './DeckStats';
 import type { ArkhamCard, Investigator } from '../../types/arkham';
 import { FACTION_COLORS } from '../../config/games/arkham';
 import type { ArkhamCardFilters } from './ArkhamCardTable';
+
+// Configure marked for safe rendering
+marked.setOptions({
+  breaks: true, // Convert \n to <br>
+  gfm: true, // GitHub Flavored Markdown
+});
+
+// Convert ArkhamDB card links to full URLs
+function convertArkhamDBLinks(html: string): string {
+  // Convert /card/XXXXX links to full ArkhamDB URLs
+  return html.replace(/href="\/card\/(\d+)"/g, 'href="https://arkhamdb.com/card/$1" target="_blank" rel="noopener noreferrer"');
+}
+
+// Parse markdown and convert to HTML
+function parseNotesMarkdown(text: string): string {
+  if (!text) return '';
+
+  // Parse markdown to HTML
+  const html = marked.parse(text) as string;
+
+  // Convert ArkhamDB-style card links
+  return convertArkhamDBLinks(html);
+}
+
+// ArkhamDB icon CSS styles (inline for the preview)
+const ARKHAMDB_ICON_STYLES = `
+  .icon-guardian, .icon-seeker, .icon-rogue, .icon-mystic, .icon-survivor, .icon-neutral,
+  .icon-willpower, .icon-intellect, .icon-combat, .icon-agility, .icon-wild,
+  .icon-elder_sign, .icon-skull, .icon-cultist, .icon-tablet, .icon-elder_thing, .icon-auto_fail,
+  .icon-unique, .icon-per_investigator, .icon-action, .icon-fast, .icon-free, .icon-reaction,
+  .icon-health, .icon-sanity, .icon-damage, .icon-horror {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    background-size: contain;
+    background-repeat: no-repeat;
+    vertical-align: middle;
+    margin: 0 0.1em;
+  }
+  .icon-guardian { color: #2b80c5; }
+  .icon-seeker { color: #ec8426; }
+  .icon-rogue { color: #107116; }
+  .icon-mystic { color: #6d2aa4; }
+  .icon-survivor { color: #cc3038; }
+  .icon-neutral { color: #808080; }
+  .icon-willpower::before { content: "⟡"; color: #6d2aa4; }
+  .icon-intellect::before { content: "❂"; color: #ec8426; }
+  .icon-combat::before { content: "⚔"; color: #cc3038; }
+  .icon-agility::before { content: "⟐"; color: #107116; }
+  .icon-wild::before { content: "?"; font-weight: bold; }
+  .icon-action::before { content: "➤"; }
+  .icon-fast::before { content: "⚡"; }
+  .icon-reaction::before { content: "↩"; }
+  .icon-free::before { content: "⚬"; }
+  .icon-elder_sign::before { content: "☆"; color: #2b80c5; }
+  .icon-skull::before { content: "💀"; }
+  .icon-cultist::before { content: "🗡"; }
+  .icon-auto_fail::before { content: "⊗"; color: #cc3038; }
+  .icon-unique::before { content: "★"; color: #daa520; }
+  .icon-health::before { content: "♥"; color: #cc3038; }
+  .icon-sanity::before { content: "🧠"; }
+  .icon-damage::before { content: "💥"; }
+  .icon-horror::before { content: "😱"; }
+`;
 
 interface ArkhamDeckPanelProps {
   onCrossFilter?: (filters: ArkhamCardFilters) => void;
@@ -57,6 +123,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     getIgnoreDeckSizeCount,
     addXP,
     setXP,
+    setMetadata,
   } = useArkhamDeckBuilder();
 
   const [selectedCard, setSelectedCard] = useState<ArkhamCard | null>(null);
@@ -70,6 +137,9 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
   const [xpToAdd, setXpToAdd] = useState(0);
   const [showEditXP, setShowEditXP] = useState(false);
   const [editXpEarned, setEditXpEarned] = useState(0);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notesText, setNotesText] = useState('');
+  const [notesPreview, setNotesPreview] = useState(false);
 
   // Drag image ref for side deck cards
   const sideDragImageRef = useRef<HTMLImageElement>(null);
@@ -109,6 +179,18 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     setEditXpEarned(state.xpEarned);
     setShowEditXP(true);
     setShowAddXP(false);
+  };
+
+  // Handle deck notes
+  const openNotes = () => {
+    setNotesText(state.deckDescription);
+    setNotesPreview(false);
+    setShowNotes(true);
+  };
+
+  const saveNotes = () => {
+    setMetadata({ description: notesText });
+    setShowNotes(false);
   };
 
   // Add random basic weakness
@@ -571,13 +653,23 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
             <span className="sm:hidden">Simulate</span>
           </button>
         </div>
-        <div className="mt-2">
+        <div className="flex gap-2 mt-2">
           <button
             onClick={() => setShowDeckStats(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-600/50 text-blue-300 text-sm font-medium rounded-lg transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-600/50 text-blue-300 text-sm font-medium rounded-lg transition-colors"
           >
             <BarChart3 className="w-4 h-4" />
-            <span>Deck Statistics</span>
+            <span className="hidden sm:inline">Deck Statistics</span>
+            <span className="sm:hidden">Stats</span>
+          </button>
+          <button
+            onClick={openNotes}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-600/50 text-amber-300 text-sm font-medium rounded-lg transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Deck Notes</span>
+            <span className="sm:hidden">Notes</span>
+            {state.deckDescription && <span className="w-2 h-2 rounded-full bg-amber-400" />}
           </button>
         </div>
       </div>
@@ -934,6 +1026,121 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
         onClose={() => setShowDeckStats(false)}
         onFilter={onCrossFilter ? handleStatsFilter : undefined}
       />
+
+      {/* Deck notes */}
+      <BottomSheet
+        isOpen={showNotes}
+        onClose={() => setShowNotes(false)}
+        title="Deck Notes"
+        maxHeight={95}
+        footer={
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowNotes(false)}
+              className="flex-1 px-4 py-2 text-gray-300 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveNotes}
+              className="flex-1 px-4 py-2 bg-gold-600 hover:bg-gold-500 text-black font-medium rounded-lg transition-colors"
+            >
+              Save Notes
+            </button>
+          </div>
+        }
+      >
+        <div className="px-4 pt-2 pb-4">
+          {/* Edit/Preview tabs */}
+          <div className="flex gap-1 mb-3">
+            <button
+              onClick={() => setNotesPreview(false)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                !notesPreview
+                  ? 'bg-gold-600 text-black'
+                  : 'bg-cc-border text-gray-400 hover:text-white'
+              }`}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => setNotesPreview(true)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                notesPreview
+                  ? 'bg-gold-600 text-black'
+                  : 'bg-cc-border text-gray-400 hover:text-white'
+              }`}
+            >
+              Preview
+            </button>
+            <span className="ml-auto text-xs text-gray-500 self-center">
+              {notesText.length.toLocaleString()} chars • Markdown + HTML
+            </span>
+          </div>
+
+          {notesPreview ? (
+            /* Preview mode - render Markdown as HTML */
+            <div
+              className="overflow-auto bg-cc-dark border border-cc-border rounded-lg"
+              style={{ height: 'calc(95vh - 180px)' }}
+            >
+              <style dangerouslySetInnerHTML={{ __html: ARKHAMDB_ICON_STYLES }} />
+              <div
+                className="p-5 prose prose-invert max-w-none
+                  prose-headings:text-gold-400 prose-headings:font-semibold prose-headings:border-b prose-headings:border-cc-border prose-headings:pb-2
+                  prose-h1:text-2xl prose-h1:mt-6 prose-h1:mb-4
+                  prose-h2:text-xl prose-h2:mt-5 prose-h2:mb-3
+                  prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2 prose-h3:border-none
+                  prose-h4:text-base prose-h4:mt-3 prose-h4:mb-2 prose-h4:border-none
+                  prose-p:text-gray-300 prose-p:my-3 prose-p:leading-relaxed
+                  prose-a:text-blue-400 prose-a:font-medium hover:prose-a:text-blue-300 prose-a:no-underline hover:prose-a:underline
+                  prose-strong:text-white prose-strong:font-semibold
+                  prose-em:text-gray-200
+                  prose-ul:text-gray-300 prose-ul:my-3 prose-ul:pl-6
+                  prose-ol:text-gray-300 prose-ol:my-3 prose-ol:pl-6
+                  prose-li:my-1.5 prose-li:leading-relaxed
+                  prose-blockquote:border-l-4 prose-blockquote:border-gold-500 prose-blockquote:bg-cc-darker prose-blockquote:text-gray-400 prose-blockquote:not-italic prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:my-4 prose-blockquote:rounded-r
+                  prose-code:text-amber-400 prose-code:bg-cc-darker prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
+                  prose-pre:bg-cc-darker prose-pre:border prose-pre:border-cc-border prose-pre:rounded-lg prose-pre:my-4
+                  prose-hr:border-cc-border prose-hr:my-8
+                  prose-table:w-full prose-table:my-4 prose-table:border-collapse
+                  prose-thead:bg-cc-darker
+                  prose-th:text-gold-400 prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:border prose-th:border-cc-border
+                  prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-cc-border prose-td:text-gray-300
+                  prose-tr:even:bg-cc-darker/50
+                  prose-img:rounded-lg prose-img:my-4 prose-img:max-w-full
+                  [&_center]:text-center [&_center]:my-4
+                  [&_.icon-guardian]:text-blue-500 [&_.icon-seeker]:text-orange-500 [&_.icon-rogue]:text-green-500 [&_.icon-mystic]:text-purple-500 [&_.icon-survivor]:text-red-500"
+                dangerouslySetInnerHTML={{ __html: notesText ? parseNotesMarkdown(notesText) : '<p class="text-gray-500 text-center py-8">No notes to preview</p>' }}
+              />
+            </div>
+          ) : (
+            /* Edit mode - large textarea */
+            <textarea
+              value={notesText}
+              onChange={(e) => setNotesText(e.target.value)}
+              placeholder={`Paste your deck guide from ArkhamDB here...
+
+Supports full Markdown formatting:
+# Headers
+**Bold** and _italic_ text
+[Card links](/card/01001) → converted to ArkhamDB URLs
+* Bullet lists
+1. Numbered lists
+
+| Tables | Work |
+|--------|------|
+| Too    | !    |
+
+---
+
+Plus any HTML tags for advanced formatting.`}
+              style={{ height: 'calc(95vh - 180px)' }}
+              className="w-full p-4 bg-cc-dark border border-cc-border rounded-lg text-white text-sm font-mono placeholder:text-gray-600 resize-none focus:outline-none focus:border-gold-500/50 leading-relaxed"
+            />
+          )}
+        </div>
+      </BottomSheet>
     </div>
   );
 }
