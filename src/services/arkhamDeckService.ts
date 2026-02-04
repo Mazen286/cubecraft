@@ -32,6 +32,10 @@ interface ArkhamDeckRow {
   creator_id: string | null;
   is_public: boolean;
   tags: string | null;
+  arkhamdb_id: number | null;
+  arkhamdb_decklist_id: number | null;
+  arkhamdb_url: string | null;
+  last_synced_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +62,10 @@ interface ArkhamDeckInsert {
   creator_id?: string | null;
   is_public?: boolean;
   tags?: string | null;
+  arkhamdb_id?: number | null;
+  arkhamdb_decklist_id?: number | null;
+  arkhamdb_url?: string | null;
+  last_synced_at?: string | null;
 }
 
 // Cache for loaded decks
@@ -162,6 +170,10 @@ export const arkhamDeckService = {
       tabooId?: number;
       isPublic?: boolean;
       tags?: string;
+      arkhamdbId?: number;
+      arkhamdbDecklistId?: number;
+      arkhamdbUrl?: string;
+      lastSyncedAt?: string;
     }
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -210,6 +222,22 @@ export const arkhamDeckService = {
 
       if (updates.tags !== undefined) {
         updateData.tags = updates.tags;
+      }
+
+      if (updates.arkhamdbId !== undefined) {
+        updateData.arkhamdb_id = updates.arkhamdbId;
+      }
+
+      if (updates.arkhamdbDecklistId !== undefined) {
+        updateData.arkhamdb_decklist_id = updates.arkhamdbDecklistId;
+      }
+
+      if (updates.arkhamdbUrl !== undefined) {
+        updateData.arkhamdb_url = updates.arkhamdbUrl;
+      }
+
+      if (updates.lastSyncedAt !== undefined) {
+        updateData.last_synced_at = updates.lastSyncedAt;
       }
 
       // Update meta if any meta fields are provided
@@ -330,6 +358,10 @@ export const arkhamDeckService = {
         ignoreDeckSizeSlots: row.meta?.ignoreDeckSizeSlots || undefined,
         xpDiscountSlots: row.meta?.xpDiscountSlots || undefined,
         taboo_id: row.taboo_id || undefined,
+        arkhamdb_id: row.arkhamdb_id || undefined,
+        arkhamdb_decklist_id: row.arkhamdb_decklist_id || undefined,
+        arkhamdb_url: row.arkhamdb_url || undefined,
+        last_synced_at: row.last_synced_at || undefined,
         creator_id: row.creator_id || undefined,
         is_public: row.is_public,
         created_at: row.created_at,

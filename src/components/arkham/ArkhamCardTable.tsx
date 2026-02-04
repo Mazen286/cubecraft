@@ -3,6 +3,7 @@ import { Search, X, Plus, Minus, Filter, ChevronUp, ChevronDown, RotateCw } from
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
+import { isExceptional, isMyriad } from '../../services/arkhamDeckValidation';
 import { BottomSheet } from '../ui/BottomSheet';
 import type { ArkhamCard, ArkhamFaction, ArkhamCardType, Investigator } from '../../types/arkham';
 import { FACTION_COLORS, FACTION_NAMES } from '../../config/games/arkham';
@@ -305,7 +306,10 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
           comparison = (a.cost ?? 99) - (b.cost ?? 99);
           break;
         case 'xp':
-          comparison = (a.xp || 0) - (b.xp || 0);
+          // Account for Exceptional cards (double XP cost)
+          const aXp = (a.xp || 0) * (isExceptional(a) ? 2 : 1);
+          const bXp = (b.xp || 0) * (isExceptional(b) ? 2 : 1);
+          comparison = aXp - bXp;
           break;
       }
 
@@ -580,7 +584,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
                 onMouseEnter={() => {
                   // Preload image on hover for smooth drag preview
                   if (dragImageRef.current) {
-                    dragImageRef.current.src = arkhamCardService.getArkhamCardImageUrl(card.code);
+                    dragImageRef.current.src = arkhamCardService.getCardImageUrl(card);
                   }
                 }}
                 onDragStart={(e) => {
@@ -625,9 +629,9 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
                   {card.cost === null ? '—' : card.cost === -2 ? 'X' : card.cost}
                 </span>
 
-                {/* XP */}
-                <span className={card.xp ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
-                  {card.xp || '—'}
+                {/* XP - doubled for Exceptional cards */}
+                <span className={card.xp ? (isExceptional(card) ? 'text-red-400 font-medium' : 'text-yellow-400 font-medium') : 'text-gray-500'}>
+                  {card.xp ? (isExceptional(card) ? card.xp * 2 : card.xp) : '—'}
                 </span>
 
                 {/* Skill icons - flat list, one icon at a time */}
@@ -692,7 +696,7 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
 
   if (!card) return null;
 
-  const imageUrl = arkhamCardService.getArkhamCardImageUrl(card.code);
+  const imageUrl = arkhamCardService.getCardImageUrl(card);
   const factionColor = FACTION_COLORS[card.faction_code];
   const quantityInDeck = getCardQuantity(card.code);
   const quantityInSide = getSideCardQuantity(card.code);
@@ -701,7 +705,10 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
   const ignoredCount = getIgnoreDeckSizeCount(card.code);
   const xpDiscount = getXpDiscount(card.code);
   const cardXp = card.xp || 0;
-  const maxXp = cardXp * quantityInDeck;
+  // Exceptional cards cost double XP, Myriad cards only cost XP once
+  const exceptionalMult = isExceptional(card) ? 2 : 1;
+  const copies = isMyriad(card) ? 1 : quantityInDeck;
+  const maxXp = cardXp * copies * exceptionalMult;
   const effectiveXp = Math.max(0, maxXp - xpDiscount);
 
   const title = (
@@ -918,8 +925,9 @@ function CardInfoSection({ card, factionColor }: { card: ArkhamCard; factionColo
           </span>
         )}
         {(card.xp || 0) > 0 && (
-          <span className="text-yellow-400">
-            Level: <span className="font-medium">{card.xp}</span>
+          <span className={isExceptional(card) ? 'text-red-400' : 'text-yellow-400'}>
+            XP: <span className="font-medium">{isExceptional(card) ? (card.xp || 0) * 2 : card.xp}</span>
+            {isMyriad(card) && <span className="ml-1 text-xs text-blue-400">(Myriad)</span>}
           </span>
         )}
         {card.health && (

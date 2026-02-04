@@ -14,7 +14,7 @@ import type { Card } from '../types/card';
 
 const API_BASE = 'https://arkhamdb.com/api/public';
 const CACHE_KEY = 'arkham_cards_cache';
-const CACHE_VERSION = 'v2'; // Bumped to include encounter/story cards
+const CACHE_VERSION = 'v4'; // Bumped to include exceptional/myriad boolean fields
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CacheData {
@@ -31,9 +31,25 @@ let investigatorsCache: Investigator[] | null = null;
 
 /**
  * Get image URL for an Arkham card
+ * Uses the card's imagesrc if available, otherwise constructs from code
  */
-export function getArkhamCardImageUrl(code: string): string {
-  return `https://arkhamdb.com/bundles/cards/${code}.png`;
+export function getArkhamCardImageUrl(code: string, imagesrc?: string): string {
+  // If card has imagesrc from API, use it (prepend domain if relative path)
+  if (imagesrc) {
+    if (imagesrc.startsWith('http')) {
+      return imagesrc;
+    }
+    return `https://arkhamdb.com${imagesrc}`;
+  }
+  // Fallback to constructed URL - newer cards without imagesrc use .jpg
+  return `https://arkhamdb.com/bundles/cards/${code}.jpg`;
+}
+
+/**
+ * Get image URL from a card object (uses imagesrc when available)
+ */
+export function getCardImageUrl(card: ArkhamCard): string {
+  return getArkhamCardImageUrl(card.code, card.imagesrc);
 }
 
 /**
@@ -212,11 +228,16 @@ function getAllDeckableCards(): ArkhamCard[] {
 
   // Include more card types for campaign use
   const deckableCards = cardsCache.filter(card => {
-    // Exclude hidden cards
-    if (card.hidden) return false;
-
     // Exclude investigators
     if (card.type_code === 'investigator') return false;
+
+    // Story cards and story assets are allowed even if hidden
+    // (many signature and campaign cards have hidden: true)
+    const isStoryCard = card.type_code === 'story';
+    const isStoryAsset = card.type_code === 'asset' && card.encounter_code;
+
+    // For regular cards, exclude hidden ones
+    if (card.hidden && !isStoryCard && !isStoryAsset) return false;
 
     // Exclude pure encounter cards (enemies, treacheries from encounter sets, locations)
     // But KEEP story assets even if they have encounter_code
@@ -572,4 +593,5 @@ export const arkhamCardService = {
   refreshCache,
   toCard,
   getArkhamCardImageUrl,
+  getCardImageUrl,
 };

@@ -2,7 +2,7 @@ import { useMemo, useState, useRef } from 'react';
 import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3, ArrowRight, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
-import { calculateXpCost } from '../../services/arkhamDeckValidation';
+import { calculateXpCost, isExceptional, isMyriad } from '../../services/arkhamDeckValidation';
 import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon, getSkillIconsArray } from './ArkhamCardTable';
 import { DrawSimulator } from './DrawSimulator';
 import { DeckStats } from './DeckStats';
@@ -489,7 +489,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
         ) : (
           <div className="space-y-3">
             {/* Column headers - sticky at top, responsive */}
-            <div className="grid grid-cols-[28px_1fr_auto] md:grid-cols-[32px_1fr_44px_72px_auto] gap-2 px-2 py-1.5 text-xs text-gray-400 font-medium bg-cc-darker border-b border-cc-border rounded-t sticky top-0 z-10">
+            <div className="grid grid-cols-[32px_1fr_auto] md:grid-cols-[32px_1fr_48px_80px_100px] gap-2 px-2 py-1.5 text-xs text-gray-400 font-medium bg-cc-darker border-b border-cc-border rounded-t sticky top-0 z-10">
               <span></span>
               <span>Card</span>
               <span className="hidden md:block text-center">XP</span>
@@ -656,6 +656,10 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                   {sideCards.map(({ card, quantity }) => {
                     const factionColor = FACTION_COLORS[card.faction_code];
                     const xp = card.xp || 0;
+                    // Calculate actual XP cost for Exceptional/Myriad
+                    const exceptionalMult = isExceptional(card) ? 2 : 1;
+                    const copies = isMyriad(card) ? 1 : quantity;
+                    const totalXp = xp * copies * exceptionalMult;
                     const skillIcons = getSkillIconsArray(card);
 
                     return (
@@ -665,7 +669,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                         onMouseEnter={() => {
                           // Preload image on hover for smooth drag preview
                           if (sideDragImageRef.current) {
-                            sideDragImageRef.current.src = arkhamCardService.getArkhamCardImageUrl(card.code);
+                            sideDragImageRef.current.src = arkhamCardService.getCardImageUrl(card);
                           }
                         }}
                         onDragStart={(e) => {
@@ -701,8 +705,13 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                           {card.is_unique && (
                             <span className="text-yellow-400 text-[10px] flex-shrink-0">★</span>
                           )}
-                          {xp > 0 && (
-                            <span className="text-yellow-400 text-[10px] flex-shrink-0">({xp})</span>
+                          {totalXp > 0 && (
+                            <span className={`text-[10px] flex-shrink-0 ${isExceptional(card) ? 'text-red-400' : 'text-yellow-400'}`}>
+                              ({totalXp}{isExceptional(card) ? '×2' : ''})
+                            </span>
+                          )}
+                          {isMyriad(card) && (
+                            <span className="text-blue-400 text-[9px] flex-shrink-0">M</span>
                           )}
 
                           {/* Skill icons - compact */}
@@ -916,8 +925,13 @@ function CardTypeSection({
           const factionColor = FACTION_COLORS[card.faction_code];
           const xp = card.xp || 0;
           const xpDiscount = getXpDiscount?.(card.code) || 0;
-          const maxXp = xp * quantity;
+          // Exceptional cards cost double XP, Myriad cards only cost XP once
+          const exceptionalMultiplier = isExceptional(card) ? 2 : 1;
+          const copies = isMyriad(card) ? 1 : quantity;
+          const maxXp = xp * copies * exceptionalMultiplier;
           const effectiveXp = Math.max(0, maxXp - xpDiscount);
+          const cardIsExceptional = isExceptional(card);
+          const cardIsMyriad = isMyriad(card);
           const excludedCount = getIgnoreDeckSizeCount?.(card.code) || 0;
 
           const canDrag = !isSignature && !isWeakness;
@@ -929,7 +943,7 @@ function CardTypeSection({
               onClick={() => onCardClick(card)}
               onMouseEnter={() => {
                 if (dragImageRef.current && canDrag) {
-                  dragImageRef.current.src = arkhamCardService.getArkhamCardImageUrl(card.code);
+                  dragImageRef.current.src = arkhamCardService.getCardImageUrl(card);
                 }
               }}
               onDragStart={(e) => {
@@ -943,7 +957,7 @@ function CardTypeSection({
                   e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
                 }
               }}
-              className={`grid grid-cols-[28px_1fr_auto] md:grid-cols-[32px_1fr_44px_72px_auto] gap-2 px-2 py-1.5 items-center rounded bg-cc-darker hover:bg-cc-dark transition-colors cursor-pointer ${
+              className={`grid grid-cols-[32px_1fr_auto] md:grid-cols-[32px_1fr_48px_80px_100px] gap-2 px-2 py-1.5 items-center rounded bg-cc-darker hover:bg-cc-dark transition-colors cursor-pointer ${
                 isSignature ? 'border border-purple-500/50' : ''
               } ${xpDiscount > 0 ? 'ring-1 ring-green-500/30' : ''} ${excludedCount > 0 ? 'ring-1 ring-orange-500/30' : ''} ${canDrag ? 'active:cursor-grabbing' : ''}`}
             >
@@ -987,6 +1001,16 @@ function CardTypeSection({
                 {excludedCount > 0 && (
                   <span className="text-[9px] px-1 bg-orange-500/30 text-orange-400 rounded flex-shrink-0">
                     NC
+                  </span>
+                )}
+                {cardIsExceptional && (
+                  <span className="text-[9px] px-1 bg-red-500/30 text-red-300 rounded flex-shrink-0" title="Exceptional - costs double XP">
+                    2×
+                  </span>
+                )}
+                {cardIsMyriad && (
+                  <span className="text-[9px] px-1 bg-blue-500/30 text-blue-300 rounded flex-shrink-0" title="Myriad - XP paid once for all copies">
+                    M
                   </span>
                 )}
               </div>

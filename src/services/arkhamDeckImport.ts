@@ -50,6 +50,9 @@ export function parseArkhamDBText(text: string): ImportedDeck {
     warnings: [],
   };
 
+  // Track potential investigator names that need disambiguation
+  let ambiguousInvestigatorName: string | null = null;
+
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   let isFirstLine = true;
 
@@ -80,7 +83,11 @@ export function parseArkhamDBText(text: string): ImportedDeck {
       // Check if this line contains an investigator name (often in format "Investigator Name - Deck Title")
       const investigatorFromTitle = tryExtractInvestigatorFromTitle(line);
       if (investigatorFromTitle) {
-        result.investigatorCode = investigatorFromTitle.code;
+        if (investigatorFromTitle.ambiguous && investigatorFromTitle.name) {
+          ambiguousInvestigatorName = investigatorFromTitle.name;
+        } else if (investigatorFromTitle.code) {
+          result.investigatorCode = investigatorFromTitle.code;
+        }
         result.name = line; // Keep the full line as deck name
         continue;
       }
@@ -93,6 +100,7 @@ export function parseArkhamDBText(text: string): ImportedDeck {
       if (card) {
         if (card.type_code === 'investigator') {
           result.investigatorCode = card.code;
+          ambiguousInvestigatorName = null; // Resolved
         } else {
           result.slots[card.code] = (result.slots[card.code] || 0) + 1;
         }
@@ -122,6 +130,7 @@ export function parseArkhamDBText(text: string): ImportedDeck {
       if (card) {
         if (card.type_code === 'investigator') {
           result.investigatorCode = card.code;
+          ambiguousInvestigatorName = null; // Resolved
         } else {
           result.slots[card.code] = (result.slots[card.code] || 0) + quantity;
         }
@@ -133,6 +142,13 @@ export function parseArkhamDBText(text: string): ImportedDeck {
     const card = arkhamCardService.findCardByName(name, xp);
 
     if (!card) {
+      // Check if this might be an investigator with multiple versions
+      const matchingInvestigators = findAllInvestigatorsByName(name);
+      if (matchingInvestigators.length > 1) {
+        // Ambiguous investigator - we'll resolve after parsing all cards
+        ambiguousInvestigatorName = name;
+        continue;
+      }
       result.warnings.push(`Card not found: "${name}"${xp !== undefined ? ` (${xp})` : ''}`);
       continue;
     }
@@ -140,10 +156,28 @@ export function parseArkhamDBText(text: string): ImportedDeck {
 
     // Check if it's an investigator
     if (card.type_code === 'investigator') {
-      result.investigatorCode = card.code;
+      // Check if there are multiple investigators with this name
+      const matchingInvestigators = findAllInvestigatorsByName(name);
+      if (matchingInvestigators.length > 1) {
+        // Ambiguous investigator - we'll resolve after parsing all cards
+        ambiguousInvestigatorName = name;
+      } else {
+        result.investigatorCode = card.code;
+        ambiguousInvestigatorName = null; // Resolved
+      }
     } else {
       // Add to slots
       result.slots[card.code] = (result.slots[card.code] || 0) + quantity;
+    }
+  }
+
+  // If we have an ambiguous investigator, resolve it based on deck card factions
+  if (ambiguousInvestigatorName && !result.investigatorCode) {
+    const resolvedInvestigator = resolveAmbiguousInvestigator(ambiguousInvestigatorName, result.slots);
+    if (resolvedInvestigator) {
+      result.investigatorCode = resolvedInvestigator;
+    } else {
+      result.warnings.push(`Could not determine which version of "${ambiguousInvestigatorName}" to use. Please specify faction.`);
     }
   }
 
@@ -153,8 +187,30 @@ export function parseArkhamDBText(text: string): ImportedDeck {
 /**
  * Try to extract investigator from a deck title line
  * e.g., "Jacqueline Fine - My Cool Deck" or "Agnes Baker"
+ * Also handles: "Agatha Crane (Seeker) [10001]" for disambiguation
+ * Returns ambiguous: true if multiple investigators match and we need to resolve by deck contents
  */
-function tryExtractInvestigatorFromTitle(line: string): { code: string } | null {
+function tryExtractInvestigatorFromTitle(line: string): { code: string; ambiguous?: boolean; name?: string } | null {
+  // First check for explicit card code in brackets, e.g., "[10001]"
+  const codeMatch = line.match(/\[(\d{5})\]/);
+  if (codeMatch) {
+    const card = arkhamCardService.getCard(codeMatch[1]);
+    if (card?.type_code === 'investigator') {
+      return { code: card.code };
+    }
+  }
+
+  // Check for faction in parentheses, e.g., "Agatha Crane (Seeker)"
+  const factionMatch = line.match(/^(.+?)\s+\((guardian|seeker|rogue|mystic|survivor|neutral)\)/i);
+  if (factionMatch) {
+    const name = factionMatch[1].trim();
+    const faction = factionMatch[2].toLowerCase();
+    const card = findInvestigatorByNameAndFaction(name, faction);
+    if (card) {
+      return { code: card.code };
+    }
+  }
+
   // Try splitting by common separators
   const separators = [' - ', ' – ', ' | ', ': '];
 
@@ -162,20 +218,120 @@ function tryExtractInvestigatorFromTitle(line: string): { code: string } | null 
     if (line.includes(sep)) {
       const parts = line.split(sep);
       const possibleName = parts[0].trim();
-      const card = arkhamCardService.findCardByName(possibleName);
-      if (card?.type_code === 'investigator') {
-        return { code: card.code };
+
+      // Check for faction in the first part
+      const partFactionMatch = possibleName.match(/^(.+?)\s+\((guardian|seeker|rogue|mystic|survivor|neutral)\)/i);
+      if (partFactionMatch) {
+        const name = partFactionMatch[1].trim();
+        const faction = partFactionMatch[2].toLowerCase();
+        const card = findInvestigatorByNameAndFaction(name, faction);
+        if (card) {
+          return { code: card.code };
+        }
+      }
+
+      // Check if this investigator name has multiple versions
+      const matchingInvestigators = findAllInvestigatorsByName(possibleName);
+      if (matchingInvestigators.length > 1) {
+        return { code: '', ambiguous: true, name: possibleName };
+      }
+      if (matchingInvestigators.length === 1) {
+        return { code: matchingInvestigators[0].code };
       }
     }
   }
 
-  // Try the whole line as investigator name
-  const card = arkhamCardService.findCardByName(line);
-  if (card?.type_code === 'investigator') {
-    return { code: card.code };
+  // Try the whole line as investigator name (without any faction/code info)
+  const cleanLine = line.replace(/\s*\[.*?\]\s*/g, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+
+  // Check if this investigator name has multiple versions
+  const matchingInvestigators = findAllInvestigatorsByName(cleanLine);
+  if (matchingInvestigators.length > 1) {
+    return { code: '', ambiguous: true, name: cleanLine };
+  }
+  if (matchingInvestigators.length === 1) {
+    return { code: matchingInvestigators[0].code };
   }
 
   return null;
+}
+
+/**
+ * Find all investigators matching a name (for detecting ambiguous cases)
+ */
+function findAllInvestigatorsByName(name: string): Array<{ code: string; faction_code: string }> {
+  const investigators = arkhamCardService.getInvestigators();
+  const normalizedName = name.toLowerCase().trim();
+
+  return investigators.filter(inv => {
+    const invName = inv.name.toLowerCase();
+    return invName === normalizedName;
+  }).map(inv => ({ code: inv.code, faction_code: inv.faction_code }));
+}
+
+/**
+ * Find an investigator by name and faction
+ * Used to disambiguate investigators with multiple versions (e.g., Agatha Crane)
+ */
+function findInvestigatorByNameAndFaction(name: string, faction: string): { code: string; type_code: string } | null {
+  const investigators = arkhamCardService.getInvestigators();
+  const normalizedName = name.toLowerCase().trim();
+  const normalizedFaction = faction.toLowerCase();
+
+  const match = investigators.find(inv => {
+    const invName = inv.name.toLowerCase();
+    return invName === normalizedName && inv.faction_code === normalizedFaction;
+  });
+
+  if (match) {
+    return { code: match.code, type_code: 'investigator' };
+  }
+
+  return null;
+}
+
+/**
+ * Resolve an ambiguous investigator by analyzing the factions of cards in the deck
+ * Returns the investigator code that best matches the deck's faction composition
+ */
+function resolveAmbiguousInvestigator(investigatorName: string, slots: Record<string, number>): string | null {
+  const matchingInvestigators = findAllInvestigatorsByName(investigatorName);
+  if (matchingInvestigators.length === 0) return null;
+  if (matchingInvestigators.length === 1) return matchingInvestigators[0].code;
+
+  // Count faction occurrences in the deck
+  const factionCounts: Record<string, number> = {};
+
+  for (const [code, qty] of Object.entries(slots)) {
+    const card = arkhamCardService.getCard(code);
+    if (card && card.faction_code && card.faction_code !== 'neutral') {
+      factionCounts[card.faction_code] = (factionCounts[card.faction_code] || 0) + qty;
+      // Also count secondary faction if present
+      if (card.faction2_code) {
+        factionCounts[card.faction2_code] = (factionCounts[card.faction2_code] || 0) + qty;
+      }
+    }
+  }
+
+  // Find the investigator whose faction has the most cards
+  let bestMatch: { code: string; faction_code: string } | null = null;
+  let bestScore = -1;
+
+  for (const inv of matchingInvestigators) {
+    const score = factionCounts[inv.faction_code] || 0;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = inv;
+    }
+  }
+
+  // If we found a clear winner, use it
+  if (bestMatch && bestScore > 0) {
+    return bestMatch.code;
+  }
+
+  // If no clear winner (e.g., all neutral cards), just pick the first one
+  return matchingInvestigators[0].code;
 }
 
 /**

@@ -25,12 +25,15 @@ function mustKeepInOpeningHand(card: ArkhamCard): boolean {
 export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
   const { state } = useArkhamDeckBuilder();
 
-  // Build the deck array from slots
+  // Build the deck array from slots (excluding permanents which start in play)
   const fullDeck = useMemo(() => {
     const deck: ArkhamCard[] = [];
     for (const [code, quantity] of Object.entries(state.slots)) {
       const card = arkhamCardService.getCard(code);
       if (card) {
+        // Skip permanent cards - they don't go in the deck, they start in play
+        if (card.permanent) continue;
+
         // Add card multiple times based on quantity
         for (let i = 0; i < quantity; i++) {
           deck.push(card);
@@ -319,7 +322,7 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
                           className="block"
                         >
                           <img
-                            src={arkhamCardService.getArkhamCardImageUrl(card.code)}
+                            src={arkhamCardService.getCardImageUrl(card)}
                             alt={card.name}
                             className="w-24 h-32 sm:w-28 sm:h-36 object-cover rounded-lg shadow-lg"
                           />
@@ -447,7 +450,7 @@ function CardDetailBottomSheet({
   onToggleMulligan: () => void;
   onClose: () => void;
 }) {
-  const imageUrl = arkhamCardService.getArkhamCardImageUrl(card.code);
+  const imageUrl = arkhamCardService.getCardImageUrl(card);
   const factionColor = FACTION_COLORS[card.faction_code];
   const cardIsWeakness = card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness';
 

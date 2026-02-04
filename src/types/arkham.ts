@@ -180,6 +180,8 @@ export interface ArkhamCard {
   illustrator?: string;
   is_unique?: boolean;
   permanent?: boolean;
+  exceptional?: boolean;
+  myriad?: boolean;
   double_sided?: boolean;
   back_link?: string;
   back_text?: string;
@@ -298,6 +300,12 @@ export interface ArkhamDeckData {
 
   /** Taboo list ID */
   taboo_id?: number;
+
+  /** ArkhamDB sync fields */
+  arkhamdb_id?: number;          // Private deck ID on ArkhamDB
+  arkhamdb_decklist_id?: number; // Published decklist ID (for TTS)
+  arkhamdb_url?: string;         // URL to deck on ArkhamDB
+  last_synced_at?: string;       // ISO timestamp of last sync
 
   /** Metadata */
   creator_id?: string;

@@ -303,7 +303,7 @@ export function MyDecks() {
                 return (
                   <div
                     key={deck.id}
-                    className={`bg-cc-darker rounded-lg border border-cc-border overflow-hidden transition-opacity ${
+                    className={`bg-cc-darker rounded-lg border border-cc-border transition-opacity ${
                       isDeleting ? 'opacity-50' : ''
                     }`}
                   >
@@ -417,7 +417,7 @@ export function MyDecks() {
                 return (
                   <div
                     key={deck.id}
-                    className={`bg-cc-darker rounded-lg border border-cc-border overflow-hidden transition-opacity ${
+                    className={`bg-cc-darker rounded-lg border border-cc-border transition-opacity ${
                       isDeleting ? 'opacity-50' : ''
                     }`}
                   >

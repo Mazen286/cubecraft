@@ -69,6 +69,12 @@ export interface ArkhamDeckBuilderState {
     xpSpent: number;
   }>;
   historyIndex: number;
+
+  // ArkhamDB sync state
+  arkhamdbId: number | null;
+  arkhamdbDecklistId: number | null;
+  arkhamdbUrl: string | null;
+  lastSyncedAt: string | null;
 }
 
 /**
@@ -103,12 +109,30 @@ type ArkhamDeckBuilderAction =
   | { type: 'SET_IGNORE_DECK_SIZE_COUNT'; payload: { code: string; count: number } }
   | { type: 'MOVE_TO_MAIN'; payload: { code: string } }
   // XP discount tracking
-  | { type: 'SET_XP_DISCOUNT'; payload: { code: string; discount: number } };
+  | { type: 'SET_XP_DISCOUNT'; payload: { code: string; discount: number } }
+  // ArkhamDB sync
+  | { type: 'SET_ARKHAMDB_IDS'; payload: { arkhamdbId?: number; decklistId?: number; url?: string } };
 
 const MAX_HISTORY = 50;
 
 /**
+ * Check if a card is Exceptional (costs double XP)
+ */
+function isExceptional(card: { text?: string }): boolean {
+  return card.text?.includes('Exceptional.') ?? false;
+}
+
+/**
+ * Check if a card is Myriad (only costs XP once regardless of copies)
+ */
+function isMyriad(card: { text?: string }): boolean {
+  return card.text?.includes('Myriad.') ?? false;
+}
+
+/**
  * Calculate XP cost with discounts applied (e.g., from Arcane Research)
+ * - Exceptional cards cost double their printed XP
+ * - Myriad cards only cost XP once regardless of copies
  */
 function calculateXpCostWithDiscounts(
   slots: Record<string, number>,
@@ -119,8 +143,12 @@ function calculateXpCostWithDiscounts(
   for (const [code, quantity] of Object.entries(slots)) {
     const card = arkhamCardService.getCard(code);
     if (card && card.xp) {
+      // Exceptional cards cost double XP
+      const exceptionalMultiplier = isExceptional(card) ? 2 : 1;
+      // Myriad cards only cost XP once, otherwise multiply by quantity
+      const copies = isMyriad(card) ? 1 : quantity;
       // Base XP for all copies
-      const baseXp = card.xp * quantity;
+      const baseXp = card.xp * copies * exceptionalMultiplier;
       totalXp += baseXp;
 
       // Subtract discount (capped at base XP - can't go negative per card)
@@ -426,6 +454,10 @@ function arkhamDeckBuilderReducer(
         error: null,
         history: [],
         historyIndex: -1,
+        arkhamdbId: deckData.arkhamdb_id || null,
+        arkhamdbDecklistId: deckData.arkhamdb_decklist_id || null,
+        arkhamdbUrl: deckData.arkhamdb_url || null,
+        lastSyncedAt: deckData.last_synced_at || null,
       };
 
       return {
@@ -735,6 +767,18 @@ function arkhamDeckBuilderReducer(
       };
     }
 
+    case 'SET_ARKHAMDB_IDS': {
+      const { arkhamdbId, decklistId, url } = action.payload;
+      return {
+        ...state,
+        arkhamdbId: arkhamdbId ?? state.arkhamdbId,
+        arkhamdbDecklistId: decklistId ?? state.arkhamdbDecklistId,
+        arkhamdbUrl: url ?? state.arkhamdbUrl,
+        lastSyncedAt: new Date().toISOString(),
+        isDirty: true,
+      };
+    }
+
     default:
       return state;
   }
@@ -767,6 +811,10 @@ function createInitialState(): ArkhamDeckBuilderState {
     error: null,
     history: [],
     historyIndex: -1,
+    arkhamdbId: null,
+    arkhamdbDecklistId: null,
+    arkhamdbUrl: null,
+    lastSyncedAt: null,
   };
 }
 
@@ -828,6 +876,9 @@ interface ArkhamDeckBuilderContextValue {
   // XP discount tracking (for Arcane Research, Down the Rabbit Hole, etc.)
   getXpDiscount: (code: string) => number;
   setXpDiscount: (code: string, discount: number) => void;
+
+  // ArkhamDB sync
+  setArkhamdbIds: (ids: { arkhamdbId?: number; decklistId?: number; url?: string }) => void;
 
   // Utilities
   clearError: () => void;
@@ -1125,6 +1176,10 @@ export function ArkhamDeckBuilderProvider({
           xpDiscountSlots: state.xpDiscountSlots,
           xpEarned: state.xpEarned,
           xpSpent: state.xpSpent,
+          arkhamdbId: state.arkhamdbId || undefined,
+          arkhamdbDecklistId: state.arkhamdbDecklistId || undefined,
+          arkhamdbUrl: state.arkhamdbUrl || undefined,
+          lastSyncedAt: state.lastSyncedAt || undefined,
         });
 
         if (result.error) {
@@ -1226,6 +1281,10 @@ export function ArkhamDeckBuilderProvider({
     dispatch({ type: 'SET_XP_DISCOUNT', payload: { code, discount } });
   }, []);
 
+  const setArkhamdbIds = useCallback((ids: { arkhamdbId?: number; decklistId?: number; url?: string }) => {
+    dispatch({ type: 'SET_ARKHAMDB_IDS', payload: ids });
+  }, []);
+
   const investigators = state.isInitialized ? arkhamCardService.getInvestigators() : [];
 
   const value: ArkhamDeckBuilderContextValue = {
@@ -1264,6 +1323,7 @@ export function ArkhamDeckBuilderProvider({
     setIgnoreDeckSizeCount,
     getXpDiscount,
     setXpDiscount,
+    setArkhamdbIds,
   };
 
   return (

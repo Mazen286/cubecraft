@@ -12,6 +12,7 @@ import {
   Layers,
   Search,
   Trash2,
+  Cloud,
 } from 'lucide-react';
 import {
   ArkhamDeckBuilderProvider,
@@ -23,7 +24,11 @@ import { ArkhamDeckPanel } from '../components/arkham/ArkhamDeckPanel';
 import { XPTracker } from '../components/arkham/XPTracker';
 import { UpgradeDialog } from '../components/arkham/UpgradeDialog';
 import { ImportDeckModal } from '../components/arkham/ImportDeckModal';
+import { ArkhamDBConnectionStatus } from '../components/arkham/ArkhamDBConnectionStatus';
+import { SyncDeckModal } from '../components/arkham/SyncDeckModal';
+import { ExportDeckModal } from '../components/arkham/ExportDeckModal';
 import { FACTION_COLORS, FACTION_NAMES } from '../config/games/arkham';
+import { isOAuthConfigured } from '../services/arkhamDBAuth';
 import { arkhamCardService } from '../services/arkhamCardService';
 import { arkhamDeckService } from '../services/arkhamDeckService';
 import type { ArkhamCardFilters } from '../components/arkham/ArkhamCardTable';
@@ -52,6 +57,7 @@ function ArkhamDeckBuilderContent() {
     canUndo,
     canRedo,
     getTotalCardCount,
+    setArkhamdbIds,
   } = useArkhamDeckBuilder();
 
   const [showImportModal, setShowImportModal] = useState(false);
@@ -80,6 +86,9 @@ function ArkhamDeckBuilderContent() {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isArkhamDBConnected, setIsArkhamDBConnected] = useState(false);
 
   // Clear import param from URL after reading it
   useEffect(() => {
@@ -306,6 +315,14 @@ function ArkhamDeckBuilderContent() {
 
             {/* Right: Stats and actions */}
             <div className="flex items-center gap-2">
+              {/* ArkhamDB connection status */}
+              <div className="hidden sm:block">
+                <ArkhamDBConnectionStatus
+                  compact
+                  onConnectionChange={setIsArkhamDBConnected}
+                />
+              </div>
+
               {/* XP display */}
               {state.xpEarned > 0 && (
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-cc-dark rounded-lg">
@@ -381,6 +398,46 @@ function ArkhamDeckBuilderContent() {
                       <Upload className="w-4 h-4" />
                       Import Deck
                     </button>
+                    {state.deckId && isOAuthConfigured() && (
+                      isArkhamDBConnected ? (
+                        <button
+                          onClick={() => {
+                            setShowSyncModal(true);
+                            setShowMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-cc-border transition-colors"
+                        >
+                          <Cloud className="w-4 h-4" />
+                          Sync to ArkhamDB
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                            // Trigger connect flow
+                            import('../services/arkhamDBAuth').then(({ initiateAuth }) => {
+                              initiateAuth();
+                            });
+                          }}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-cc-border transition-colors"
+                        >
+                          <Cloud className="w-4 h-4" />
+                          Connect ArkhamDB
+                        </button>
+                      )
+                    )}
+                    {state.deckId && (
+                      <button
+                        onClick={() => {
+                          setShowExportModal(true);
+                          setShowMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-cc-border transition-colors"
+                      >
+                        <Upload className="w-4 h-4 rotate-180" />
+                        Export for ArkhamDB
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setShowUpgradeDialog(true);
@@ -543,6 +600,56 @@ function ArkhamDeckBuilderContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Export for ArkhamDB Modal */}
+      {showExportModal && state.investigator && (
+        <ExportDeckModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          deckName={state.deckName}
+          investigatorCode={state.investigator.code}
+          slots={state.slots}
+        />
+      )}
+
+      {/* ArkhamDB Sync Modal */}
+      {showSyncModal && state.investigator && (
+        <SyncDeckModal
+          isOpen={showSyncModal}
+          onClose={() => setShowSyncModal(false)}
+          deck={{
+            id: state.deckId || '',
+            name: state.deckName,
+            description: state.deckDescription,
+            investigator_code: state.investigator.code,
+            investigator_name: state.investigator.name,
+            xp_earned: state.xpEarned,
+            xp_spent: state.xpSpent,
+            version: state.version,
+            slots: state.slots,
+            sideSlots: state.sideSlots,
+            ignoreDeckSizeSlots: state.ignoreDeckSizeSlots,
+            xpDiscountSlots: state.xpDiscountSlots,
+            taboo_id: undefined,
+            arkhamdb_id: state.arkhamdbId || undefined,
+            arkhamdb_decklist_id: state.arkhamdbDecklistId || undefined,
+            arkhamdb_url: state.arkhamdbUrl || undefined,
+            last_synced_at: state.lastSyncedAt || undefined,
+            is_public: false,
+            created_at: '',
+            updated_at: '',
+          }}
+          onSyncComplete={(updates) => {
+            setArkhamdbIds({
+              arkhamdbId: updates.arkhamdb_id,
+              decklistId: updates.arkhamdb_decklist_id,
+              url: updates.arkhamdb_url,
+            });
+            // Trigger save to persist the ArkhamDB IDs
+            saveDeck();
+          }}
+        />
       )}
     </div>
   );

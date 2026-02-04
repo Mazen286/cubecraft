@@ -9,6 +9,7 @@ import { Search, X, Plus, Minus, ChevronUp, ChevronDown, Info } from 'lucide-rea
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
+import { isExceptional } from '../../services/arkhamDeckValidation';
 import type { ArkhamCard, ArkhamFaction, ArkhamCardType } from '../../types/arkham';
 import { FACTION_COLORS, FACTION_NAMES } from '../../config/games/arkham';
 
@@ -91,7 +92,10 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
           comparison = (a.cost ?? 99) - (b.cost ?? 99);
           break;
         case 'xp':
-          comparison = (a.xp || 0) - (b.xp || 0);
+          // Account for Exceptional cards (double XP cost)
+          const aXp = (a.xp || 0) * (isExceptional(a) ? 2 : 1);
+          const bXp = (b.xp || 0) * (isExceptional(b) ? 2 : 1);
+          comparison = aXp - bXp;
           break;
       }
 
@@ -293,7 +297,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
                 draggable
                 onMouseEnter={() => {
                   if (dragImageRef.current) {
-                    dragImageRef.current.src = arkhamCardService.getArkhamCardImageUrl(card.code);
+                    dragImageRef.current.src = arkhamCardService.getCardImageUrl(card);
                   }
                 }}
                 onDragStart={(e) => {
@@ -341,9 +345,9 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
                   {card.cost === null ? '—' : card.cost === -2 ? 'X' : card.cost}
                 </span>
 
-                {/* XP */}
-                <span className={card.xp ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
-                  {card.xp || '—'}
+                {/* XP - doubled for Exceptional cards */}
+                <span className={card.xp ? (isExceptional(card) ? 'text-red-400 font-medium' : 'text-yellow-400 font-medium') : 'text-gray-500'}>
+                  {card.xp ? (isExceptional(card) ? card.xp * 2 : card.xp) : '—'}
                 </span>
 
                 {/* Quantity controls */}

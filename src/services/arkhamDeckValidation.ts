@@ -114,7 +114,23 @@ export function canIncludeCard(
 }
 
 /**
+ * Check if a card is Exceptional (costs double XP)
+ */
+export function isExceptional(card: { exceptional?: boolean }): boolean {
+  return card.exceptional === true;
+}
+
+/**
+ * Check if a card is Myriad (only costs XP once regardless of copies)
+ */
+export function isMyriad(card: { myriad?: boolean }): boolean {
+  return card.myriad === true;
+}
+
+/**
  * Calculate total XP cost of cards in deck
+ * - Exceptional cards cost double their printed XP
+ * - Myriad cards only cost XP once regardless of copies
  */
 export function calculateXpCost(slots: Record<string, number>): number {
   let totalXp = 0;
@@ -122,7 +138,10 @@ export function calculateXpCost(slots: Record<string, number>): number {
   for (const [code, quantity] of Object.entries(slots)) {
     const card = arkhamCardService.getCard(code);
     if (card && card.xp) {
-      totalXp += card.xp * quantity;
+      const exceptionalMultiplier = isExceptional(card) ? 2 : 1;
+      // Myriad cards only cost XP once, otherwise multiply by quantity
+      const copies = isMyriad(card) ? 1 : quantity;
+      totalXp += card.xp * copies * exceptionalMultiplier;
     }
   }
 
