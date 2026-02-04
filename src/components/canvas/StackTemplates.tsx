@@ -145,7 +145,7 @@ export function StackTemplates({
         <div
           className={cn(
             'absolute z-50 top-full left-0 mt-1',
-            'bg-yugi-card border border-yugi-border rounded-lg shadow-xl',
+            'bg-cc-card border border-cc-border rounded-lg shadow-xl',
             'min-w-[200px] py-1',
             'animate-in fade-in slide-in-from-top-2 duration-150'
           )}
@@ -176,7 +176,7 @@ export function StackTemplates({
           {/* Save as template */}
           {onSaveAsTemplate && (
             <>
-              <div className="h-px bg-yugi-border mx-2 my-1" />
+              <div className="h-px bg-cc-border mx-2 my-1" />
               <button
                 onClick={() => {
                   onSaveAsTemplate();

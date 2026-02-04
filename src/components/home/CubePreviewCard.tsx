@@ -130,7 +130,7 @@ export function CubePreviewCard({ cube }: CubePreviewCardProps) {
                 <div
                   key={card.id}
                   className={`absolute w-14 h-20 rounded overflow-hidden shadow-lg transition-transform hover:scale-110 hover:z-10 ${
-                    cube.gameId === 'hearthstone' ? '' : 'border border-yugi-border'
+                    cube.gameId === 'hearthstone' ? '' : 'border border-cc-border'
                   }`}
                   style={{
                     transform: `translateX(${(index - 1.5) * 38}px) rotate(${(index - 1.5) * 5}deg)`,

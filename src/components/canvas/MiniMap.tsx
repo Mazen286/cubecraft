@@ -111,7 +111,7 @@ export function MiniMap({
         className={cn(
           'fixed bottom-4 right-4 z-40',
           'px-2 py-1 text-xs',
-          'bg-yugi-card/90 border border-yugi-border rounded',
+          'bg-cc-card/90 border border-cc-border rounded',
           'text-gray-400 hover:text-white transition-colors',
           className
         )}
@@ -135,13 +135,13 @@ export function MiniMap({
     <div
       className={cn(
         'fixed bottom-4 right-4 z-40',
-        'bg-yugi-card/90 backdrop-blur-sm border border-yugi-border rounded-lg',
+        'bg-cc-card/90 backdrop-blur-sm border border-cc-border rounded-lg',
         'shadow-xl overflow-hidden',
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-2 py-1 border-b border-yugi-border">
+      <div className="flex items-center justify-between px-2 py-1 border-b border-cc-border">
         <span className="text-xs text-gray-400">Mini Map</span>
         <button
           onClick={onToggleVisibility}

@@ -121,7 +121,7 @@ export function DeckZonePanel({ zoneId, className = '' }: DeckZonePanelProps) {
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {/* Zone Header */}
-      <div className="flex-shrink-0 px-4 py-3 border-b border-yugi-border">
+      <div className="flex-shrink-0 px-4 py-3 border-b border-cc-border">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">
             {zoneConfig?.name || zoneId}
@@ -148,8 +148,8 @@ export function DeckZonePanel({ zoneId, className = '' }: DeckZonePanelProps) {
         {cards.length === 0 ? (
           <div className="flex items-center justify-center h-full text-center">
             <div>
-              <p className="text-gray-500 mb-2">No cards in {zoneConfig?.name || zoneId}</p>
-              <p className="text-xs text-gray-600">
+              <p className="text-gray-400 mb-2">No cards in {zoneConfig?.name || zoneId}</p>
+              <p className="text-xs text-gray-500">
                 Add cards from the browser or drag from other zones
               </p>
             </div>
@@ -221,7 +221,7 @@ export function DeckZonePanel({ zoneId, className = '' }: DeckZonePanelProps) {
 
                                 {/* Move dropdown menu */}
                                 {showMoveMenu === card.instanceId && (
-                                  <div className="absolute top-full left-0 mt-1 bg-yugi-darker border border-yugi-border rounded shadow-lg z-20 min-w-[100px]">
+                                  <div className="absolute top-full left-0 mt-1 bg-cc-darker border border-cc-border rounded shadow-lg z-20 min-w-[100px]">
                                     {otherZones.map(zone => (
                                       <button
                                         key={zone.id}
@@ -229,7 +229,7 @@ export function DeckZonePanel({ zoneId, className = '' }: DeckZonePanelProps) {
                                           e.stopPropagation();
                                           handleMoveCard(card.instanceId, zone.id);
                                         }}
-                                        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-yugi-border hover:text-white transition-colors"
+                                        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-cc-border hover:text-white transition-colors"
                                       >
                                         {zone.name}
                                       </button>
@@ -266,7 +266,7 @@ export function DeckZonePanel({ zoneId, className = '' }: DeckZonePanelProps) {
         onClose={() => setSelectedCard(null)}
         hideScores
         footer={selectedCard && (() => (
-          <div className="p-4 border-t border-yugi-border bg-yugi-darker">
+          <div className="p-4 border-t border-cc-border bg-cc-darker">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-400">
                 In {zoneConfig?.name || zoneId}
@@ -285,7 +285,7 @@ export function DeckZonePanel({ zoneId, className = '' }: DeckZonePanelProps) {
                     </button>
 
                     {showMoveMenu === 'sheet' && (
-                      <div className="absolute bottom-full right-0 mb-1 bg-yugi-darker border border-yugi-border rounded shadow-lg z-20 min-w-[120px]">
+                      <div className="absolute bottom-full right-0 mb-1 bg-cc-darker border border-cc-border rounded shadow-lg z-20 min-w-[120px]">
                         {otherZones.map(zone => (
                           <button
                             key={zone.id}
@@ -293,7 +293,7 @@ export function DeckZonePanel({ zoneId, className = '' }: DeckZonePanelProps) {
                               handleMoveCard(selectedCard.instanceId, zone.id);
                               setSelectedCard(null);
                             }}
-                            className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-yugi-border hover:text-white transition-colors"
+                            className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-cc-border hover:text-white transition-colors"
                           >
                             {zone.name}
                           </button>

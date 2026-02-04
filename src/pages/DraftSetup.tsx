@@ -350,7 +350,7 @@ export function DraftSetup() {
           )}
 
           {/* Upload prompt */}
-          <div className="text-center pt-2 border-t border-yugi-border/50">
+          <div className="text-center pt-2 border-t border-cc-border/50">
             <Link
               to="/my-cubes"
               className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gold-400 transition-colors"
@@ -406,7 +406,7 @@ export function DraftSetup() {
               value={playerName}
               onChange={handlePlayerNameChange}
               placeholder="Enter your name"
-              className="bg-yugi-card border border-yugi-border rounded-lg px-4 py-3 text-white text-lg focus:border-gold-500 focus:outline-none w-full sm:w-48"
+              className="bg-cc-card border border-cc-border rounded-lg px-4 py-3 text-white text-lg focus:border-gold-500 focus:outline-none w-full sm:w-48"
               maxLength={20}
             />
             <p className="text-sm text-gray-400">
@@ -421,7 +421,7 @@ export function DraftSetup() {
             <select
               value={settings.playerCount}
               onChange={(e) => updateSetting('playerCount', parseInt(e.target.value))}
-              className="bg-yugi-card border border-yugi-border rounded-lg px-4 py-3 text-white text-lg focus:border-gold-500 focus:outline-none w-full sm:w-auto"
+              className="bg-cc-card border border-cc-border rounded-lg px-4 py-3 text-white text-lg focus:border-gold-500 focus:outline-none w-full sm:w-auto"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
@@ -444,7 +444,7 @@ export function DraftSetup() {
               <select
                 value={settings.botCount}
                 onChange={(e) => updateSetting('botCount', parseInt(e.target.value))}
-                className="bg-yugi-card border border-yugi-border rounded-lg px-4 py-3 text-white text-lg focus:border-gold-500 focus:outline-none w-full sm:w-auto"
+                className="bg-cc-card border border-cc-border rounded-lg px-4 py-3 text-white text-lg focus:border-gold-500 focus:outline-none w-full sm:w-auto"
               >
                 {Array.from({ length: 12 }, (_, i) => i).map((n) => (
                   <option key={n} value={n}>
@@ -471,7 +471,7 @@ export function DraftSetup() {
                     onChange={(e) =>
                       updateSetting('auctionBiddingPoints', parseInt(e.target.value))
                     }
-                    className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
+                    className="bg-cc-card border border-cc-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
                   >
                     {[50, 75, 100, 125, 150, 200].map((n) => (
                       <option key={n} value={n}>
@@ -486,7 +486,7 @@ export function DraftSetup() {
                     onChange={(e) =>
                       updateSetting('auctionBidTimerSeconds', parseInt(e.target.value))
                     }
-                    className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
+                    className="bg-cc-card border border-cc-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
                   >
                     {AUCTION_TIMER_OPTIONS.map((n) => (
                       <option key={n} value={n}>
@@ -504,7 +504,7 @@ export function DraftSetup() {
                 onChange={(e) =>
                   updateSetting('cardsPerPlayer', parseInt(e.target.value))
                 }
-                className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
+                className="bg-cc-card border border-cc-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
               >
                 {[30, 45, 60, 75].map((n) => (
                   <option key={n} value={n}>
@@ -520,7 +520,7 @@ export function DraftSetup() {
                 onChange={(e) =>
                   updateSetting('packSize', parseInt(e.target.value))
                 }
-                className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
+                className="bg-cc-card border border-cc-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
               >
                 {[5, 10, 15, 20].map((n) => (
                   <option key={n} value={n}>
@@ -536,7 +536,7 @@ export function DraftSetup() {
                 onChange={(e) =>
                   updateSetting('burnedPerPack', parseInt(e.target.value))
                 }
-                className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
+                className="bg-cc-card border border-cc-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
               >
                 {/* For grid modes, allow more burn options (0-30). For pack mode, limit to pack size */}
                 {Array.from(
@@ -556,7 +556,7 @@ export function DraftSetup() {
                 onChange={(e) =>
                   updateSetting('timerSeconds', parseInt(e.target.value))
                 }
-                className="bg-yugi-card border border-yugi-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
+                className="bg-cc-card border border-cc-border rounded-lg px-3 py-2 text-white focus:border-gold-500 focus:outline-none"
               >
                 {(settings.mode === 'pack' ? PACK_TIMER_OPTIONS : AUCTION_TIMER_OPTIONS).map((n) => (
                   <option key={n} value={n}>
@@ -573,7 +573,7 @@ export function DraftSetup() {
                 onClick={() => updateSetting('hideScores', !settings.hideScores)}
                 className={cn(
                   'relative inline-flex h-8 w-14 items-center rounded-full transition-colors',
-                  settings.hideScores ? 'bg-gold-500' : 'bg-yugi-card border border-yugi-border'
+                  settings.hideScores ? 'bg-gold-500' : 'bg-cc-card border border-cc-border'
                 )}
               >
                 <span
@@ -593,7 +593,7 @@ export function DraftSetup() {
 
           {/* Mode-specific rules summary */}
           {settings.mode === 'auction-grid' && (
-            <div className="mt-4 bg-yugi-card/30 rounded-lg p-3 border border-yugi-border/50">
+            <div className="mt-4 bg-cc-card/30 rounded-lg p-3 border border-cc-border/50">
               <p className="text-sm text-gray-400">
                 The selector picks a card, then players bid clockwise. Highest bidder wins.
                 Pass to exit bidding (you cannot re-enter). Remaining cards per grid go to the graveyard.
@@ -601,7 +601,7 @@ export function DraftSetup() {
             </div>
           )}
           {settings.mode === 'open' && (
-            <div className="mt-4 bg-yugi-card/30 rounded-lg p-3 border border-yugi-border/50">
+            <div className="mt-4 bg-cc-card/30 rounded-lg p-3 border border-cc-border/50">
               <p className="text-sm text-gray-400">
                 Players take turns picking cards from a face-up grid. No bidding - the selector
                 keeps their chosen card. Remaining cards per grid go to the graveyard.
@@ -688,7 +688,7 @@ export function DraftSetup() {
       >
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
           {/* Overview */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
             <p className="text-sm text-gray-300">
               Pack-Based Drafting is the traditional TCG draft format. Players pick cards from packs passed around the table, building their deck one card at a time.
@@ -696,7 +696,7 @@ export function DraftSetup() {
           </div>
 
           {/* Drafting */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">1. Drafting Phase</h3>
             <ul className="text-sm text-gray-300 space-y-1">
               <li>• Each player receives a <span className="text-white font-medium">pack of cards</span></li>
@@ -707,7 +707,7 @@ export function DraftSetup() {
           </div>
 
           {/* Passing */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">2. Pack Passing</h3>
             <ul className="text-sm text-gray-300 space-y-1">
               <li>• Packs pass <span className="text-white font-medium">clockwise</span> in odd rounds</li>
@@ -717,7 +717,7 @@ export function DraftSetup() {
           </div>
 
           {/* Rulebook Link */}
-          <div className="pt-2 border-t border-yugi-border">
+          <div className="pt-2 border-t border-cc-border">
             <Link
               to="/rulebook#pack-drafting"
               className="text-gold-400 hover:text-gold-300 transition-colors text-sm"
@@ -740,7 +740,7 @@ export function DraftSetup() {
       >
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
           {/* Overview */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
             <p className="text-sm text-gray-300">
               Auction Grid Drafting is a bidding-based format where players use <span className="text-gold-400 font-medium">bidding points</span> to compete for cards across multiple grids. Budget wisely - your points must last the entire draft!
@@ -748,7 +748,7 @@ export function DraftSetup() {
           </div>
 
           {/* Selection */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">1. Selection Phase</h3>
             <ul className="text-sm text-gray-300 space-y-1">
               <li>• The <span className="text-gold-400">selecting player</span> picks a card from the grid to auction</li>
@@ -758,7 +758,7 @@ export function DraftSetup() {
           </div>
 
           {/* Bidding */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">2. Bidding Phase</h3>
             <ul className="text-sm text-gray-300 space-y-1">
               <li>• Bidding starts at <span className="text-white font-medium">0 points</span></li>
@@ -769,7 +769,7 @@ export function DraftSetup() {
           </div>
 
           {/* Winning */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">3. Winning Cards</h3>
             <ul className="text-sm text-gray-300 space-y-1">
               <li>• Highest bidder wins and <span className="text-gold-400">deducts points</span> from their total</li>
@@ -779,7 +779,7 @@ export function DraftSetup() {
           </div>
 
           {/* Rulebook Link */}
-          <div className="pt-2 border-t border-yugi-border">
+          <div className="pt-2 border-t border-cc-border">
             <Link
               to="/rulebook#auction-grid"
               className="text-gold-400 hover:text-gold-300 transition-colors text-sm"
@@ -802,7 +802,7 @@ export function DraftSetup() {
       >
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
           {/* Overview */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
             <p className="text-sm text-gray-300">
               In Open Drafting, all cards are visible to all players. Players take turns selecting cards one at a time from a shared grid.
@@ -810,7 +810,7 @@ export function DraftSetup() {
           </div>
 
           {/* Drafting */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">1. Grid Setup</h3>
             <ul className="text-sm text-gray-300 space-y-1">
               <li>• All cards in the grid are laid <span className="text-white font-medium">face-up</span></li>
@@ -820,7 +820,7 @@ export function DraftSetup() {
           </div>
 
           {/* Selection */}
-          <div className="bg-yugi-card rounded-lg p-4">
+          <div className="bg-cc-card rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">2. Selection Phase</h3>
             <ul className="text-sm text-gray-300 space-y-1">
               <li>• Players take turns picking <span className="text-gold-400">one card</span> at a time</li>
@@ -837,7 +837,7 @@ export function DraftSetup() {
           </div>
 
           {/* Rulebook Link */}
-          <div className="pt-2 border-t border-yugi-border">
+          <div className="pt-2 border-t border-cc-border">
             <Link
               to="/rulebook#grid-drafting"
               className="text-gold-400 hover:text-gold-300 transition-colors text-sm"
@@ -990,7 +990,7 @@ const CubeOption = memo(function CubeOption({
         'p-4 rounded-lg border transition-all text-left',
         selected
           ? 'border-gold-500 bg-gold-500/10'
-          : 'border-yugi-border bg-yugi-card',
+          : 'border-cc-border bg-cc-card',
         disabled && 'opacity-50'
       )}
     >
@@ -1072,7 +1072,7 @@ const ModeOption = memo(function ModeOption({
           'w-full h-full p-4 rounded-lg border transition-all text-left flex flex-col',
           selected
             ? 'border-gold-500 bg-gold-500/10'
-            : 'border-yugi-border bg-yugi-card hover:border-yugi-border',
+            : 'border-cc-border bg-cc-card hover:border-cc-border',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
       >
@@ -1143,7 +1143,7 @@ const DraftSummary = memo(function DraftSummary({
 
     return (
       <Section title="Draft Summary">
-        <div className="bg-yugi-card/50 rounded-lg p-4 border border-yugi-border">
+        <div className="bg-cc-card/50 rounded-lg p-4 border border-cc-border">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
             <div>
               <span className="text-gray-400">Total Players:</span>
@@ -1191,7 +1191,7 @@ const DraftSummary = memo(function DraftSummary({
 
   return (
     <Section title="Draft Summary">
-      <div className="bg-yugi-card/50 rounded-lg p-4 border border-yugi-border">
+      <div className="bg-cc-card/50 rounded-lg p-4 border border-cc-border">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
           <div>
             <span className="text-gray-400">Total Players:</span>

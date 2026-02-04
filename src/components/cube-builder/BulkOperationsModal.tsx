@@ -171,9 +171,9 @@ export function BulkOperationsModal({ mode, onClose }: BulkOperationsModalProps)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div className="w-full max-w-2xl max-h-[80vh] bg-yugi-dark rounded-xl border border-yugi-border flex flex-col">
+      <div className="w-full max-w-2xl max-h-[80vh] bg-cc-dark rounded-xl border border-cc-border flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+        <div className="flex items-center justify-between p-4 border-b border-cc-border">
           <div className="flex items-center gap-2">
             {mode === 'add' ? (
               <Plus className="w-5 h-5 text-green-400" />
@@ -193,7 +193,7 @@ export function BulkOperationsModal({ mode, onClose }: BulkOperationsModalProps)
         </div>
 
         {/* Filters */}
-        <div className="p-4 border-b border-yugi-border">
+        <div className="p-4 border-b border-cc-border">
           {/* Search input */}
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -202,7 +202,7 @@ export function BulkOperationsModal({ mode, onClose }: BulkOperationsModalProps)
               placeholder="Filter by name..."
               value={filters.nameSearch}
               onChange={e => setFilters(prev => ({ ...prev, nameSearch: e.target.value }))}
-              className="w-full pl-9 pr-10 py-2 bg-yugi-darker border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
+              className="w-full pl-9 pr-10 py-2 bg-cc-darker border border-cc-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
             />
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -229,7 +229,7 @@ export function BulkOperationsModal({ mode, onClose }: BulkOperationsModalProps)
                         className={`px-2 py-1 text-xs rounded transition-colors truncate max-w-[120px] ${
                           filters.types.includes(type)
                             ? 'bg-gold-600/30 text-gold-400 border border-gold-500/50'
-                            : 'bg-yugi-darker text-gray-400 hover:text-white border border-yugi-border'
+                            : 'bg-cc-darker text-gray-400 hover:text-white border border-cc-border'
                         }`}
                         title={type}
                       >
@@ -255,7 +255,7 @@ export function BulkOperationsModal({ mode, onClose }: BulkOperationsModalProps)
                         ...prev,
                         minLevel: e.target.value ? parseInt(e.target.value, 10) : undefined,
                       }))}
-                      className="w-20 px-2 py-1 bg-yugi-darker border border-yugi-border rounded text-white text-sm focus:outline-none focus:border-gold-500/50"
+                      className="w-20 px-2 py-1 bg-cc-darker border border-cc-border rounded text-white text-sm focus:outline-none focus:border-gold-500/50"
                     />
                     <span className="text-gray-500">to</span>
                     <input
@@ -268,7 +268,7 @@ export function BulkOperationsModal({ mode, onClose }: BulkOperationsModalProps)
                         ...prev,
                         maxLevel: e.target.value ? parseInt(e.target.value, 10) : undefined,
                       }))}
-                      className="w-20 px-2 py-1 bg-yugi-darker border border-yugi-border rounded text-white text-sm focus:outline-none focus:border-gold-500/50"
+                      className="w-20 px-2 py-1 bg-cc-darker border border-cc-border rounded text-white text-sm focus:outline-none focus:border-gold-500/50"
                     />
                   </div>
                 </div>
@@ -314,7 +314,7 @@ export function BulkOperationsModal({ mode, onClose }: BulkOperationsModalProps)
                 {previewData.slice(0, 50).map(({ card, count }) => (
                   <div
                     key={card.instanceId}
-                    className="flex items-center gap-2 p-2 bg-yugi-darker rounded text-sm"
+                    className="flex items-center gap-2 p-2 bg-cc-darker rounded text-sm"
                   >
                     <span className="flex-1 truncate text-gray-300">{card.name}</span>
                     {count > 1 && (
@@ -333,7 +333,7 @@ export function BulkOperationsModal({ mode, onClose }: BulkOperationsModalProps)
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-yugi-border flex justify-end gap-2">
+        <div className="p-4 border-t border-cc-border flex justify-end gap-2">
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-400 hover:text-white transition-colors"

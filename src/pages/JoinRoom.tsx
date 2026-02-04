@@ -63,7 +63,7 @@ export function JoinRoom() {
               onChange={(e) => setDisplayName(e.target.value.slice(0, 20))}
               placeholder="Enter your name"
               autoComplete="off"
-              className="w-full py-3 px-4 bg-yugi-dark border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
+              className="w-full py-3 px-4 bg-cc-dark border border-cc-border rounded-lg text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
             />
           </div>
 
@@ -80,7 +80,7 @@ export function JoinRoom() {
               placeholder="XXXX"
               autoComplete="off"
               autoFocus
-              className="w-full text-center text-4xl font-bold tracking-[0.3em] py-4 px-6 bg-yugi-dark border border-yugi-border rounded-lg text-gold-400 placeholder-gray-600 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
+              className="w-full text-center text-4xl font-bold tracking-[0.3em] py-4 px-6 bg-cc-dark border border-cc-border rounded-lg text-gold-400 placeholder-gray-600 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
             />
           </div>
 

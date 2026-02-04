@@ -33,7 +33,7 @@ export function SelectionTimer({
     <div
       className={cn(
         'p-4 rounded-lg border transition-colors',
-        isMyTurn ? 'bg-gold-500/10 border-gold-500/30' : 'bg-yugi-card border-yugi-border',
+        isMyTurn ? 'bg-gold-500/10 border-gold-500/30' : 'bg-cc-card border-cc-border',
         isCritical && isMyTurn && 'bg-red-500/20 border-red-500/50 animate-pulse'
       )}
     >
@@ -62,7 +62,7 @@ export function SelectionTimer({
       </div>
 
       {/* Progress bar */}
-      <div className="h-2 bg-yugi-dark rounded-full overflow-hidden">
+      <div className="h-2 bg-cc-dark rounded-full overflow-hidden">
         <div
           className={cn(
             'h-full transition-all duration-1000',

@@ -14,7 +14,7 @@ import type { Card } from '../types/card';
 
 const API_BASE = 'https://arkhamdb.com/api/public';
 const CACHE_KEY = 'arkham_cards_cache';
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2'; // Bumped to include encounter/story cards
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CacheData {
@@ -114,10 +114,11 @@ function saveToCache(cards: ArkhamCard[], packs: ArkhamPack[]): void {
 }
 
 /**
- * Fetch all cards from ArkhamDB API
+ * Fetch all cards from ArkhamDB API (including encounter/story cards)
  */
 async function fetchAllCards(): Promise<ArkhamCard[]> {
-  const response = await fetch(`${API_BASE}/cards/`);
+  // Use encounter=1 to include encounter cards (story assets, weaknesses, etc.)
+  const response = await fetch(`${API_BASE}/cards/?encounter=1`);
   if (!response.ok) {
     throw new Error(`Failed to fetch cards: ${response.statusText}`);
   }
@@ -163,12 +164,13 @@ async function initialize(): Promise<void> {
 }
 
 /**
- * Get all player cards (excluding encounter cards)
+ * Get all player cards (excluding encounter cards), deduplicated by name+xp
  */
 function getPlayerCards(): ArkhamCard[] {
   if (!cardsCache) return [];
 
-  return cardsCache.filter(card => {
+  // First filter to player cards only
+  const playerCards = cardsCache.filter(card => {
     // Exclude encounter cards
     if (card.encounter_code) return false;
 
@@ -179,6 +181,74 @@ function getPlayerCards(): ArkhamCard[] {
     const playerTypes: ArkhamCardType[] = ['asset', 'event', 'skill'];
     return playerTypes.includes(card.type_code);
   });
+
+  // Deduplicate by name + XP level (keep earliest release = lowest code)
+  // This handles reprints like Core Set vs Revised Core Set
+  const seen = new Map<string, ArkhamCard>();
+
+  for (const card of playerCards) {
+    const key = `${card.name}|${card.xp ?? 0}`;
+
+    if (!seen.has(key)) {
+      seen.set(key, card);
+    } else {
+      // Keep the one with the lower code (earlier release)
+      const existing = seen.get(key)!;
+      if (card.code < existing.code) {
+        seen.set(key, card);
+      }
+    }
+  }
+
+  return Array.from(seen.values());
+}
+
+/**
+ * Get ALL cards that can be added to decks (including story assets, weaknesses, etc.)
+ * Used for campaign card additions where normal deck building rules don't apply
+ */
+function getAllDeckableCards(): ArkhamCard[] {
+  if (!cardsCache) return [];
+
+  // Include more card types for campaign use
+  const deckableCards = cardsCache.filter(card => {
+    // Exclude hidden cards
+    if (card.hidden) return false;
+
+    // Exclude investigators
+    if (card.type_code === 'investigator') return false;
+
+    // Exclude pure encounter cards (enemies, treacheries from encounter sets, locations)
+    // But KEEP story assets even if they have encounter_code
+    if (card.encounter_code) {
+      // Allow story type cards and assets from encounter sets (story assets)
+      if (card.type_code !== 'story' && card.type_code !== 'asset') {
+        return false;
+      }
+    }
+
+    // Include: assets, events, skills, story, and weaknesses (treachery with subtype)
+    const deckableTypes = ['asset', 'event', 'skill', 'story', 'treachery'];
+    return deckableTypes.includes(card.type_code);
+  });
+
+  // Deduplicate by name + XP level
+  const seen = new Map<string, ArkhamCard>();
+
+  for (const card of deckableCards) {
+    const key = `${card.name}|${card.xp ?? 0}`;
+
+    if (!seen.has(key)) {
+      seen.set(key, card);
+    } else {
+      const existing = seen.get(key)!;
+      if (card.code < existing.code) {
+        seen.set(key, card);
+      }
+    }
+  }
+
+  return Array.from(seen.values());
 }
 
 /**
@@ -489,6 +559,7 @@ export const arkhamCardService = {
   initialize,
   isInitialized,
   getPlayerCards,
+  getAllDeckableCards,
   getInvestigators,
   getInvestigator,
   getCard,

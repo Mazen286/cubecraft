@@ -21,13 +21,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-yugi-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap';
+      'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-cc-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap';
 
     const variants = {
       primary:
-        'bg-gradient-to-r from-gold-500 to-gold-600 text-yugi-darker hover:from-gold-400 hover:to-gold-500 active:from-gold-600 active:to-gold-700 shadow-lg shadow-gold-500/25 hover:shadow-xl hover:shadow-gold-500/30 focus:ring-gold-400',
+        'bg-gradient-to-r from-gold-500 to-gold-600 text-cc-darker hover:from-gold-400 hover:to-gold-500 active:from-gold-600 active:to-gold-700 shadow-lg shadow-gold-500/25 hover:shadow-xl hover:shadow-gold-500/30 focus:ring-gold-400',
       secondary:
-        'bg-yugi-card border border-yugi-border text-white hover:bg-yugi-border hover:border-gold-500/50 active:bg-yugi-dark focus:ring-gold-400/50',
+        'bg-cc-card border border-cc-border text-white hover:bg-cc-border hover:border-gold-500/50 active:bg-cc-dark focus:ring-gold-400/50',
       ghost:
         'bg-transparent text-white hover:bg-white/10 active:bg-white/5 focus:ring-white/50',
     };

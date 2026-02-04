@@ -197,7 +197,7 @@ export function Home() {
             {games.map((game) => (
               <div
                 key={game.id}
-                className="flex items-center gap-4 p-4 bg-yugi-card rounded-lg border border-yugi-border"
+                className="flex items-center gap-4 p-4 bg-cc-card rounded-lg border border-cc-border"
               >
                 <div
                   className="w-12 h-12 rounded-lg flex items-center justify-center text-xl font-bold"
@@ -216,7 +216,7 @@ export function Home() {
               </div>
             ))}
           </div>
-          <div className="pt-4 border-t border-yugi-border">
+          <div className="pt-4 border-t border-cc-border">
             <Button onClick={() => { setInfoSheet(null); navigate('/setup'); }} className="w-full">
               Browse Cubes
             </Button>
@@ -237,7 +237,7 @@ export function Home() {
             Draft with friends in real-time! Create a room and share the 4-digit code.
           </p>
           <div className="space-y-4">
-            <div className="flex items-start gap-4 p-4 bg-yugi-card rounded-lg border border-yugi-border">
+            <div className="flex items-start gap-4 p-4 bg-cc-card rounded-lg border border-cc-border">
               <div className="w-10 h-10 rounded-full bg-gold-500/20 flex items-center justify-center text-gold-400 font-bold">
                 1
               </div>
@@ -248,7 +248,7 @@ export function Home() {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-4 p-4 bg-yugi-card rounded-lg border border-yugi-border">
+            <div className="flex items-start gap-4 p-4 bg-cc-card rounded-lg border border-cc-border">
               <div className="w-10 h-10 rounded-full bg-gold-500/20 flex items-center justify-center text-gold-400 font-bold">
                 2
               </div>
@@ -259,7 +259,7 @@ export function Home() {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-4 p-4 bg-yugi-card rounded-lg border border-yugi-border">
+            <div className="flex items-start gap-4 p-4 bg-cc-card rounded-lg border border-cc-border">
               <div className="w-10 h-10 rounded-full bg-gold-500/20 flex items-center justify-center text-gold-400 font-bold">
                 3
               </div>
@@ -271,7 +271,7 @@ export function Home() {
               </div>
             </div>
           </div>
-          <div className="pt-4 border-t border-yugi-border flex gap-3">
+          <div className="pt-4 border-t border-cc-border flex gap-3">
             <Button onClick={() => { setInfoSheet(null); navigate('/setup'); }} className="flex-1">
               Create Room
             </Button>
@@ -295,7 +295,7 @@ export function Home() {
             After drafting, export your deck to play in your favorite simulator.
           </p>
           <div className="space-y-4">
-            <div className="p-4 bg-yugi-card rounded-lg border border-yugi-border">
+            <div className="p-4 bg-cc-card rounded-lg border border-cc-border">
               <h4 className="font-semibold text-white mb-2">Yu-Gi-Oh!</h4>
               <div className="flex flex-wrap gap-2">
                 <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-sm">EDOPro (.ydk)</span>
@@ -303,7 +303,7 @@ export function Home() {
                 <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-sm">Dueling Book</span>
               </div>
             </div>
-            <div className="p-4 bg-yugi-card rounded-lg border border-yugi-border">
+            <div className="p-4 bg-cc-card rounded-lg border border-cc-border">
               <h4 className="font-semibold text-white mb-2">Magic: The Gathering</h4>
               <div className="flex flex-wrap gap-2">
                 <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-sm">MTGO (.txt)</span>
@@ -311,7 +311,7 @@ export function Home() {
                 <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-sm">Moxfield</span>
               </div>
             </div>
-            <div className="p-4 bg-yugi-card rounded-lg border border-yugi-border">
+            <div className="p-4 bg-cc-card rounded-lg border border-cc-border">
               <h4 className="font-semibold text-white mb-2">Pokemon TCG</h4>
               <div className="flex flex-wrap gap-2">
                 <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-sm">PTCGO (.txt)</span>
@@ -319,7 +319,7 @@ export function Home() {
               </div>
             </div>
           </div>
-          <div className="pt-4 border-t border-yugi-border">
+          <div className="pt-4 border-t border-cc-border">
             <Button
               variant="secondary"
               onClick={() => { setInfoSheet(null); navigate('/rules'); }}
@@ -352,7 +352,7 @@ function FeatureCard({
   return (
     <button
       onClick={onClick}
-      className="glass-card p-6 text-left card-hover w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:ring-offset-2 focus:ring-offset-yugi-dark"
+      className="glass-card p-6 text-left card-hover w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:ring-offset-2 focus:ring-offset-cc-dark"
     >
       <div className={`mb-4 ${iconColor}`}>
         <Icon size={32} strokeWidth={1.5} />

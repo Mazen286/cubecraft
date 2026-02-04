@@ -78,8 +78,8 @@ export const GameCard = memo(function GameCard({
         'relative group cursor-pointer transition-transform duration-200',
         sizeClasses[size],
         onClick && 'hover:scale-105 hover:z-10',
-        isSelected && 'ring-2 ring-offset-2 ring-offset-yugi-dark scale-105',
-        isHighlighted && !isSelected && 'ring-2 ring-white/70 ring-offset-1 ring-offset-yugi-dark',
+        isSelected && 'ring-2 ring-offset-2 ring-offset-cc-dark scale-105',
+        isHighlighted && !isSelected && 'ring-2 ring-white/70 ring-offset-1 ring-offset-cc-dark',
         draggable && 'cursor-grab active:cursor-grabbing',
         className
       )}
@@ -97,7 +97,7 @@ export const GameCard = memo(function GameCard({
           'relative w-full h-full overflow-hidden',
           !flush && 'rounded-lg shadow-lg shadow-black/50',
           !flush && isSelected && 'shadow-gold-500/50',
-          !imageLoaded && 'bg-yugi-card animate-pulse'
+          !imageLoaded && 'bg-cc-card animate-pulse'
         )}
       >
         {!imageError && imageUrl ? (
@@ -118,7 +118,7 @@ export const GameCard = memo(function GameCard({
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-yugi-card text-xs text-gray-300 p-2 text-center">
+          <div className="w-full h-full flex items-center justify-center bg-cc-card text-xs text-gray-300 p-2 text-center">
             {card.name}
           </div>
         )}
@@ -157,7 +157,7 @@ export const GameCard = memo(function GameCard({
 
       {/* Tooltip on hover - high z-index to appear above everything */}
       {showDetails && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-yugi-card border border-yugi-border rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] w-48">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-cc-card border border-cc-border rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] w-48">
           <p
             className="text-sm font-semibold truncate"
             style={{ color: gameConfig.theme.primaryColor }}

@@ -67,7 +67,7 @@ export function SaveDeckModal({
       onClick={handleBackdropClick}
     >
       <div className="fixed inset-0 bg-black/60" />
-      <div className="relative bg-yugi-dark border border-yugi-border rounded-lg p-6 w-full max-w-md">
+      <div className="relative bg-cc-dark border border-cc-border rounded-lg p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4 text-gold-400">
           Save to My Decks
         </h2>
@@ -84,7 +84,7 @@ export function SaveDeckModal({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter deck name..."
-                className="w-full px-3 py-2 bg-yugi-darker border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-400 transition-colors"
+                className="w-full px-3 py-2 bg-cc-darker border border-cc-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-400 transition-colors"
                 disabled={isLoading}
                 autoFocus
               />
@@ -100,7 +100,7 @@ export function SaveDeckModal({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add a description..."
                 rows={3}
-                className="w-full px-3 py-2 bg-yugi-darker border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-400 transition-colors resize-none"
+                className="w-full px-3 py-2 bg-cc-darker border border-cc-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-400 transition-colors resize-none"
                 disabled={isLoading}
               />
             </div>

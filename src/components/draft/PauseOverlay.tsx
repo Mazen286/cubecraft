@@ -93,7 +93,7 @@ export function PauseOverlay({
 
         {/* Time remaining info */}
         {formattedTime && (
-          <div className="mb-6 p-4 rounded-lg bg-yugi-card border border-yugi-border">
+          <div className="mb-6 p-4 rounded-lg bg-cc-card border border-cc-border">
             <p className="text-sm text-gray-400 mb-1">Time remaining when paused</p>
             <p className="text-2xl font-bold text-gold-400">
               {formattedTime}

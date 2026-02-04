@@ -493,7 +493,7 @@ export function CubeBuilderStats({ onFilterChange, activeFilters = {} }: CubeBui
   }
 
   return (
-    <div className="border-b border-yugi-border flex-shrink-0">
+    <div className="border-b border-cc-border flex-shrink-0">
       {/* Collapsible header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -565,7 +565,7 @@ export function CubeBuilderStats({ onFilterChange, activeFilters = {} }: CubeBui
                         <span className={cn("w-14 text-left truncate", isDimmed ? "text-gray-500" : "text-gray-300")} title={dist.label}>
                           {dist.label}
                         </span>
-                        <div className="flex-1 h-3 bg-yugi-darker rounded overflow-hidden">
+                        <div className="flex-1 h-3 bg-cc-darker rounded overflow-hidden">
                           <div
                             className={cn("h-full transition-all", dist.color || DEFAULT_BAR_COLOR)}
                             style={{ width: `${percentage}%` }}

@@ -960,7 +960,7 @@ export function AuctionDraft() {
                             ? 'bg-gold-500/20 border border-gold-500/50 text-gold-400'
                             : hasMaxCards
                               ? 'bg-gray-700/30 text-gray-500 line-through'
-                              : 'bg-yugi-card text-gray-300'
+                              : 'bg-cc-card text-gray-300'
                           }
                           ${isMe ? 'ring-1 ring-blue-500/50' : ''}
                         `}
@@ -1146,7 +1146,7 @@ export function AuctionDraft() {
         {myCardsInline && (
           <div className="glass-card mt-4 overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+            <div className="flex items-center justify-between p-4 border-b border-cc-border">
               <div className="flex items-center gap-4">
                 <h3 className="text-lg font-semibold text-white">
                   My Cards ({draftedCards.length})
@@ -1162,7 +1162,7 @@ export function AuctionDraft() {
               {/* Toggle to drawer mode */}
               <button
                 onClick={() => setMyCardsInline(false)}
-                className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-yugi-border rounded hover:bg-yugi-card transition-colors flex items-center gap-1"
+                className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-cc-border rounded hover:bg-cc-card transition-colors flex items-center gap-1"
                 title="Show as drawer"
               >
                 <PanelBottomClose className="w-3 h-3" />
@@ -1172,7 +1172,7 @@ export function AuctionDraft() {
 
             {/* Filters */}
             {draftedCards.length > 0 && (
-              <div className="px-4 py-3 border-b border-yugi-border">
+              <div className="px-4 py-3 border-b border-cc-border">
                 <CardFilterBar
                   filters={myCardsFilters}
                   showSearch
@@ -1217,7 +1217,7 @@ export function AuctionDraft() {
                           onClick={() => setMobileViewCard(card)}
                           className={`cursor-pointer hover:scale-105 transition-transform ${
                             index === myCardsSelectedIndex
-                              ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-darker rounded-lg z-10'
+                              ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-cc-darker rounded-lg z-10'
                               : ''
                           }`}
                         >
@@ -1261,14 +1261,14 @@ export function AuctionDraft() {
             />
 
             {/* Drawer */}
-            <div className="absolute bottom-0 left-0 right-0 h-[80vh] bg-yugi-darker rounded-t-2xl border-t border-yugi-border overflow-hidden flex flex-col animate-slide-up">
+            <div className="absolute bottom-0 left-0 right-0 h-[80vh] bg-cc-darker rounded-t-2xl border-t border-cc-border overflow-hidden flex flex-col animate-slide-up">
               {/* Drag handle */}
               <div className="flex justify-center py-2 flex-shrink-0">
                 <div className="w-12 h-1 bg-gray-600 rounded-full" />
               </div>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-4 pb-3 border-b border-yugi-border flex-shrink-0">
+              <div className="flex items-center justify-between px-4 pb-3 border-b border-cc-border flex-shrink-0">
                 <h3 className="text-lg font-semibold text-white">
                   My Drafted Cards ({draftedCards.length})
                 </h3>
@@ -1279,7 +1279,7 @@ export function AuctionDraft() {
                       setMyCardsInline(true);
                       setShowMobileCards(false);
                     }}
-                    className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-yugi-border rounded hover:bg-yugi-card transition-colors flex items-center gap-1"
+                    className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-cc-border rounded hover:bg-cc-card transition-colors flex items-center gap-1"
                     title="Show below grid"
                   >
                     <PanelBottomOpen className="w-3 h-3" />
@@ -1296,7 +1296,7 @@ export function AuctionDraft() {
 
               {/* Stats and Filters */}
               {draftedCards.length > 0 && (
-                <div className="px-4 py-3 border-b border-yugi-border flex-shrink-0 space-y-3">
+                <div className="px-4 py-3 border-b border-cc-border flex-shrink-0 space-y-3">
                   {/* Stats Toggle & Summary */}
                   <div className="flex items-center justify-between">
                     <button
@@ -1319,7 +1319,7 @@ export function AuctionDraft() {
                   {showMyCardsStats && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                       {/* Card Type Breakdown */}
-                      <div className="bg-yugi-card rounded-lg p-2">
+                      <div className="bg-cc-card rounded-lg p-2">
                         <div className="text-gray-400 mb-1">Card Types</div>
                         <div className="space-y-0.5">
                           <div className="flex justify-between">
@@ -1338,7 +1338,7 @@ export function AuctionDraft() {
                       </div>
 
                       {/* Deck Split */}
-                      <div className="bg-yugi-card rounded-lg p-2">
+                      <div className="bg-cc-card rounded-lg p-2">
                         <div className="text-gray-400 mb-1">Deck Split</div>
                         <div className="space-y-0.5">
                           <div className="flex justify-between">
@@ -1353,7 +1353,7 @@ export function AuctionDraft() {
                       </div>
 
                       {/* Tier Distribution */}
-                      <div className="bg-yugi-card rounded-lg p-2 col-span-2 sm:col-span-2">
+                      <div className="bg-cc-card rounded-lg p-2 col-span-2 sm:col-span-2">
                         <div className="text-gray-400 mb-1">Tier Distribution</div>
                         <div className="flex items-center gap-1 flex-wrap">
                           {myCardsStats.tiers.S > 0 && (
@@ -1488,7 +1488,7 @@ export function AuctionDraft() {
                             onClick={() => setMobileViewCard(card)}
                             className={`cursor-pointer active:scale-95 transition-all ${
                               index === myCardsSelectedIndex
-                                ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-darker rounded-lg z-10'
+                                ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-cc-darker rounded-lg z-10'
                                 : ''
                             }`}
                           >
@@ -1567,7 +1567,7 @@ export function AuctionDraft() {
               /* Open Draft Content */
               <>
                 {/* Quick Overview */}
-                <div className="bg-yugi-card rounded-lg p-4">
+                <div className="bg-cc-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
                   <p className="text-sm text-gray-300">
                     Open Drafting is a straightforward pick-based format where players take turns selecting cards from a shared pool across <span className="text-white font-medium">{totalGrids} grids</span>. Each grid has cards laid out face-up, and on your turn you simply pick the card you want.
@@ -1575,7 +1575,7 @@ export function AuctionDraft() {
                 </div>
 
                 {/* How It Works */}
-                <div className="bg-yugi-card rounded-lg p-4">
+                <div className="bg-cc-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">1. Your Turn</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>• When it's your turn, <span className="text-gold-400">pick any card</span> from the grid</li>
@@ -1586,7 +1586,7 @@ export function AuctionDraft() {
                 </div>
 
                 {/* Max Cards */}
-                <div className="bg-yugi-card rounded-lg p-4">
+                <div className="bg-cc-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">2. Cards Per Grid</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>• You can acquire <span className="text-white font-medium">maximum {maxCardsPerGrid} cards</span> per grid</li>
@@ -1611,7 +1611,7 @@ export function AuctionDraft() {
               /* Auction Grid Content */
               <>
                 {/* Quick Overview */}
-                <div className="bg-yugi-card rounded-lg p-4">
+                <div className="bg-cc-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">Quick Overview</h3>
                   <p className="text-sm text-gray-300">
                     Auction Grid Drafting is a bidding-based draft format where players use <span className="text-gold-400 font-medium">{(auctionState as any)?.totalBiddingPoints ?? 100} bidding points</span> to compete for cards across <span className="text-white font-medium">{totalGrids} grids</span>. Each grid has cards laid out face-up, and players take turns selecting cards to auction.
@@ -1619,7 +1619,7 @@ export function AuctionDraft() {
                 </div>
 
                 {/* Selection Phase */}
-                <div className="bg-yugi-card rounded-lg p-4">
+                <div className="bg-cc-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">1. Selection Phase</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>• The <span className="text-gold-400">selecting player</span> picks a card from the grid to auction</li>
@@ -1629,7 +1629,7 @@ export function AuctionDraft() {
                 </div>
 
                 {/* Bidding Phase */}
-                <div className="bg-yugi-card rounded-lg p-4">
+                <div className="bg-cc-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">2. Bidding Phase</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>• Bidding starts at <span className="text-white font-medium">0 points</span></li>
@@ -1641,7 +1641,7 @@ export function AuctionDraft() {
                 </div>
 
                 {/* Winning */}
-                <div className="bg-yugi-card rounded-lg p-4">
+                <div className="bg-cc-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">3. Winning Cards</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>• Highest bidder wins and <span className="text-gold-400">deducts points</span> from their total</li>
@@ -1651,7 +1651,7 @@ export function AuctionDraft() {
                 </div>
 
                 {/* Max Cards */}
-                <div className="bg-yugi-card rounded-lg p-4">
+                <div className="bg-cc-card rounded-lg p-4">
                   <h3 className="font-semibold text-white mb-2">4. Max Cards Per Grid</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>• You can acquire <span className="text-white font-medium">maximum {maxCardsPerGrid} cards</span> per grid</li>

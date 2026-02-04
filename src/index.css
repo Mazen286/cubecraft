@@ -23,12 +23,12 @@
   --color-gold-900: #78350f;
 
   /* Dark theme base colors */
-  --color-yugi-dark: #0a0a0f;
-  --color-yugi-darker: #050508;
-  --color-yugi-card: #1a1a2e;
-  --color-yugi-border: #2a2a4a;
-  --color-yugi-accent: #fbbf24;
-  --color-yugi-purple: #7c3aed;
+  --color-cc-dark: #0a0a0f;
+  --color-cc-darker: #050508;
+  --color-cc-card: #1a1a2e;
+  --color-cc-border: #2a2a4a;
+  --color-cc-accent: #fbbf24;
+  --color-cc-purple: #7c3aed;
 
   /* Dynamic game colors (set via JavaScript) */
   --game-primary: #fbbf24;
@@ -81,7 +81,7 @@
   }
 
   body {
-    @apply bg-yugi-darker text-white min-h-screen m-0;
+    @apply bg-cc-darker text-white min-h-screen m-0;
     background-image:
       radial-gradient(ellipse at top, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
       radial-gradient(ellipse at bottom, rgba(251, 191, 36, 0.05) 0%, transparent 50%);
@@ -95,7 +95,7 @@
 @layer components {
   /* Glass morphism card */
   .glass-card {
-    @apply bg-yugi-card/80 backdrop-blur-md border border-yugi-border rounded-xl;
+    @apply bg-cc-card/80 backdrop-blur-md border border-cc-border rounded-xl;
     box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.3),
       0 2px 4px -1px rgba(0, 0, 0, 0.2),
@@ -105,23 +105,23 @@
   /* Primary button with gold accent */
   .btn-primary {
     @apply px-6 py-3 bg-gradient-to-r from-gold-500 to-gold-600
-           text-yugi-darker font-semibold rounded-lg
+           text-cc-darker font-semibold rounded-lg
            hover:from-gold-400 hover:to-gold-500
            active:from-gold-600 active:to-gold-700
            transition-all duration-200 ease-out
            shadow-lg shadow-gold-500/25
            hover:shadow-xl hover:shadow-gold-500/30
-           focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-yugi-dark;
+           focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-cc-dark;
   }
 
   /* Secondary button */
   .btn-secondary {
-    @apply px-6 py-3 bg-yugi-card border border-yugi-border
+    @apply px-6 py-3 bg-cc-card border border-cc-border
            text-white font-medium rounded-lg
-           hover:bg-yugi-border hover:border-gold-500/50
-           active:bg-yugi-dark
+           hover:bg-cc-border hover:border-gold-500/50
+           active:bg-cc-dark
            transition-all duration-200 ease-out
-           focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:ring-offset-2 focus:ring-offset-yugi-dark;
+           focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:ring-offset-2 focus:ring-offset-cc-dark;
   }
 
   /* Card hover effect */
@@ -149,11 +149,11 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-yugi-dark rounded-full;
+    @apply bg-cc-dark rounded-full;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-yugi-border rounded-full hover:bg-gold-500/50;
+    @apply bg-cc-border rounded-full hover:bg-gold-500/50;
   }
 }
 

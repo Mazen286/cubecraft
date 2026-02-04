@@ -148,17 +148,17 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={() => onClose()}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-yugi-card border border-yugi-border rounded-xl shadow-2xl">
+      <div className="relative w-full max-w-2xl bg-cc-card border border-cc-border rounded-xl shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+        <div className="flex items-center justify-between p-4 border-b border-cc-border">
           <h2 className="text-lg font-semibold text-white">Import Deck</h2>
           <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-yugi-border"
+            onClick={() => onClose()}
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-cc-border"
           >
             <X className="w-5 h-5" />
           </button>
@@ -174,7 +174,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
             className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
               isDragging
                 ? 'border-gold-500 bg-gold-500/10'
-                : 'border-yugi-border hover:border-gray-500'
+                : 'border-cc-border hover:border-gray-500'
             }`}
           >
             <input
@@ -203,7 +203,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
           </div>
 
           {/* Refresh database option */}
-          <div className="flex items-center justify-between p-3 bg-yugi-darker rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-cc-darker rounded-lg">
             <div className="text-sm">
               <p className="text-gray-300">Card database outdated?</p>
               <p className="text-xs text-gray-500">
@@ -213,7 +213,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
             <button
               onClick={handleRefreshDatabase}
               disabled={isRefreshing}
-              className="flex items-center gap-2 px-3 py-1.5 bg-yugi-card hover:bg-yugi-border border border-yugi-border text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-1.5 bg-cc-card hover:bg-cc-border border border-cc-border text-white text-sm rounded-lg transition-colors disabled:opacity-50"
             >
               {isRefreshing ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -226,9 +226,9 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
 
           {/* Or divider */}
           <div className="flex items-center gap-4">
-            <div className="flex-1 border-t border-yugi-border" />
+            <div className="flex-1 border-t border-cc-border" />
             <span className="text-gray-500 text-sm">or paste deck list</span>
-            <div className="flex-1 border-t border-yugi-border" />
+            <div className="flex-1 border-t border-cc-border" />
           </div>
 
           {/* Text input */}
@@ -241,7 +241,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
               value={textContent}
               onChange={(e) => setTextContent(e.target.value)}
               placeholder={`Paste deck list here...\n\nExample formats:\n1x Agnes Baker\n2x Shrivelling\n2x Ward of Protection (2)\n...`}
-              className="w-full h-48 p-3 bg-yugi-darker border border-yugi-border rounded-lg text-white placeholder-gray-500 text-sm font-mono resize-none focus:outline-none focus:border-gold-500/50"
+              className="w-full h-48 p-3 bg-cc-darker border border-cc-border rounded-lg text-white placeholder-gray-500 text-sm font-mono resize-none focus:outline-none focus:border-gold-500/50"
             />
           </div>
 
@@ -289,9 +289,9 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 border-t border-yugi-border">
+        <div className="flex justify-end gap-3 p-4 border-t border-cc-border">
           <button
-            onClick={onClose}
+            onClick={() => onClose()}
             className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
           >
             Cancel

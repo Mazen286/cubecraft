@@ -668,14 +668,14 @@ export function CanvasMode({
                 style={{ width: STACK_DIMENSIONS[cardSize].width }}
               >
                 {/* Stack header */}
-                <div className="bg-yugi-card border border-yugi-border rounded-t-lg px-2 py-1 flex items-center justify-between">
+                <div className="bg-cc-card border border-cc-border rounded-t-lg px-2 py-1 flex items-center justify-between">
                   <span className="text-xs font-medium text-gray-300 truncate">
                     {stack.name || 'Stack'}
                   </span>
                   <span className="text-xs text-gray-500">{stack.cardIds.length}</span>
                 </div>
                 {/* Cards preview */}
-                <div className="relative bg-yugi-darker/50 rounded-b-lg overflow-hidden border-x border-b border-yugi-border">
+                <div className="relative bg-cc-darker/50 rounded-b-lg overflow-hidden border-x border-b border-cc-border">
                   {cardIds.map((cardId, idx) => {
                     const card = getCardData(cardId);
                     if (!card) return null;

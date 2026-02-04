@@ -57,7 +57,7 @@ export function UserMenu() {
 
   if (isLoading) {
     return (
-      <div className="w-8 h-8 rounded-full bg-yugi-darker animate-pulse" />
+      <div className="w-8 h-8 rounded-full bg-cc-darker animate-pulse" />
     );
   }
 
@@ -84,13 +84,13 @@ export function UserMenu() {
   const dropdown = showDropdown && createPortal(
     <div
       ref={dropdownRef}
-      className="fixed w-48 bg-yugi-dark border border-yugi-border rounded-lg shadow-xl py-1 z-[100]"
+      className="fixed w-48 bg-cc-dark border border-cc-border rounded-lg shadow-xl py-1 z-[100]"
       style={{
         top: dropdownPosition.top,
         right: dropdownPosition.right,
       }}
     >
-      <div className="px-4 py-2 border-b border-yugi-border">
+      <div className="px-4 py-2 border-b border-cc-border">
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium text-white truncate">{user?.displayName}</p>
           {isAdmin && (
@@ -170,7 +170,7 @@ export function UserMenu() {
         </button>
       )}
 
-      <hr className="my-1 border-yugi-border" />
+      <hr className="my-1 border-cc-border" />
 
       <button
         onClick={async () => {
@@ -201,7 +201,7 @@ export function UserMenu() {
             src={user.avatarUrl}
             alt=""
             referrerPolicy="no-referrer"
-            className="w-7 h-7 rounded-full border border-yugi-border"
+            className="w-7 h-7 rounded-full border border-cc-border"
           />
         ) : (
           <div className="w-7 h-7 rounded-full bg-gold-600 flex items-center justify-center text-black font-medium text-sm">

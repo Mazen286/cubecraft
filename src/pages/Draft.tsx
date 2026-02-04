@@ -1468,7 +1468,7 @@ export function Draft() {
               className="hidden sm:flex items-center gap-1 text-gray-400 hover:text-gold-400 transition-colors"
               title="Keyboard shortcuts (?)"
             >
-              <kbd className="px-1.5 py-0.5 bg-yugi-dark rounded border border-yugi-border text-xs">?</kbd>
+              <kbd className="px-1.5 py-0.5 bg-cc-dark rounded border border-cc-border text-xs">?</kbd>
               <span className="text-xs">Shortcuts</span>
             </button>
             {/* Auto-select toggle */}
@@ -1501,9 +1501,9 @@ export function Draft() {
               <div className="flex items-center gap-1.5 whitespace-nowrap">
                 <span className="text-gray-500">|</span>
                 <span className="text-gray-400">{passOrder.fromPlayer}</span>
-                <ArrowRight className="w-4 h-4 text-yugi-accent flex-shrink-0" />
-                <span className="text-yugi-accent font-medium">You</span>
-                <ArrowRight className="w-4 h-4 text-yugi-accent flex-shrink-0" />
+                <ArrowRight className="w-4 h-4 text-cc-accent flex-shrink-0" />
+                <span className="text-cc-accent font-medium">You</span>
+                <ArrowRight className="w-4 h-4 text-cc-accent flex-shrink-0" />
                 <span className="text-gray-400">{passOrder.toPlayer}</span>
               </div>
             )}
@@ -1534,7 +1534,7 @@ export function Draft() {
 
         {/* Keyboard shortcuts help */}
         {showShortcuts && (
-          <div className="mb-4 p-4 rounded-lg bg-yugi-card border border-yugi-border">
+          <div className="mb-4 p-4 rounded-lg bg-cc-card border border-cc-border">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-white">Keyboard Shortcuts</h3>
               <button
@@ -1546,41 +1546,41 @@ export function Draft() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">←→↑↓</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">←→↑↓</kbd>
                 <span className="text-gray-400">Highlight card</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">1-9</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">1-9</kbd>
                 <span className="text-gray-400">Highlight by number</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Space</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">Space</kbd>
                 <span className="text-gray-400">View / Pick</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">↓/Esc</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">↓/Esc</kbd>
                 <span className="text-gray-400">Close sheet</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">?</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">?</kbd>
                 <span className="text-gray-400">Toggle help</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">S</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">S</kbd>
                 <span className="text-gray-400">Cycle sort options</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">A</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">A</kbd>
                 <span className="text-gray-400">Toggle asc/desc</span>
               </div>
               {isHost && (
                 <>
                   <div className="flex items-center gap-2">
-                    <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">P</kbd>
+                    <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">P</kbd>
                     <span className="text-gray-400">Pause/Resume (Host)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">R</kbd>
+                    <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">R</kbd>
                     <span className="text-gray-400">Resume (Host)</span>
                   </div>
                 </>
@@ -1603,7 +1603,7 @@ export function Draft() {
                   <select
                     value={packSortBy}
                     onChange={(e) => setPackSortBy(e.target.value)}
-                    className="bg-yugi-dark border border-yugi-border rounded-lg text-white text-sm px-2 py-1 focus:border-gold-500 focus:outline-none"
+                    className="bg-cc-dark border border-cc-border rounded-lg text-white text-sm px-2 py-1 focus:border-gold-500 focus:outline-none"
                   >
                     <option value="none">No Sort</option>
                     {showScores && <option value="score">Score</option>}
@@ -1616,7 +1616,7 @@ export function Draft() {
                   {packSortBy !== 'none' && (
                     <button
                       onClick={() => setPackSortDirection(d => d === 'asc' ? 'desc' : 'asc')}
-                      className="p-1.5 bg-yugi-dark border border-yugi-border rounded-lg hover:border-gold-500 transition-colors"
+                      className="p-1.5 bg-cc-dark border border-cc-border rounded-lg hover:border-gold-500 transition-colors"
                       title={packSortDirection === 'asc' ? 'Ascending' : 'Descending'}
                     >
                       {packSortDirection === 'asc' ? (
@@ -1633,8 +1633,8 @@ export function Draft() {
                       className={cn(
                         "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-sm font-medium",
                         showRecommendation
-                          ? "bg-gold-500 text-yugi-darker"
-                          : "bg-yugi-dark border border-yugi-border hover:border-gold-500 text-gray-300 hover:text-white"
+                          ? "bg-gold-500 text-cc-darker"
+                          : "bg-cc-dark border border-cc-border hover:border-gold-500 text-gray-300 hover:text-white"
                       )}
                       title="Show recommended pick"
                     >
@@ -1703,7 +1703,7 @@ export function Draft() {
                   return (
                     <div
                       key={card.id}
-                      className={cn("relative", isRecommended && "ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-dark rounded-lg")}
+                      className={cn("relative", isRecommended && "ring-2 ring-gold-400 ring-offset-2 ring-offset-cc-dark rounded-lg")}
                       data-card-index={index}
                     >
                       <YuGiOhCard
@@ -1724,7 +1724,7 @@ export function Draft() {
                       />
                       {/* Recommended badge */}
                       {isRecommended && (
-                        <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gold-500 text-yugi-darker flex items-center justify-center shadow-lg z-20">
+                        <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gold-500 text-cc-darker flex items-center justify-center shadow-lg z-20">
                           <Sparkles className="w-3.5 h-3.5" />
                         </div>
                       )}
@@ -1744,7 +1744,7 @@ export function Draft() {
                       {/* Synergy breakdown tooltip */}
                       {showingSynergyFor === card.id && synergy && (
                         <div
-                          className="absolute bottom-8 right-0 z-50 bg-yugi-darker border border-yugi-border rounded-lg shadow-xl p-3 min-w-[200px] text-left"
+                          className="absolute bottom-8 right-0 z-50 bg-cc-darker border border-cc-border rounded-lg shadow-xl p-3 min-w-[200px] text-left"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex items-center justify-between mb-2">
@@ -1768,13 +1768,13 @@ export function Draft() {
                                 </span>
                               </div>
                             ))}
-                            <div className="border-t border-yugi-border pt-1 mt-1 flex justify-between font-semibold text-white">
+                            <div className="border-t border-cc-border pt-1 mt-1 flex justify-between font-semibold text-white">
                               <span>Adjusted:</span>
                               <span>{synergy.adjustedScore}</span>
                             </div>
                           </div>
                           {synergy.breakdown.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-yugi-border text-xs text-gray-500">
+                            <div className="mt-2 pt-2 border-t border-cc-border text-xs text-gray-500">
                               <span>From: </span>
                               {synergy.breakdown[0].triggerCards.slice(0, 2).join(', ')}
                               {synergy.breakdown[0].triggerCards.length > 2 && '...'}
@@ -1872,7 +1872,7 @@ export function Draft() {
                     </div>
                   </div>
                   {hasPicked ? (
-                    <div className="text-center text-gray-400 py-2 bg-yugi-card rounded-lg">
+                    <div className="text-center text-gray-400 py-2 bg-cc-card rounded-lg">
                       <span className="text-green-400">Pick made</span> — Viewing remaining cards
                     </div>
                   ) : (
@@ -1938,7 +1938,7 @@ export function Draft() {
               onDrop={handleDrop}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+              <div className="flex items-center justify-between p-4 border-b border-cc-border">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2 whitespace-nowrap">
                   <Layers className="w-5 h-5 text-gold-400" />
                   My Cards ({draftedCards.length})
@@ -1955,7 +1955,7 @@ export function Draft() {
                   {/* Toggle to drawer mode */}
                   <button
                     onClick={() => setMyCardsInline(false)}
-                    className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-yugi-border rounded hover:bg-yugi-card transition-colors flex items-center gap-1"
+                    className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-cc-border rounded hover:bg-cc-card transition-colors flex items-center gap-1"
                     title="Show as drawer"
                   >
                     <PanelBottomClose className="w-3 h-3" />
@@ -1966,7 +1966,7 @@ export function Draft() {
 
               {/* Filters */}
               {draftedCards.length > 0 && (
-                <div className="px-4 py-3 border-b border-yugi-border">
+                <div className="px-4 py-3 border-b border-cc-border">
                   <CardFilterBar
                     filters={myCardsFilters}
                     showSearch
@@ -2116,7 +2116,7 @@ export function Draft() {
             onDrop={handleDrop}
             className={`fixed bottom-4 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 px-4 py-3 font-semibold rounded-full shadow-lg transition-all duration-200 ${
               isDragOver
-                ? 'bg-green-500 text-white scale-110 shadow-green-500/50 shadow-2xl ring-4 ring-green-400/50 ring-offset-2 ring-offset-yugi-darker'
+                ? 'bg-green-500 text-white scale-110 shadow-green-500/50 shadow-2xl ring-4 ring-green-400/50 ring-offset-2 ring-offset-cc-darker'
                 : isDragging
                   ? 'bg-gold-400 text-black scale-105 shadow-gold-400/50 shadow-xl ring-2 ring-gold-300/50 animate-pulse'
                   : 'bg-gold-500 hover:bg-gold-400 text-black shadow-gold-500/30'
@@ -2140,14 +2140,14 @@ export function Draft() {
             />
 
             {/* Drawer */}
-            <div className="absolute bottom-0 left-0 right-0 h-[80vh] bg-yugi-darker rounded-t-2xl border-t border-yugi-border overflow-hidden flex flex-col animate-slide-up">
+            <div className="absolute bottom-0 left-0 right-0 h-[80vh] bg-cc-darker rounded-t-2xl border-t border-cc-border overflow-hidden flex flex-col animate-slide-up">
               {/* Drag handle */}
               <div className="flex justify-center py-2 flex-shrink-0">
                 <div className="w-12 h-1 bg-gray-600 rounded-full" />
               </div>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-4 pb-3 border-b border-yugi-border flex-shrink-0">
+              <div className="flex items-center justify-between px-4 pb-3 border-b border-cc-border flex-shrink-0">
                 <h3 className="text-lg font-semibold text-white whitespace-nowrap">
                   My Cards ({draftedCards.length})
                 </h3>
@@ -2158,7 +2158,7 @@ export function Draft() {
                       setMyCardsInline(true);
                       setShowMobileCards(false);
                     }}
-                    className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-yugi-border rounded hover:bg-yugi-card transition-colors flex items-center gap-1"
+                    className="px-2 py-1 text-xs text-gray-400 hover:text-white border border-cc-border rounded hover:bg-cc-card transition-colors flex items-center gap-1"
                     title="Show below pack"
                   >
                     <PanelBottomOpen className="w-3 h-3" />
@@ -2178,7 +2178,7 @@ export function Draft() {
 
               {/* Stats and Filters - Collapsible Section */}
               {draftedCards.length > 0 && (
-                <div className="border-b border-yugi-border flex-shrink-0">
+                <div className="border-b border-cc-border flex-shrink-0">
                   {/* Section Header - Always visible */}
                   <button
                     onClick={() => setDrawerSectionsCollapsed(prev => ({ ...prev, filters: !prev.filters }))}
@@ -2217,7 +2217,7 @@ export function Draft() {
                   {showMyCardsStats && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                       {/* Card Type Breakdown */}
-                      <div className="bg-yugi-card rounded-lg p-2">
+                      <div className="bg-cc-card rounded-lg p-2">
                         <div className="text-gray-400 mb-1">Card Types</div>
                         <div className="space-y-0.5">
                           <div className="flex justify-between">
@@ -2240,7 +2240,7 @@ export function Draft() {
                       </div>
 
                       {/* Deck Split */}
-                      <div className="bg-yugi-card rounded-lg p-2">
+                      <div className="bg-cc-card rounded-lg p-2">
                         <div className="text-gray-400 mb-1">Deck Split</div>
                         <div className="space-y-0.5">
                           <div className="flex justify-between">
@@ -2255,7 +2255,7 @@ export function Draft() {
                       </div>
 
                       {/* Tier Distribution */}
-                      <div className="bg-yugi-card rounded-lg p-2 col-span-2 sm:col-span-2">
+                      <div className="bg-cc-card rounded-lg p-2 col-span-2 sm:col-span-2">
                         <div className="text-gray-400 mb-1">Tier Distribution</div>
                         <div className="flex items-center gap-1 flex-wrap">
                           {myCardsStats.tiers.S > 0 && (
@@ -2365,7 +2365,7 @@ export function Draft() {
 
               {/* Cube Statistics Dashboard - Collapsible Section */}
               {draftedCards.length > 0 && (
-                <div className="border-b border-yugi-border flex-shrink-0">
+                <div className="border-b border-cc-border flex-shrink-0">
                   {/* Section Header */}
                   <button
                     onClick={() => setDrawerSectionsCollapsed(prev => ({ ...prev, cubeStats: !prev.cubeStats }))}

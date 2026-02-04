@@ -65,7 +65,7 @@ function DeckBuilderContent({ deckId }: { deckId?: string }) {
 
   if (state.isLoading) {
     return (
-      <div className="min-h-screen bg-yugi-dark flex items-center justify-center">
+      <div className="min-h-screen bg-cc-dark flex items-center justify-center">
         <div className="text-center">
           <div className="w-10 h-10 border-3 border-gold-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-300">Loading deck...</p>
@@ -77,7 +77,7 @@ function DeckBuilderContent({ deckId }: { deckId?: string }) {
   // Wrap content with GameProvider to use the correct game config
   return (
     <GameProvider initialGame={state.gameId}>
-      <div className="min-h-screen bg-yugi-dark flex flex-col">
+      <div className="min-h-screen bg-cc-dark flex flex-col">
         <DeckBuilderHeader
           onSave={() => {
             // Could navigate to my-decks after save
@@ -86,7 +86,7 @@ function DeckBuilderContent({ deckId }: { deckId?: string }) {
 
         {/* Validation warnings */}
         {state.validationWarnings.length > 0 && (
-          <div className="px-4 py-2 bg-yugi-darker border-b border-yugi-border">
+          <div className="px-4 py-2 bg-cc-darker border-b border-cc-border">
             <ValidationBanner warnings={state.validationWarnings} />
           </div>
         )}
@@ -119,22 +119,22 @@ function DesktopLayout({ zones }: { zones: { id: string; name: string }[] }) {
 
   return (
     <>
-      {/* Left: Card Browser */}
-      <div className="w-1/3 min-w-[300px] border-r border-yugi-border bg-yugi-darker overflow-hidden">
-        <DeckCardBrowser />
-      </div>
-
-      {/* Middle: Main Deck */}
-      <div className={`flex-1 border-r border-yugi-border bg-yugi-dark overflow-hidden ${!showThirdPanel ? 'flex-1' : ''}`}>
+      {/* Left: Main Deck */}
+      <div className={`flex-1 border-r border-cc-border bg-cc-dark overflow-hidden`}>
         <DeckZonePanel zoneId="main" />
       </div>
 
-      {/* Right: Extra/Side zones (if applicable) */}
+      {/* Middle: Extra/Side zones (if applicable) */}
       {showThirdPanel && (
-        <div className="w-1/4 min-w-[250px] bg-yugi-darker overflow-hidden">
+        <div className="w-1/4 min-w-[250px] border-r border-cc-border bg-cc-darker overflow-hidden">
           <ExtraSideZones zones={zones} />
         </div>
       )}
+
+      {/* Right: Card Browser */}
+      <div className="w-1/3 min-w-[300px] bg-cc-darker overflow-hidden">
+        <DeckCardBrowser />
+      </div>
     </>
   );
 }
@@ -157,12 +157,12 @@ function ExtraSideZones({ zones }: { zones: { id: string; name: string }[] }) {
     return (
       <div className="flex flex-col h-full">
         {/* Tabs */}
-        <div className="flex-shrink-0 flex border-b border-yugi-border">
+        <div className="flex-shrink-0 flex border-b border-cc-border">
           <button
             onClick={() => setActiveTab('extra')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               activeTab === 'extra'
-                ? 'text-gold-400 border-b-2 border-gold-500 bg-yugi-dark/50'
+                ? 'text-gold-400 border-b-2 border-gold-500 bg-cc-dark/50'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -172,7 +172,7 @@ function ExtraSideZones({ zones }: { zones: { id: string; name: string }[] }) {
             onClick={() => setActiveTab('side')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               activeTab === 'side'
-                ? 'text-gold-400 border-b-2 border-gold-500 bg-yugi-dark/50'
+                ? 'text-gold-400 border-b-2 border-gold-500 bg-cc-dark/50'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -205,24 +205,14 @@ function MobileLayout({
   setActiveZoneTab: (tab: string) => void;
 }) {
   const { getZoneCards } = useDeckBuilder();
-  const [activeView, setActiveView] = useState<'browse' | 'deck'>('browse');
+  const [activeView, setActiveView] = useState<'browse' | 'deck'>('deck');
 
   const getZoneCount = (zoneId: string) => getZoneCards(zoneId).length;
 
   return (
     <div className="flex flex-col h-full">
-      {/* Top tabs: Browse vs Deck */}
-      <div className="flex-shrink-0 flex border-b border-yugi-border bg-yugi-darker">
-        <button
-          onClick={() => setActiveView('browse')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            activeView === 'browse'
-              ? 'text-gold-400 border-b-2 border-gold-500'
-              : 'text-gray-400'
-          }`}
-        >
-          Browse
-        </button>
+      {/* Top tabs: Deck first, Browse second */}
+      <div className="flex-shrink-0 flex border-b border-cc-border bg-cc-darker">
         <button
           onClick={() => setActiveView('deck')}
           className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
@@ -236,24 +226,30 @@ function MobileLayout({
             Deck
           </span>
         </button>
+        <button
+          onClick={() => setActiveView('browse')}
+          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+            activeView === 'browse'
+              ? 'text-gold-400 border-b-2 border-gold-500'
+              : 'text-gray-400'
+          }`}
+        >
+          Browse
+        </button>
       </div>
 
-      {activeView === 'browse' ? (
-        <div className="flex-1 overflow-hidden">
-          <DeckCardBrowser />
-        </div>
-      ) : (
+      {activeView === 'deck' ? (
         <div className="flex flex-col h-full">
           {/* Zone tabs (only if multiple zones) */}
           {zones.length > 1 && (
-            <div className="flex-shrink-0 flex border-b border-yugi-border bg-yugi-dark overflow-x-auto">
+            <div className="flex-shrink-0 flex border-b border-cc-border bg-cc-dark overflow-x-auto">
               {zones.map(zone => (
                 <button
                   key={zone.id}
                   onClick={() => setActiveZoneTab(zone.id)}
                   className={`flex-shrink-0 px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
                     activeZoneTab === zone.id
-                      ? 'text-gold-400 border-b-2 border-gold-500 bg-yugi-darker'
+                      ? 'text-gold-400 border-b-2 border-gold-500 bg-cc-darker'
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >
@@ -267,6 +263,10 @@ function MobileLayout({
           <div className="flex-1 overflow-hidden">
             <DeckZonePanel zoneId={activeZoneTab} />
           </div>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-hidden">
+          <DeckCardBrowser />
         </div>
       )}
     </div>

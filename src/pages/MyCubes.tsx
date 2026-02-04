@@ -127,7 +127,7 @@ export function MyCubes() {
             </button>
             <button
               onClick={() => setShowUpload(true)}
-              className="px-4 py-2 bg-yugi-dark hover:bg-yugi-border text-gray-300 font-medium rounded-lg transition-colors flex items-center gap-2 border border-yugi-border"
+              className="px-4 py-2 bg-cc-dark hover:bg-cc-border text-gray-300 font-medium rounded-lg transition-colors flex items-center gap-2 border border-cc-border"
             >
               <Upload className="w-5 h-5" />
               Import
@@ -136,7 +136,7 @@ export function MyCubes() {
         </div>
 
         {cubes.length === 0 ? (
-          <div className="bg-yugi-dark border border-yugi-border rounded-lg p-12 text-center">
+          <div className="bg-cc-dark border border-cc-border rounded-lg p-12 text-center">
             <div className="flex justify-center mb-4">
               <Boxes className="w-12 h-12 text-gold-500" />
             </div>
@@ -154,7 +154,7 @@ export function MyCubes() {
               </button>
               <button
                 onClick={() => setShowUpload(true)}
-                className="px-6 py-3 bg-yugi-darker hover:bg-yugi-border text-gray-300 font-medium rounded-lg transition-colors flex items-center gap-2 border border-yugi-border"
+                className="px-6 py-3 bg-cc-darker hover:bg-cc-border text-gray-300 font-medium rounded-lg transition-colors flex items-center gap-2 border border-cc-border"
               >
                 <Upload className="w-5 h-5" />
                 Import from File
@@ -166,7 +166,7 @@ export function MyCubes() {
             {cubes.map((cube) => (
               <div
                 key={cube.id}
-                className="bg-yugi-dark border border-yugi-border rounded-lg p-4 hover:border-gold-500/30 transition-colors"
+                className="bg-cc-dark border border-cc-border rounded-lg p-4 hover:border-gold-500/30 transition-colors"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -174,7 +174,7 @@ export function MyCubes() {
                       <h3 className="text-lg font-semibold text-white truncate">
                         {cube.name}
                       </h3>
-                      <span className="px-2 py-0.5 bg-yugi-darker text-gray-400 text-xs rounded">
+                      <span className="px-2 py-0.5 bg-cc-darker text-gray-400 text-xs rounded">
                         {getGameName(cube.game_id)}
                       </span>
                       {cube.is_public ? (

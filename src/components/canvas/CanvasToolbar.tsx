@@ -60,7 +60,7 @@ export function CanvasToolbar({
     <div
       className={cn(
         'flex items-center gap-2 px-3 py-2',
-        'bg-yugi-card/70 border border-yugi-border rounded-lg',
+        'bg-cc-card/70 border border-cc-border rounded-lg',
         isMobile && 'gap-1.5 px-2 py-1.5',  // Tighter spacing on mobile
         className
       )}
@@ -68,7 +68,7 @@ export function CanvasToolbar({
       {/* Card Size Toggle - ALWAYS SHOW */}
       <div className="flex items-center gap-1">
         {!isMobile && <Grid3X3 className="w-4 h-4 text-gray-400 mr-1" />}
-        <div className="flex rounded overflow-hidden border border-yugi-border">
+        <div className="flex rounded overflow-hidden border border-cc-border">
           {SIZE_OPTIONS.map(({ value, label }) => (
             <button
               key={value}
@@ -77,7 +77,7 @@ export function CanvasToolbar({
                 'px-2 py-1 text-xs font-medium transition-colors',
                 cardSize === value
                   ? 'bg-gold-500 text-black'
-                  : 'bg-yugi-card text-gray-300 hover:bg-yugi-card/80'
+                  : 'bg-cc-card text-gray-300 hover:bg-cc-card/80'
               )}
               title={`${value.charAt(0).toUpperCase() + value.slice(1)} cards`}
             >
@@ -88,7 +88,7 @@ export function CanvasToolbar({
       </div>
 
       {/* Separator */}
-      <div className="w-px h-6 bg-yugi-border" />
+      <div className="w-px h-6 bg-cc-border" />
 
       {/* Undo/Redo - ALWAYS SHOW */}
       <div className="flex items-center gap-1">
@@ -123,7 +123,7 @@ export function CanvasToolbar({
       {/* Templates - DESKTOP ONLY */}
       {!isMobile && onApplyTemplate && (
         <>
-          <div className="w-px h-6 bg-yugi-border" />
+          <div className="w-px h-6 bg-cc-border" />
           <StackTemplates
             onApplyTemplate={onApplyTemplate}
             size="sm"
@@ -134,7 +134,7 @@ export function CanvasToolbar({
       {/* Snap to Grid - Always show (icon only on mobile) */}
       {onSnapToGridChange && (
         <>
-          <div className="w-px h-6 bg-yugi-border" />
+          <div className="w-px h-6 bg-cc-border" />
           <button
             onClick={() => onSnapToGridChange(!snapToGrid)}
             className={cn(
@@ -156,7 +156,7 @@ export function CanvasToolbar({
       {/* Zoom Controls - DESKTOP ONLY (use native pinch-zoom on mobile) */}
       {!isMobile && onZoomChange && (
         <>
-          <div className="w-px h-6 bg-yugi-border" />
+          <div className="w-px h-6 bg-cc-border" />
           <div className="flex items-center gap-1">
             <button
               onClick={() => onZoomChange(zoom - 0.1)}
@@ -202,7 +202,7 @@ export function CanvasToolbar({
       {/* Auto Layout (Tidy) */}
       {onAutoLayout && (
         <>
-          <div className="w-px h-6 bg-yugi-border" />
+          <div className="w-px h-6 bg-cc-border" />
           <button
             onClick={onAutoLayout}
             className={cn(
@@ -220,7 +220,7 @@ export function CanvasToolbar({
       )}
 
       {/* Reset Layout */}
-      <div className="w-px h-6 bg-yugi-border" />
+      <div className="w-px h-6 bg-cc-border" />
       <button
         onClick={onResetLayout}
         className={cn(

@@ -45,13 +45,13 @@ export function DeckBuilderHeader({ onSave, onOpenSettings }: DeckBuilderHeaderP
   const totalCards = getTotalCardCount();
 
   return (
-    <header className="flex-shrink-0 bg-yugi-darker border-b border-yugi-border">
+    <header className="flex-shrink-0 bg-cc-darker border-b border-cc-border">
       <div className="flex items-center justify-between px-4 py-3">
         {/* Left: Back button and deck info */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => navigate('/my-decks')}
-            className="p-2 text-gray-400 hover:text-white hover:bg-yugi-border rounded-lg transition-colors"
+            className="p-2 text-gray-400 hover:text-white hover:bg-cc-border rounded-lg transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -71,7 +71,7 @@ export function DeckBuilderHeader({ onSave, onOpenSettings }: DeckBuilderHeaderP
                   }
                 }}
                 placeholder="Deck name..."
-                className="w-full max-w-[200px] px-2 py-1 bg-yugi-dark border border-yugi-border rounded text-white focus:outline-none focus:border-gold-500/50"
+                className="w-full max-w-[200px] px-2 py-1 bg-cc-dark border border-cc-border rounded text-white focus:outline-none focus:border-gold-500/50"
                 autoFocus
               />
             ) : (
@@ -114,7 +114,7 @@ export function DeckBuilderHeader({ onSave, onOpenSettings }: DeckBuilderHeaderP
           <button
             onClick={undo}
             disabled={!canUndo}
-            className="p-2 text-gray-400 hover:text-white hover:bg-yugi-border rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-2 text-gray-400 hover:text-white hover:bg-cc-border rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             title="Undo (Ctrl+Z)"
           >
             <Undo2 className="w-5 h-5" />
@@ -122,19 +122,19 @@ export function DeckBuilderHeader({ onSave, onOpenSettings }: DeckBuilderHeaderP
           <button
             onClick={redo}
             disabled={!canRedo}
-            className="p-2 text-gray-400 hover:text-white hover:bg-yugi-border rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-2 text-gray-400 hover:text-white hover:bg-cc-border rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             title="Redo (Ctrl+Shift+Z)"
           >
             <Redo2 className="w-5 h-5" />
           </button>
 
-          <div className="w-px h-6 bg-yugi-border mx-1" />
+          <div className="w-px h-6 bg-cc-border mx-1" />
 
           {/* Settings */}
           {onOpenSettings && (
             <button
               onClick={onOpenSettings}
-              className="p-2 text-gray-400 hover:text-white hover:bg-yugi-border rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-white hover:bg-cc-border rounded-lg transition-colors"
               title="Settings"
             >
               <Settings className="w-5 h-5" />
@@ -150,7 +150,7 @@ export function DeckBuilderHeader({ onSave, onOpenSettings }: DeckBuilderHeaderP
                 ? 'bg-green-600 text-white'
                 : state.isDirty
                 ? 'bg-gold-600 hover:bg-gold-500 text-black'
-                : 'bg-yugi-border text-gray-400'
+                : 'bg-cc-border text-gray-400'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {saveStatus === 'saving' ? (

@@ -43,7 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-yugi-dark flex items-center justify-center p-4">
+        <div className="min-h-screen bg-cc-dark flex items-center justify-center p-4">
           <div className="glass-card p-8 max-w-md w-full text-center">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-500/10 flex items-center justify-center">
               <svg
@@ -77,13 +77,13 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex gap-4 justify-center">
               <button
                 onClick={this.handleReset}
-                className="px-6 py-3 rounded-lg border border-yugi-border bg-yugi-card text-white hover:border-gold-500 transition-colors"
+                className="px-6 py-3 rounded-lg border border-cc-border bg-cc-card text-white hover:border-gold-500 transition-colors"
               >
                 Try Again
               </button>
               <button
                 onClick={this.handleGoHome}
-                className="px-6 py-3 rounded-lg bg-gradient-to-r from-gold-500 to-gold-600 text-yugi-darker font-semibold hover:from-gold-400 hover:to-gold-500 transition-colors"
+                className="px-6 py-3 rounded-lg bg-gradient-to-r from-gold-500 to-gold-600 text-cc-darker font-semibold hover:from-gold-400 hover:to-gold-500 transition-colors"
               >
                 Go Home
               </button>

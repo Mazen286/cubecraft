@@ -174,7 +174,7 @@ function DraggableStackHeader({
               onFinishEdit(false);
             }
           }}
-          className="bg-yugi-dark border border-yugi-border rounded px-2 py-0.5 text-sm text-white focus:border-gold-500 focus:outline-none w-20"
+          className="bg-cc-dark border border-cc-border rounded px-2 py-0.5 text-sm text-white focus:border-gold-500 focus:outline-none w-20"
           autoFocus
         />
       ) : (
@@ -260,8 +260,8 @@ function DroppableStack({
       <div
         ref={setNodeRef}
         className={cn(
-          'relative w-[80px] sm:w-[100px] bg-yugi-card/30 rounded-lg border border-dashed transition-colors',
-          isOver ? 'border-gold-400 bg-gold-400/10' : 'border-yugi-border'
+          'relative w-[80px] sm:w-[100px] bg-cc-card/30 rounded-lg border border-dashed transition-colors',
+          isOver ? 'border-gold-400 bg-gold-400/10' : 'border-cc-border'
         )}
         style={{ height: `${pileHeight}px`, minHeight: '60px' }}
       >
@@ -450,7 +450,7 @@ export function StackablePileView({
   // Empty stacks state with cards available
   if (stacks.length === 0 && cards.length > 0) {
     return (
-      <div className={cn('text-center text-gray-500 py-4 border-2 border-dashed border-yugi-border rounded-lg', className)}>
+      <div className={cn('text-center text-gray-500 py-4 border-2 border-dashed border-cc-border rounded-lg', className)}>
         Drag a card here to create your first stack
       </div>
     );
@@ -518,7 +518,7 @@ export function StackablePileView({
           </div>
         )}
         {activeDragData?.type === 'stack' && activeDragData.stackId && (
-          <div className="px-2 py-1 bg-yugi-card border border-gold-400 rounded text-sm text-white opacity-90">
+          <div className="px-2 py-1 bg-cc-card border border-gold-400 rounded text-sm text-white opacity-90">
             {stacks.find(s => s.id === activeDragData.stackId)?.name || 'Stack'}
           </div>
         )}

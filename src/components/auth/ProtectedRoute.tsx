@@ -23,7 +23,7 @@ export function ProtectedRoute({
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-yugi-darker">
+      <div className="min-h-screen flex items-center justify-center bg-cc-darker">
         <div className="text-center">
           <div className="w-10 h-10 border-2 border-gold-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-400">Loading...</p>

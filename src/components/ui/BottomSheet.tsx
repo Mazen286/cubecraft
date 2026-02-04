@@ -95,11 +95,11 @@ export function BottomSheet({
 
       {/* Sheet */}
       <div
-        className="relative w-full bg-yugi-darker rounded-t-2xl border-t border-yugi-border overflow-hidden animate-slide-up flex flex-col"
+        className="relative w-full bg-cc-darker rounded-t-2xl border-t border-cc-border overflow-hidden animate-slide-up flex flex-col"
         style={{ maxHeight: `${maxHeight}vh` }}
       >
         {/* Header */}
-        <div className="flex-shrink-0 bg-yugi-darker pt-3 pb-2 px-4 border-b border-yugi-border z-10">
+        <div className="flex-shrink-0 bg-cc-darker pt-3 pb-2 px-4 border-b border-cc-border z-10">
           {showHandle && (
             <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-2" />
           )}
@@ -146,7 +146,7 @@ export function BottomSheet({
 
         {/* Footer - always visible at bottom */}
         {footer && (
-          <div className="flex-shrink-0 bg-yugi-darker border-t border-yugi-border px-4 py-3">
+          <div className="flex-shrink-0 bg-cc-darker border-t border-cc-border px-4 py-3">
             <div className={fullWidth ? '' : 'max-w-lg mx-auto'}>
               {footer}
             </div>

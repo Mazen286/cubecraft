@@ -106,7 +106,7 @@ function CubeBuilderInner() {
     <Layout>
       <div className="flex flex-col h-[calc(100vh-4rem)]">
         {/* Header */}
-        <header className="flex-shrink-0 bg-yugi-darker border-b border-yugi-border px-3 py-2 sm:px-4 sm:py-3">
+        <header className="flex-shrink-0 bg-cc-darker border-b border-cc-border px-3 py-2 sm:px-4 sm:py-3">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
             {/* Title & Name Input */}
             <div className="flex-1">
@@ -131,7 +131,7 @@ function CubeBuilderInner() {
               ) : null}
 
               {/* Undo/Redo - hidden on small screens */}
-              <div className="hidden sm:flex border border-yugi-border rounded-lg overflow-hidden">
+              <div className="hidden sm:flex border border-cc-border rounded-lg overflow-hidden">
                 <button
                   onClick={undo}
                   disabled={!canUndo}
@@ -143,7 +143,7 @@ function CubeBuilderInner() {
                 <button
                   onClick={redo}
                   disabled={!canRedo}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-yugi-border"
+                  className="p-2 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-cc-border"
                   title="Redo (Ctrl+Shift+Z)"
                 >
                   <Redo2 className="w-4 h-4" />
@@ -177,12 +177,12 @@ function CubeBuilderInner() {
 
           {/* Settings panel */}
           {showSettings && (
-            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-yugi-dark rounded-lg border border-yugi-border">
+            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-cc-dark rounded-lg border border-cc-border">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {/* Undo/Redo - visible only on mobile within settings */}
                 <div className="sm:hidden">
                   <label className="block text-sm text-gray-400 mb-1">History</label>
-                  <div className="flex border border-yugi-border rounded-lg overflow-hidden">
+                  <div className="flex border border-cc-border rounded-lg overflow-hidden">
                     <button
                       onClick={undo}
                       disabled={!canUndo}
@@ -194,7 +194,7 @@ function CubeBuilderInner() {
                     <button
                       onClick={redo}
                       disabled={!canRedo}
-                      className="flex-1 p-2 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-yugi-border flex items-center justify-center gap-1"
+                      className="flex-1 p-2 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-cc-border flex items-center justify-center gap-1"
                     >
                       <Redo2 className="w-4 h-4" />
                       <span className="text-xs">Redo</span>
@@ -207,7 +207,7 @@ function CubeBuilderInner() {
                   <select
                     value={state.gameId}
                     onChange={e => handleGameChange(e.target.value)}
-                    className="w-full px-3 py-2 bg-yugi-darker border border-yugi-border rounded-lg text-white focus:outline-none focus:border-gold-500/50"
+                    className="w-full px-3 py-2 bg-cc-darker border border-cc-border rounded-lg text-white focus:outline-none focus:border-gold-500/50"
                   >
                     {availableGames.map(game => (
                       <option key={game.id} value={game.id}>
@@ -225,7 +225,7 @@ function CubeBuilderInner() {
                     placeholder="Add a description..."
                     value={state.cubeDescription}
                     onChange={e => setMetadata({ description: e.target.value })}
-                    className="w-full px-3 py-2 bg-yugi-darker border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
+                    className="w-full px-3 py-2 bg-cc-darker border border-cc-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
                   />
                 </div>
 
@@ -237,7 +237,7 @@ function CubeBuilderInner() {
                     className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
                       state.isPublic
                         ? 'bg-green-900/30 border-green-500/50 text-green-400'
-                        : 'bg-yugi-darker border-yugi-border text-gray-400'
+                        : 'bg-cc-darker border-cc-border text-gray-400'
                     }`}
                   >
                     {state.isPublic ? (
@@ -263,7 +263,7 @@ function CubeBuilderInner() {
                       const val = e.target.value;
                       setDuplicateLimit(val === 'unlimited' ? null : parseInt(val, 10));
                     }}
-                    className="w-full px-3 py-2 bg-yugi-darker border border-yugi-border rounded-lg text-white focus:outline-none focus:border-gold-500/50"
+                    className="w-full px-3 py-2 bg-cc-darker border border-cc-border rounded-lg text-white focus:outline-none focus:border-gold-500/50"
                   >
                     <option value="1">Singleton (1 copy)</option>
                     <option value="2">2 copies max</option>
@@ -275,19 +275,19 @@ function CubeBuilderInner() {
               </div>
 
               {/* Bulk operations */}
-              <div className="mt-4 pt-4 border-t border-yugi-border">
+              <div className="mt-4 pt-4 border-t border-cc-border">
                 <h4 className="text-sm text-gray-400 mb-2">Bulk Operations</h4>
                 <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => setShowBulkScore(true)}
-                    className="px-3 py-1.5 bg-yugi-darker border border-yugi-border rounded text-sm text-gray-300 hover:bg-yugi-border transition-colors"
+                    className="px-3 py-1.5 bg-cc-darker border border-cc-border rounded text-sm text-gray-300 hover:bg-cc-border transition-colors"
                   >
                     Set All Scores
                   </button>
                   <button
                     onClick={() => setShowBulkRemove(true)}
                     disabled={state.cards.size === 0}
-                    className="px-3 py-1.5 bg-yugi-darker border border-yugi-border rounded text-sm text-gray-300 hover:bg-yugi-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-cc-darker border border-cc-border rounded text-sm text-gray-300 hover:bg-cc-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Bulk Remove
@@ -307,7 +307,7 @@ function CubeBuilderInner() {
         </header>
 
         {/* Mobile tab switcher */}
-        <div className="lg:hidden flex-shrink-0 bg-yugi-darker border-b border-yugi-border">
+        <div className="lg:hidden flex-shrink-0 bg-cc-darker border-b border-cc-border">
           <div className="flex">
             <button
               onClick={() => setMobileView('browse')}
@@ -337,14 +337,14 @@ function CubeBuilderInner() {
         {/* Main content */}
         <div className="flex-1 flex overflow-hidden">
           {/* Card Browser (left panel) */}
-          <div className={`w-full lg:w-1/2 xl:w-3/5 bg-yugi-dark border-r border-yugi-border overflow-hidden ${
+          <div className={`w-full lg:w-1/2 xl:w-3/5 bg-cc-dark border-r border-cc-border overflow-hidden ${
             mobileView !== 'browse' ? 'hidden lg:block' : ''
           }`}>
             <CardBrowser />
           </div>
 
           {/* Cube Editor (right panel) */}
-          <div className={`w-full lg:w-1/2 xl:w-2/5 bg-yugi-dark overflow-hidden ${
+          <div className={`w-full lg:w-1/2 xl:w-2/5 bg-cc-dark overflow-hidden ${
             mobileView !== 'cube' ? 'hidden lg:block' : ''
           }`}>
             <CubeEditor />
@@ -365,7 +365,7 @@ function CubeBuilderInner() {
         </button>
 
         {/* Footer with affiliate/feedback links */}
-        <footer className="flex-shrink-0 bg-yugi-darker border-t border-yugi-border px-4 py-2">
+        <footer className="flex-shrink-0 bg-cc-darker border-t border-cc-border px-4 py-2">
           <div className="flex items-center justify-between text-xs text-gray-500">
             <div className="flex items-center gap-4">
               {/* Feedback link */}

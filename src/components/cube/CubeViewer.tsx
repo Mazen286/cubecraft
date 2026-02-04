@@ -418,9 +418,9 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
       />
 
       {/* Modal - full screen on mobile, centered on desktop */}
-      <div className="absolute inset-0 md:inset-4 md:top-8 md:bottom-8 md:left-1/2 md:-translate-x-1/2 md:max-w-6xl md:rounded-xl bg-yugi-darker md:border border-yugi-border shadow-2xl flex flex-col overflow-hidden">
+      <div className="absolute inset-0 md:inset-4 md:top-8 md:bottom-8 md:left-1/2 md:-translate-x-1/2 md:max-w-6xl md:rounded-xl bg-cc-darker md:border border-cc-border shadow-2xl flex flex-col overflow-hidden">
         {/* Header - compact on mobile */}
-        <div className="flex items-center justify-between p-2 md:p-4 border-b border-yugi-border flex-shrink-0">
+        <div className="flex items-center justify-between p-2 md:p-4 border-b border-cc-border flex-shrink-0">
           <div className="min-w-0 flex-1">
             <h2 className="text-base md:text-xl font-bold text-white truncate">{cubeName}</h2>
             <p className="text-xs md:text-sm text-gray-400">
@@ -441,7 +441,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
                 "p-2 rounded-lg border text-sm font-bold transition-colors hidden sm:block",
                 showShortcuts
                   ? "border-gold-500 text-gold-400 bg-gold-500/10"
-                  : "border-yugi-border text-gray-400 hover:text-white hover:border-gold-500"
+                  : "border-cc-border text-gray-400 hover:text-white hover:border-gold-500"
               )}
               title="Keyboard shortcuts (?)"
             >
@@ -458,7 +458,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
 
         {/* Keyboard shortcuts help */}
         {showShortcuts && (
-          <div className="p-4 border-b border-yugi-border bg-yugi-card/50">
+          <div className="p-4 border-b border-cc-border bg-cc-card/50">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-white">Keyboard Shortcuts</h3>
               <button
@@ -470,35 +470,35 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-xs">
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">←→</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">←→</kbd>
                 <span className="text-gray-400">Navigate cards</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">↑↓</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">↑↓</kbd>
                 <span className="text-gray-400">Navigate rows</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">1-9</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">1-9</kbd>
                 <span className="text-gray-400">Quick select</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Enter</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">Enter</kbd>
                 <span className="text-gray-400">View card</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">S</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">S</kbd>
                 <span className="text-gray-400">Cycle sort</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">A</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">A</kbd>
                 <span className="text-gray-400">Toggle asc/desc</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">Esc</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">Esc</kbd>
                 <span className="text-gray-400">Close / Back</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-yugi-dark rounded border border-yugi-border text-gray-300">?</kbd>
+                <kbd className="px-2 py-1 bg-cc-dark rounded border border-cc-border text-gray-300">?</kbd>
                 <span className="text-gray-400">Toggle help</span>
               </div>
             </div>
@@ -506,7 +506,7 @@ export function CubeViewer({ cubeId, cubeName, isOpen, onClose }: CubeViewerProp
         )}
 
         {/* Filters & Sort - Collapsible on mobile */}
-        <div className="border-b border-yugi-border bg-yugi-dark/50 flex-shrink-0">
+        <div className="border-b border-cc-border bg-cc-dark/50 flex-shrink-0">
           {/* Mobile: Compact toggle bar */}
           <button
             onClick={() => setFiltersExpanded(!filtersExpanded)}

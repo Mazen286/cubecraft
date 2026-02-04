@@ -47,13 +47,13 @@ export function SelectionActionBar({
       className={cn(
         'fixed bottom-24 md:bottom-4 left-1/2 -translate-x-1/2 z-50',
         'flex items-center gap-2 px-4 py-2',
-        'bg-yugi-card/95 backdrop-blur-sm border border-yugi-border rounded-lg shadow-xl',
+        'bg-cc-card/95 backdrop-blur-sm border border-cc-border rounded-lg shadow-xl',
         'animate-in slide-in-from-bottom-4 duration-200',
         className
       )}
     >
       {/* Selection count */}
-      <div className="flex items-center gap-2 pr-3 border-r border-yugi-border">
+      <div className="flex items-center gap-2 pr-3 border-r border-cc-border">
         <span className="text-sm text-gray-300">
           <span className="font-semibold text-white">{selectedCount}</span> selected
         </span>
@@ -87,7 +87,7 @@ export function SelectionActionBar({
             className={cn(
               'absolute bottom-full left-0 mb-2',
               'w-48 max-h-60 overflow-y-auto',
-              'bg-yugi-card border border-yugi-border rounded-lg shadow-xl',
+              'bg-cc-card border border-cc-border rounded-lg shadow-xl',
               'animate-in fade-in slide-in-from-bottom-2 duration-150'
             )}
           >
@@ -138,7 +138,7 @@ export function SelectionActionBar({
       </button>
 
       {/* Separator */}
-      <div className="w-px h-6 bg-yugi-border" />
+      <div className="w-px h-6 bg-cc-border" />
 
       {/* Delete selected */}
       <button

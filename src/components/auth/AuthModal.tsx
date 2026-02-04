@@ -70,7 +70,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
     return createPortal(
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
         <div className="fixed inset-0 bg-black/60" onClick={onClose} />
-        <div className="relative bg-yugi-dark border border-yugi-border rounded-lg p-6 w-full max-w-md my-auto">
+        <div className="relative bg-cc-dark border border-cc-border rounded-lg p-6 w-full max-w-md my-auto">
           <div className="text-center">
             <div className="text-4xl mb-4">📧</div>
             <h2 className="text-xl font-bold text-white mb-2">Check Your Email</h2>
@@ -94,7 +94,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
       <div className="fixed inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-yugi-dark border border-yugi-border rounded-lg p-6 w-full max-w-md my-auto">
+      <div className="relative bg-cc-dark border border-cc-border rounded-lg p-6 w-full max-w-md my-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
@@ -143,9 +143,9 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
         </button>
 
         <div className="flex items-center gap-4 my-4">
-          <div className="flex-1 h-px bg-yugi-border" />
+          <div className="flex-1 h-px bg-cc-border" />
           <span className="text-sm text-gray-500">or</span>
-          <div className="flex-1 h-px bg-yugi-border" />
+          <div className="flex-1 h-px bg-cc-border" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -156,7 +156,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full bg-yugi-darker border border-yugi-border rounded-lg px-4 py-3 text-white focus:border-gold-500 focus:outline-none"
+                className="w-full bg-cc-darker border border-cc-border rounded-lg px-4 py-3 text-white focus:border-gold-500 focus:outline-none"
                 placeholder="Your name"
               />
             </div>
@@ -168,7 +168,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-yugi-darker border border-yugi-border rounded-lg px-4 py-3 text-white focus:border-gold-500 focus:outline-none"
+              className="w-full bg-cc-darker border border-cc-border rounded-lg px-4 py-3 text-white focus:border-gold-500 focus:outline-none"
               placeholder="you@example.com"
               required
             />
@@ -180,7 +180,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-yugi-darker border border-yugi-border rounded-lg px-4 py-3 text-white focus:border-gold-500 focus:outline-none"
+              className="w-full bg-cc-darker border border-cc-border rounded-lg px-4 py-3 text-white focus:border-gold-500 focus:outline-none"
               placeholder={mode === 'signup' ? 'Min. 6 characters' : 'Your password'}
               required
               minLength={mode === 'signup' ? 6 : undefined}

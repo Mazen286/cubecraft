@@ -92,8 +92,8 @@ function ArkhamDeckBuilderContent() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
 
-  // Mobile view state
-  const [activeView, setActiveView] = useState<'browse' | 'deck'>('browse');
+  // Mobile view state - default to deck view
+  const [activeView, setActiveView] = useState<'browse' | 'deck'>('deck');
 
   // Cross-filter state (from DeckStats to CardBrowser)
   const [crossFilters, setCrossFilters] = useState<ArkhamCardFilters | null>(null);
@@ -151,7 +151,7 @@ function ArkhamDeckBuilderContent() {
   if (!state.isInitialized) {
     return (
       <>
-        <div className="min-h-screen bg-yugi-dark flex items-center justify-center">
+        <div className="min-h-screen bg-cc-dark flex items-center justify-center">
           <div className="text-center">
             {state.error ? (
               <>
@@ -192,7 +192,7 @@ function ArkhamDeckBuilderContent() {
     // If import modal is open, show it on a plain background instead of investigator selector
     if (showImportModal) {
       return (
-        <div className="min-h-screen bg-yugi-dark">
+        <div className="min-h-screen bg-cc-dark">
           <ImportDeckModal
             isOpen={true}
             onClose={(imported?: boolean) => {
@@ -220,7 +220,7 @@ function ArkhamDeckBuilderContent() {
   // Show loading while loading deck
   if (state.isLoading) {
     return (
-      <div className="min-h-screen bg-yugi-dark flex items-center justify-center">
+      <div className="min-h-screen bg-cc-dark flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-gold-400 animate-spin mx-auto mb-4" />
           <p className="text-gray-300">Loading deck...</p>
@@ -235,9 +235,9 @@ function ArkhamDeckBuilderContent() {
   const requiredSize = investigator.deck_requirements?.size || 30;
 
   return (
-    <div className="min-h-screen bg-yugi-dark flex flex-col">
+    <div className="h-screen bg-cc-dark flex flex-col">
       {/* Header */}
-      <header className="flex-shrink-0 bg-yugi-darker border-b border-yugi-border">
+      <header className="flex-shrink-0 bg-cc-darker border-b border-cc-border">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Left: Back button and investigator info */}
@@ -308,7 +308,7 @@ function ArkhamDeckBuilderContent() {
             <div className="flex items-center gap-2">
               {/* XP display */}
               {state.xpEarned > 0 && (
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-yugi-dark rounded-lg">
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-cc-dark rounded-lg">
                   <XPTracker compact />
                 </div>
               )}
@@ -370,13 +370,13 @@ function ArkhamDeckBuilderContent() {
                 </button>
 
                 {showMenu && (
-                  <div className="absolute right-0 top-full mt-1 bg-yugi-darker border border-yugi-border rounded-lg shadow-lg z-50 min-w-[160px]">
+                  <div className="absolute right-0 top-full mt-1 bg-cc-darker border border-cc-border rounded-lg shadow-lg z-50 min-w-[160px]">
                     <button
                       onClick={() => {
                         setShowImportModal(true);
                         setShowMenu(false);
                       }}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-yugi-border transition-colors"
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-cc-border transition-colors"
                     >
                       <Upload className="w-4 h-4" />
                       Import Deck
@@ -386,7 +386,7 @@ function ArkhamDeckBuilderContent() {
                         setShowUpgradeDialog(true);
                         setShowMenu(false);
                       }}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-yugi-border transition-colors"
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-cc-border transition-colors"
                     >
                       <ChevronUp className="w-4 h-4" />
                       Upgrade Deck
@@ -441,24 +441,11 @@ function ArkhamDeckBuilderContent() {
       </header>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         {/* Mobile: Tab-based layout */}
         <div className="flex flex-col h-full md:hidden">
-          {/* Mobile tabs */}
-          <div className="flex-shrink-0 flex border-b border-yugi-border bg-yugi-darker">
-            <button
-              onClick={() => setActiveView('browse')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeView === 'browse'
-                  ? 'text-gold-400 border-b-2 border-gold-500'
-                  : 'text-gray-400'
-              }`}
-            >
-              <span className="flex items-center justify-center gap-2">
-                <Search className="w-4 h-4" />
-                Browse
-              </span>
-            </button>
+          {/* Mobile tabs - Deck first, Browse second */}
+          <div className="flex-shrink-0 flex border-b border-cc-border bg-cc-darker">
             <button
               onClick={() => setActiveView('deck')}
               className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
@@ -472,31 +459,44 @@ function ArkhamDeckBuilderContent() {
                 Deck ({totalCards}/{requiredSize})
               </span>
             </button>
+            <button
+              onClick={() => setActiveView('browse')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeView === 'browse'
+                  ? 'text-gold-400 border-b-2 border-gold-500'
+                  : 'text-gray-400'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Search className="w-4 h-4" />
+                Browse
+              </span>
+            </button>
           </div>
 
           {/* Mobile content */}
           <div className="flex-1 overflow-hidden">
-            {activeView === 'browse' ? (
+            {activeView === 'deck' ? (
+              <ArkhamDeckPanel onCrossFilter={handleCrossFilter} />
+            ) : (
               <ArkhamCardBrowser
                 externalFilters={crossFilters || undefined}
                 onClearExternalFilters={clearCrossFilters}
               />
-            ) : (
-              <ArkhamDeckPanel onCrossFilter={handleCrossFilter} />
             )}
           </div>
         </div>
 
-        {/* Desktop: Side-by-side layout */}
-        <div className="hidden md:flex md:flex-row w-full h-full">
-          <div className="w-1/2 border-r border-yugi-border overflow-hidden">
+        {/* Desktop: Side-by-side layout - Deck on left, Browser on right */}
+        <div className="hidden md:flex md:flex-row w-full h-full min-h-0">
+          <div className="w-1/2 h-full min-h-0 border-r border-cc-border">
+            <ArkhamDeckPanel onCrossFilter={handleCrossFilter} />
+          </div>
+          <div className="w-1/2 h-full min-h-0">
             <ArkhamCardBrowser
               externalFilters={crossFilters || undefined}
               onClearExternalFilters={clearCrossFilters}
             />
-          </div>
-          <div className="w-1/2 overflow-hidden">
-            <ArkhamDeckPanel onCrossFilter={handleCrossFilter} />
           </div>
         </div>
       </div>
@@ -521,7 +521,7 @@ function ArkhamDeckBuilderContent() {
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowDeleteConfirm(false)}
           />
-          <div className="relative bg-yugi-card border border-yugi-border rounded-xl shadow-2xl p-6 max-w-md w-full">
+          <div className="relative bg-cc-card border border-cc-border rounded-xl shadow-2xl p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold text-white mb-2">Delete Deck?</h3>
             <p className="text-gray-400 mb-4">
               Are you sure you want to delete "{state.deckName}"? This action cannot be undone.

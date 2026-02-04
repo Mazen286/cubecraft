@@ -43,14 +43,14 @@ export function Profile() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold text-gold-400 mb-8">Profile Settings</h1>
 
-        <div className="bg-yugi-dark border border-yugi-border rounded-lg p-6">
+        <div className="bg-cc-dark border border-cc-border rounded-lg p-6">
           {/* Avatar Section */}
-          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-yugi-border">
+          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-cc-border">
             {user.avatarUrl ? (
               <img
                 src={user.avatarUrl}
                 alt=""
-                className="w-20 h-20 rounded-full border-2 border-yugi-border"
+                className="w-20 h-20 rounded-full border-2 border-cc-border"
               />
             ) : (
               <div className="w-20 h-20 rounded-full bg-gold-600 flex items-center justify-center text-black text-3xl font-bold">
@@ -76,7 +76,7 @@ export function Profile() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full bg-yugi-darker border border-yugi-border rounded-lg px-4 py-3 text-white focus:border-gold-500 focus:outline-none"
+                className="w-full bg-cc-darker border border-cc-border rounded-lg px-4 py-3 text-white focus:border-gold-500 focus:outline-none"
                 placeholder="Your display name"
                 required
               />
@@ -87,7 +87,7 @@ export function Profile() {
               <input
                 type="email"
                 value={user.email || ''}
-                className="w-full bg-yugi-darker border border-yugi-border rounded-lg px-4 py-3 text-gray-500 cursor-not-allowed"
+                className="w-full bg-cc-darker border border-cc-border rounded-lg px-4 py-3 text-gray-500 cursor-not-allowed"
                 disabled
               />
               <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
@@ -115,7 +115,7 @@ export function Profile() {
           </form>
 
           {/* Account Info */}
-          <div className="mt-8 pt-6 border-t border-yugi-border">
+          <div className="mt-8 pt-6 border-t border-cc-border">
             <h3 className="text-sm font-medium text-gray-400 mb-3">Account Information</h3>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">

@@ -66,7 +66,7 @@ export function Admin() {
         <h1 className="text-3xl font-bold text-gold-400 mb-6">Admin Dashboard</h1>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-yugi-border">
+        <div className="flex gap-1 mb-6 border-b border-cc-border">
           <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -189,8 +189,8 @@ function UserManagement({ currentUserId }: { currentUserId?: string }) {
   }
 
   return (
-    <div className="bg-yugi-dark border border-yugi-border rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-yugi-border">
+    <div className="bg-cc-dark border border-cc-border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-cc-border">
         <h2 className="font-semibold text-white">User Management</h2>
         <p className="text-sm text-gray-400">{users.length} registered users</p>
       </div>
@@ -198,7 +198,7 @@ function UserManagement({ currentUserId }: { currentUserId?: string }) {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="text-left text-sm text-gray-400 border-b border-yugi-border">
+            <tr className="text-left text-sm text-gray-400 border-b border-cc-border">
               <th className="px-4 py-3 font-medium">User</th>
               <th className="px-4 py-3 font-medium">Email</th>
               <th className="px-4 py-3 font-medium">Role</th>
@@ -208,7 +208,7 @@ function UserManagement({ currentUserId }: { currentUserId?: string }) {
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.id} className="border-b border-yugi-border/50 hover:bg-white/5">
+              <tr key={user.id} className="border-b border-cc-border/50 hover:bg-white/5">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gold-600/20 flex items-center justify-center text-gold-400 font-medium text-sm">
@@ -376,8 +376,8 @@ function CubeManagement() {
   }
 
   return (
-    <div className="bg-yugi-dark border border-yugi-border rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-yugi-border">
+    <div className="bg-cc-dark border border-cc-border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-cc-border">
         <h2 className="font-semibold text-white">Cube Management</h2>
         <p className="text-sm text-gray-400">
           {cubes.filter(c => c.isBuiltIn).length} built-in, {cubes.filter(c => !c.isBuiltIn).length} user-uploaded
@@ -387,7 +387,7 @@ function CubeManagement() {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="text-left text-sm text-gray-400 border-b border-yugi-border">
+            <tr className="text-left text-sm text-gray-400 border-b border-cc-border">
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Creator</th>
               <th className="px-4 py-3 font-medium">Game</th>
@@ -398,7 +398,7 @@ function CubeManagement() {
           </thead>
           <tbody>
             {cubes.map((cube) => (
-              <tr key={cube.id} className="border-b border-yugi-border/50 hover:bg-white/5">
+              <tr key={cube.id} className="border-b border-cc-border/50 hover:bg-white/5">
                 <td className="px-4 py-3">
                   <span className="text-white">{cube.name}</span>
                 </td>
@@ -406,7 +406,7 @@ function CubeManagement() {
                   {cube.user_profiles?.[0]?.display_name || 'Anonymous'}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 bg-yugi-darker text-gray-400 text-xs rounded">
+                  <span className="px-2 py-0.5 bg-cc-darker text-gray-400 text-xs rounded">
                     {getGameName(cube.game_id)}
                   </span>
                 </td>
@@ -685,7 +685,7 @@ function ScoreManagement() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-yugi-dark border border-yugi-border rounded-lg p-4">
+      <div className="bg-cc-dark border border-cc-border rounded-lg p-4">
         <div className="flex flex-wrap items-center gap-4">
           {/* Cube selector */}
           <div className="flex-1 min-w-48">
@@ -693,7 +693,7 @@ function ScoreManagement() {
             <select
               value={selectedCubeId}
               onChange={(e) => setSelectedCubeId(e.target.value)}
-              className="w-full bg-yugi-darker border border-yugi-border rounded px-3 py-2 text-white focus:outline-none focus:border-gold-500"
+              className="w-full bg-cc-darker border border-cc-border rounded px-3 py-2 text-white focus:outline-none focus:border-gold-500"
             >
               {availableCubes.map((cube) => (
                 <option key={cube.id} value={cube.id}>
@@ -711,7 +711,7 @@ function ScoreManagement() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name, type, or ID..."
-              className="w-full bg-yugi-darker border border-yugi-border rounded px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-gold-500"
+              className="w-full bg-cc-darker border border-cc-border rounded px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-gold-500"
             />
           </div>
 
@@ -721,7 +721,7 @@ function ScoreManagement() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'name-asc' | 'name-desc' | 'score-high' | 'score-low')}
-              className="bg-yugi-darker border border-yugi-border rounded px-3 py-2 text-white focus:outline-none focus:border-gold-500"
+              className="bg-cc-darker border border-cc-border rounded px-3 py-2 text-white focus:outline-none focus:border-gold-500"
             >
               <option value="name-asc">Name (A-Z)</option>
               <option value="name-desc">Name (Z-A)</option>
@@ -733,7 +733,7 @@ function ScoreManagement() {
       </div>
 
       {/* Actions bar */}
-      <div className="bg-yugi-dark border border-yugi-border rounded-lg p-4">
+      <div className="bg-cc-dark border border-cc-border rounded-lg p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             {pendingChanges.size > 0 && (
@@ -753,13 +753,13 @@ function ScoreManagement() {
           <div className="flex items-center gap-2">
             <button
               onClick={exportCSV}
-              className="px-3 py-2 bg-yugi-darker border border-yugi-border rounded text-sm text-white hover:bg-yugi-border transition-colors"
+              className="px-3 py-2 bg-cc-darker border border-cc-border rounded text-sm text-white hover:bg-cc-border transition-colors"
             >
               Export CSV
             </button>
             <button
               onClick={exportJSON}
-              className="px-3 py-2 bg-yugi-darker border border-yugi-border rounded text-sm text-white hover:bg-yugi-border transition-colors"
+              className="px-3 py-2 bg-cc-darker border border-cc-border rounded text-sm text-white hover:bg-cc-border transition-colors"
             >
               Export JSON
             </button>
@@ -785,8 +785,8 @@ function ScoreManagement() {
       </div>
 
       {/* Cards table */}
-      <div className="bg-yugi-dark border border-yugi-border rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b border-yugi-border">
+      <div className="bg-cc-dark border border-cc-border rounded-lg overflow-hidden">
+        <div className="px-4 py-3 border-b border-cc-border">
           <h2 className="font-semibold text-white">
             {selectedCube?.name || 'Card Scores'}
           </h2>
@@ -802,8 +802,8 @@ function ScoreManagement() {
         ) : (
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full">
-              <thead className="sticky top-0 bg-yugi-dark z-10">
-                <tr className="text-left text-sm text-gray-400 border-b border-yugi-border">
+              <thead className="sticky top-0 bg-cc-dark z-10">
+                <tr className="text-left text-sm text-gray-400 border-b border-cc-border">
                   <th className="px-2 py-3 font-medium w-16">Image</th>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Type</th>
@@ -818,14 +818,14 @@ function ScoreManagement() {
                   return (
                     <tr
                       key={card.id}
-                      className={`border-b border-yugi-border/50 hover:bg-white/5 ${
+                      className={`border-b border-cc-border/50 hover:bg-white/5 ${
                         hasChange ? 'bg-yellow-900/10' : ''
                       }`}
                     >
                       <td className="px-2 py-1">
                         <button
                           onClick={() => setPreviewCard(card)}
-                          className="block w-12 h-16 rounded overflow-hidden border border-yugi-border hover:border-gold-500 transition-colors bg-yugi-darker"
+                          className="block w-12 h-16 rounded overflow-hidden border border-cc-border hover:border-gold-500 transition-colors bg-cc-darker"
                         >
                           <img
                             src={getCardImageUrl(card, 'sm')}
@@ -870,20 +870,20 @@ function ScoreManagement() {
                             onChange={(e) =>
                               handleScoreChange(card.id, parseInt(e.target.value) || 0)
                             }
-                            className={`w-16 bg-yugi-darker border rounded px-2 py-1 text-white text-center focus:outline-none focus:border-gold-500 ${
-                              hasChange ? 'border-yellow-500' : 'border-yugi-border'
+                            className={`w-16 bg-cc-darker border rounded px-2 py-1 text-white text-center focus:outline-none focus:border-gold-500 ${
+                              hasChange ? 'border-yellow-500' : 'border-cc-border'
                             }`}
                           />
                           <div className="flex gap-1">
                             <button
                               onClick={() => handleScoreChange(card.id, currentScore - 5)}
-                              className="px-2 py-1 bg-yugi-darker border border-yugi-border rounded text-gray-400 hover:text-white hover:border-yugi-border transition-colors text-xs"
+                              className="px-2 py-1 bg-cc-darker border border-cc-border rounded text-gray-400 hover:text-white hover:border-cc-border transition-colors text-xs"
                             >
                               -5
                             </button>
                             <button
                               onClick={() => handleScoreChange(card.id, currentScore + 5)}
-                              className="px-2 py-1 bg-yugi-darker border border-yugi-border rounded text-gray-400 hover:text-white hover:border-yugi-border transition-colors text-xs"
+                              className="px-2 py-1 bg-cc-darker border border-cc-border rounded text-gray-400 hover:text-white hover:border-cc-border transition-colors text-xs"
                             >
                               +5
                             </button>
@@ -993,7 +993,7 @@ function ScoreManagement() {
               </div>
 
               {/* Description / Errata */}
-              <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border">
+              <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-cc-border">
                 {(() => {
                   const errata = getErrata(previewCard.id);
                   if (errata) {
@@ -1091,15 +1091,15 @@ function DraftManagement() {
   }
 
   return (
-    <div className="bg-yugi-dark border border-yugi-border rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-yugi-border flex items-center justify-between">
+    <div className="bg-cc-dark border border-cc-border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-cc-border flex items-center justify-between">
         <div>
           <h2 className="font-semibold text-white">Recent Completed Drafts</h2>
           <p className="text-sm text-gray-400">{drafts.length} drafts</p>
         </div>
         <button
           onClick={loadDrafts}
-          className="px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-yugi-border rounded hover:border-gray-500 transition-colors"
+          className="px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-cc-border rounded hover:border-gray-500 transition-colors"
         >
           Refresh
         </button>
@@ -1113,7 +1113,7 @@ function DraftManagement() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-sm text-gray-400 border-b border-yugi-border">
+              <tr className="text-left text-sm text-gray-400 border-b border-cc-border">
                 <th className="px-4 py-3 font-medium">Room</th>
                 <th className="px-4 py-3 font-medium">Cube</th>
                 <th className="px-4 py-3 font-medium">View Deck</th>
@@ -1123,7 +1123,7 @@ function DraftManagement() {
             </thead>
             <tbody>
               {drafts.map((draft) => (
-                <tr key={draft.sessionId} className="border-b border-yugi-border/50 hover:bg-white/5">
+                <tr key={draft.sessionId} className="border-b border-cc-border/50 hover:bg-white/5">
                   <td className="px-4 py-3">
                     <span className="font-mono text-gold-400 font-medium">{draft.roomCode}</span>
                   </td>
@@ -1131,7 +1131,7 @@ function DraftManagement() {
                   <td className="px-4 py-3">
                     {draft.players.length > 0 ? (
                       <select
-                        className="bg-yugi-darker border border-yugi-border rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-gold-500 cursor-pointer min-w-[140px]"
+                        className="bg-cc-darker border border-cc-border rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-gold-500 cursor-pointer min-w-[140px]"
                         defaultValue=""
                         onChange={(e) => {
                           if (e.target.value) {
@@ -1376,7 +1376,7 @@ function DatabaseManagement() {
                 max="720"
                 value={settings.retention_completed_hours}
                 onChange={(e) => setSettings({ ...settings, retention_completed_hours: parseInt(e.target.value) || 72 })}
-                className="w-20 px-3 py-2 bg-yugi-card border border-yugi-border rounded text-white text-center"
+                className="w-20 px-3 py-2 bg-cc-card border border-cc-border rounded text-white text-center"
               />
               <span className="text-gray-400 text-sm">hours ({Math.round(settings.retention_completed_hours / 24)} days)</span>
             </div>
@@ -1391,7 +1391,7 @@ function DatabaseManagement() {
                 max="168"
                 value={settings.retention_abandoned_hours}
                 onChange={(e) => setSettings({ ...settings, retention_abandoned_hours: parseInt(e.target.value) || 6 })}
-                className="w-20 px-3 py-2 bg-yugi-card border border-yugi-border rounded text-white text-center"
+                className="w-20 px-3 py-2 bg-cc-card border border-cc-border rounded text-white text-center"
               />
               <span className="text-gray-400 text-sm">hours</span>
             </div>
@@ -1406,7 +1406,7 @@ function DatabaseManagement() {
                 max="168"
                 value={settings.retention_cancelled_hours}
                 onChange={(e) => setSettings({ ...settings, retention_cancelled_hours: parseInt(e.target.value) || 24 })}
-                className="w-20 px-3 py-2 bg-yugi-card border border-yugi-border rounded text-white text-center"
+                className="w-20 px-3 py-2 bg-cc-card border border-cc-border rounded text-white text-center"
               />
               <span className="text-gray-400 text-sm">hours</span>
             </div>
@@ -1449,7 +1449,7 @@ function DatabaseManagement() {
           {isCleaning ? 'Cleaning...' : 'Run Cleanup Now'}
         </button>
 
-        <div className="mt-4 p-4 bg-yugi-card rounded-lg">
+        <div className="mt-4 p-4 bg-cc-card rounded-lg">
           <h3 className="text-sm font-semibold text-gray-300 mb-2">Automatic Cleanup</h3>
           <p className="text-xs text-gray-500">
             To enable automatic cleanup, set up a scheduled job to call the <code className="text-gold-400">cleanup_old_sessions()</code> function.
@@ -1463,7 +1463,7 @@ function DatabaseManagement() {
 
 function StatCard({ label, value, color = 'text-white' }: { label: string; value: number; color?: string }) {
   return (
-    <div className="bg-yugi-card rounded-lg p-4">
+    <div className="bg-cc-card rounded-lg p-4">
       <p className="text-xs text-gray-400 mb-1">{label}</p>
       <p className={`text-2xl font-bold ${color}`}>{value.toLocaleString()}</p>
     </div>

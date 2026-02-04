@@ -185,7 +185,7 @@ export function StackHeader({
           onKeyDown={handleKeyDown}
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            'w-full bg-yugi-dark border border-yugi-border rounded px-1.5 py-0.5',
+            'w-full bg-cc-dark border border-cc-border rounded px-1.5 py-0.5',
             'text-white focus:border-gold-500 focus:outline-none text-center',
             cardSize === 'compact' ? 'text-xs' : 'text-sm'
           )}

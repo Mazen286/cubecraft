@@ -180,7 +180,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
   };
 
   return (
-    <div className="bg-yugi-dark border border-yugi-border rounded-lg p-6 max-w-2xl mx-auto">
+    <div className="bg-cc-dark border border-cc-border rounded-lg p-6 max-w-2xl mx-auto">
       <h2 className="text-xl font-bold text-gold-400 mb-4">Upload Cube</h2>
 
       {step === 'select' && (
@@ -191,7 +191,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
             <select
               value={selectedGameId}
               onChange={(e) => handleGameChange(e.target.value)}
-              className="w-full bg-yugi-darker border border-yugi-border rounded px-3 py-2 text-white"
+              className="w-full bg-cc-darker border border-cc-border rounded px-3 py-2 text-white"
             >
               {getAllGameConfigs().map(config => (
                 <option key={config.id} value={config.id}>{config.name}</option>
@@ -201,7 +201,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
 
           {/* Drop Zone */}
           <div
-            className="border-2 border-dashed border-yugi-border rounded-lg p-8 text-center hover:border-gold-500 transition-colors cursor-pointer"
+            className="border-2 border-dashed border-cc-border rounded-lg p-8 text-center hover:border-gold-500 transition-colors cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
@@ -244,10 +244,10 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
                 Download Sample
               </button>
             </div>
-            <div className="bg-yugi-darker rounded overflow-hidden">
+            <div className="bg-cc-darker rounded overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-yugi-border">
+                  <tr className="border-b border-cc-border">
                     {(SAMPLE_DATA[selectedGameId] || SAMPLE_DATA.pokemon).headers.map((header) => (
                       <th key={header} className="text-left px-3 py-2 text-gray-400">{header}</th>
                     ))}
@@ -255,7 +255,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
                 </thead>
                 <tbody className="font-mono text-white">
                   {(SAMPLE_DATA[selectedGameId] || SAMPLE_DATA.pokemon).rows.map((row, rowIdx) => (
-                    <tr key={rowIdx} className={rowIdx < 4 ? "border-b border-yugi-border/50" : ""}>
+                    <tr key={rowIdx} className={rowIdx < 4 ? "border-b border-cc-border/50" : ""}>
                       {row.map((cell, cellIdx) => (
                         <td key={cellIdx} className={`px-3 py-1.5 ${cellIdx === row.length - 1 ? 'text-gold-400' : ''}`}>
                           {cell}
@@ -276,7 +276,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
             <p className="text-yellow-500/80 text-xs mt-1">
               Tip: If card names contain commas, wrap them in quotes: "Card, Name"
             </p>
-            <div className="bg-yugi-darker rounded p-3 font-mono text-xs space-y-2">
+            <div className="bg-cc-darker rounded p-3 font-mono text-xs space-y-2">
               <div>
                 <p className="text-gray-400 mb-1">JSON format:</p>
                 <p className="text-white">{'[{ "name": "...", "type": "...", "score": 85 }, ...]'}</p>
@@ -318,7 +318,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
           <p className="text-gray-400 text-sm">
             {enrichmentProgress.current} / {enrichmentProgress.total} cards
           </p>
-          <div className="w-64 mx-auto mt-4 bg-yugi-darker rounded-full h-2 overflow-hidden">
+          <div className="w-64 mx-auto mt-4 bg-cc-darker rounded-full h-2 overflow-hidden">
             <div
               className="bg-gold-500 h-full transition-all duration-300"
               style={{ width: `${enrichmentProgress.total > 0 ? (enrichmentProgress.current / enrichmentProgress.total) * 100 : 0}%` }}
@@ -337,7 +337,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
                 type="text"
                 value={cubeName}
                 onChange={(e) => setCubeName(e.target.value)}
-                className="w-full bg-yugi-darker border border-yugi-border rounded px-3 py-2 text-white"
+                className="w-full bg-cc-darker border border-cc-border rounded px-3 py-2 text-white"
                 placeholder="My Custom Cube"
               />
             </div>
@@ -346,7 +346,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
               <select
                 value={selectedGameId}
                 onChange={(e) => handleGameChange(e.target.value)}
-                className="w-full bg-yugi-darker border border-yugi-border rounded px-3 py-2 text-white"
+                className="w-full bg-cc-darker border border-cc-border rounded px-3 py-2 text-white"
               >
                 {getAllGameConfigs().map(config => (
                   <option key={config.id} value={config.id}>{config.name}</option>
@@ -360,7 +360,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
             <textarea
               value={cubeDescription}
               onChange={(e) => setCubeDescription(e.target.value)}
-              className="w-full bg-yugi-darker border border-yugi-border rounded px-3 py-2 text-white resize-none"
+              className="w-full bg-cc-darker border border-cc-border rounded px-3 py-2 text-white resize-none"
               rows={2}
               placeholder="Describe your cube..."
             />
@@ -372,7 +372,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
               id="isPublic"
               checked={isPublic}
               onChange={(e) => setIsPublic(e.target.checked)}
-              className="rounded border-yugi-border"
+              className="rounded border-cc-border"
             />
             <label htmlFor="isPublic" className="text-sm text-gray-300">
               Make this cube public (anyone can use it)
@@ -380,7 +380,7 @@ export function CubeUpload({ onUploadComplete, onCancel }: CubeUploadProps) {
           </div>
 
           {/* Stats */}
-          <div className="bg-yugi-darker rounded p-4">
+          <div className="bg-cc-darker rounded p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-400">Cards Found</span>
               <span className={`font-bold ${parsedCube.cards.length >= 40 ? 'text-green-400' : 'text-yellow-400'}`}>

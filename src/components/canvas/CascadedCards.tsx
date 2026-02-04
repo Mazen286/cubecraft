@@ -200,8 +200,8 @@ export function CascadedCards({
           className={cn(
             'absolute left-0 right-0 bottom-0',
             'flex items-center justify-center gap-1',
-            'bg-yugi-card/90 border border-yugi-border rounded',
-            'text-xs text-gray-300 hover:text-white hover:bg-yugi-card',
+            'bg-cc-card/90 border border-cc-border rounded',
+            'text-xs text-gray-300 hover:text-white hover:bg-cc-card',
             'transition-colors cursor-pointer py-1'
           )}
           style={{ width: dims.width }}
@@ -220,8 +220,8 @@ export function CascadedCards({
           className={cn(
             'absolute left-0 right-0',
             'flex items-center justify-center',
-            'bg-yugi-card/90 border border-yugi-border rounded',
-            'text-xs text-gray-300 hover:text-white hover:bg-yugi-card',
+            'bg-cc-card/90 border border-cc-border rounded',
+            'text-xs text-gray-300 hover:text-white hover:bg-cc-card',
             'transition-colors cursor-pointer py-1'
           )}
           style={{
@@ -242,7 +242,7 @@ export function CascadedCards({
         <div
           className={cn(
             'flex items-center justify-center',
-            'border-2 border-dashed border-yugi-border rounded-lg',
+            'border-2 border-dashed border-cc-border rounded-lg',
             'text-xs text-gray-500'
           )}
           style={{ width: dims.width, height: 60 }}

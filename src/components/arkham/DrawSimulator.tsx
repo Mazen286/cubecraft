@@ -1,7 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
-import { X, Shuffle, RotateCcw, ChevronRight, AlertTriangle } from 'lucide-react';
+import { X, Shuffle, RotateCcw, ChevronRight, AlertTriangle, Check, XCircle } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
+import { BottomSheet } from '../ui/BottomSheet';
+import { FACTION_COLORS, FACTION_NAMES } from '../../config/games/arkham';
 import type { ArkhamCard } from '../../types/arkham';
 
 interface DrawSimulatorProps {
@@ -45,6 +47,9 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
   const [phase, setPhase] = useState<'initial' | 'mulligan' | 'playing'>('initial');
   const [drawnThisTurn, setDrawnThisTurn] = useState<ArkhamCard | null>(null);
   const [setAsideWeaknesses, setSetAsideWeaknesses] = useState<ArkhamCard[]>([]);
+
+  // Card detail state
+  const [selectedCard, setSelectedCard] = useState<{ card: ArkhamCard; index: number } | null>(null);
 
   // Shuffle function
   const shuffleDeck = useCallback((deck: ArkhamCard[]): ArkhamCard[] => {
@@ -199,13 +204,13 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-yugi-card border border-yugi-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-4xl max-h-[90vh] bg-cc-card border border-cc-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+        <div className="flex items-center justify-between p-4 border-b border-cc-border">
           <h2 className="text-lg font-semibold text-white">Card Draw Simulator</h2>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-yugi-border"
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-cc-border"
           >
             <X className="w-5 h-5" />
           </button>
@@ -276,38 +281,58 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
               {/* Hand display */}
               <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-400 mb-3">
-                  {phase === 'mulligan' ? 'Opening Hand (select cards to mulligan)' : 'Your Hand'}
+                  {phase === 'mulligan' ? 'Opening Hand (tap card to view, use checkboxes to mulligan)' : 'Your Hand'}
                 </h3>
                 <div className="flex flex-wrap gap-3 justify-center">
                   {hand.map((card, index) => {
-                    const isWeakness = card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness';
-                    const isSelected = selectedForMulligan.has(index);
+                    const cardIsWeakness = card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness';
+                    const isSelectedForMulligan = selectedForMulligan.has(index);
                     const isNewlyDrawn = drawnThisTurn?.code === card.code && index === hand.length - 1;
 
                     return (
-                      <button
+                      <div
                         key={`${card.code}-${index}`}
-                        onClick={() => phase === 'mulligan' && toggleMulliganSelection(index)}
-                        disabled={phase !== 'mulligan'}
-                        className={`relative transition-all ${
-                          phase === 'mulligan' ? 'cursor-pointer hover:scale-105' : ''
-                        } ${isSelected ? 'ring-4 ring-red-500 scale-95 opacity-60' : ''} ${
-                          isNewlyDrawn ? 'ring-4 ring-green-500 animate-pulse' : ''
-                        }`}
+                        className={`relative transition-all cursor-pointer hover:scale-105 ${
+                          isSelectedForMulligan ? 'ring-4 ring-red-500 scale-95 opacity-60' : ''
+                        } ${isNewlyDrawn ? 'ring-4 ring-green-500 animate-pulse' : ''}`}
                       >
-                        <img
-                          src={arkhamCardService.getArkhamCardImageUrl(card.code)}
-                          alt={card.name}
-                          className="w-24 h-32 sm:w-28 sm:h-36 object-cover rounded-lg shadow-lg"
-                        />
-                        {isWeakness && (
+                        {/* Mulligan checkbox during mulligan phase */}
+                        {phase === 'mulligan' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleMulliganSelection(index);
+                            }}
+                            className={`absolute top-1 left-1 z-10 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                              isSelectedForMulligan
+                                ? 'bg-red-600 border-red-600'
+                                : 'bg-black/50 border-white/60 hover:border-red-400'
+                            }`}
+                          >
+                            {isSelectedForMulligan && <Check className="w-4 h-4 text-white" />}
+                          </button>
+                        )}
+
+                        {/* Card image - tap to view details */}
+                        <button
+                          onClick={() => setSelectedCard({ card, index })}
+                          className="block"
+                        >
+                          <img
+                            src={arkhamCardService.getArkhamCardImageUrl(card.code)}
+                            alt={card.name}
+                            className="w-24 h-32 sm:w-28 sm:h-36 object-cover rounded-lg shadow-lg"
+                          />
+                        </button>
+
+                        {cardIsWeakness && (
                           <div className="absolute top-1 right-1 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded font-medium">
                             Weakness
                           </div>
                         )}
-                        {isSelected && (
-                          <div className="absolute inset-0 bg-red-500/30 rounded-lg flex items-center justify-center">
-                            <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
+                        {isSelectedForMulligan && (
+                          <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none">
+                            <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-medium">
                               Mulligan
                             </span>
                           </div>
@@ -315,7 +340,7 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
                         <p className="text-xs text-center text-gray-300 mt-1 truncate max-w-24 sm:max-w-28">
                           {card.name}
                         </p>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -356,7 +381,7 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
                     </button>
                     <button
                       onClick={reset}
-                      className="flex items-center gap-2 px-4 py-2 bg-yugi-darker hover:bg-yugi-border text-gray-300 font-medium rounded-lg transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-cc-darker hover:bg-cc-border text-gray-300 font-medium rounded-lg transition-colors"
                     >
                       <RotateCcw className="w-4 h-4" />
                       Reset
@@ -378,7 +403,7 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-yugi-border bg-yugi-darker">
+        <div className="p-4 border-t border-cc-border bg-cc-darker">
           <p className="text-xs text-gray-500 text-center">
             Follows official rules: Weaknesses drawn during setup are set aside and replaced.
             After mulligan, all set-aside weaknesses are shuffled back into the deck.
@@ -386,6 +411,206 @@ export function DrawSimulator({ isOpen, onClose }: DrawSimulatorProps) {
           </p>
         </div>
       </div>
+
+      {/* Card Detail Bottom Sheet */}
+      {selectedCard && (
+        <CardDetailBottomSheet
+          card={selectedCard.card}
+          index={selectedCard.index}
+          isInMulliganPhase={phase === 'mulligan'}
+          isSelectedForMulligan={selectedForMulligan.has(selectedCard.index)}
+          onToggleMulligan={() => {
+            toggleMulliganSelection(selectedCard.index);
+          }}
+          onClose={() => setSelectedCard(null)}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Card detail bottom sheet for the draw simulator
+ */
+function CardDetailBottomSheet({
+  card,
+  index: _index,
+  isInMulliganPhase,
+  isSelectedForMulligan,
+  onToggleMulligan,
+  onClose,
+}: {
+  card: ArkhamCard;
+  index: number;
+  isInMulliganPhase: boolean;
+  isSelectedForMulligan: boolean;
+  onToggleMulligan: () => void;
+  onClose: () => void;
+}) {
+  const imageUrl = arkhamCardService.getArkhamCardImageUrl(card.code);
+  const factionColor = FACTION_COLORS[card.faction_code];
+  const cardIsWeakness = card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness';
+
+  const title = (
+    <>
+      {card.name}
+      {card.xp !== undefined && card.xp > 0 && (
+        <span className="ml-2 text-yellow-400">({'•'.repeat(card.xp)})</span>
+      )}
+    </>
+  );
+
+  const footer = isInMulliganPhase ? (
+    <div className="flex gap-3">
+      <button
+        onClick={() => {
+          onToggleMulligan();
+          onClose();
+        }}
+        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+          isSelectedForMulligan
+            ? 'bg-green-600 hover:bg-green-500 text-white'
+            : 'bg-red-600 hover:bg-red-500 text-white'
+        }`}
+      >
+        {isSelectedForMulligan ? (
+          <>
+            <XCircle className="w-5 h-5" />
+            Keep This Card
+          </>
+        ) : (
+          <>
+            <Check className="w-5 h-5" />
+            Select for Mulligan
+          </>
+        )}
+      </button>
+    </div>
+  ) : undefined;
+
+  return (
+    <BottomSheet
+      isOpen={true}
+      onClose={onClose}
+      title={title}
+      centerTitle
+      dismissOnAnyKey
+      footer={footer}
+    >
+      <div className="p-4 md:p-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex gap-4 md:gap-6">
+            {/* Card image */}
+            <div className="flex-shrink-0">
+              <img
+                src={imageUrl}
+                alt={card.name}
+                className="w-32 sm:w-40 md:w-48 rounded-lg shadow-lg"
+              />
+            </div>
+
+            {/* Card info */}
+            <div className="flex-1 min-w-0">
+              {/* Type and faction */}
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-sm text-gray-300">{card.type_name || card.type_code}</span>
+                <span className="text-sm" style={{ color: factionColor }}>
+                  {FACTION_NAMES[card.faction_code]}
+                </span>
+                {card.faction2_code && (
+                  <span className="text-sm" style={{ color: FACTION_COLORS[card.faction2_code] }}>
+                    / {FACTION_NAMES[card.faction2_code]}
+                  </span>
+                )}
+              </div>
+
+              {/* Traits */}
+              {card.traits && (
+                <p className="text-sm text-gray-400 italic mb-2">{card.traits}</p>
+              )}
+
+              {/* Stats row */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {card.cost !== undefined && card.cost !== null && (
+                  <span className="px-2 py-0.5 bg-cc-card rounded text-xs text-gray-300">
+                    Cost: {card.cost}
+                  </span>
+                )}
+                {card.slot && (
+                  <span className="px-2 py-0.5 bg-cc-card rounded text-xs text-gray-300">
+                    Slot: {card.slot}
+                  </span>
+                )}
+                {card.xp !== undefined && card.xp > 0 && (
+                  <span className="px-2 py-0.5 bg-yellow-900/50 rounded text-xs text-yellow-400">
+                    XP: {card.xp}
+                  </span>
+                )}
+              </div>
+
+              {/* Skill icons */}
+              {(card.skill_willpower || card.skill_intellect || card.skill_combat || card.skill_agility || card.skill_wild) && (
+                <div className="flex gap-2 mb-3">
+                  {card.skill_willpower && (
+                    <span className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs flex items-center justify-center font-bold">
+                      {card.skill_willpower}
+                    </span>
+                  )}
+                  {card.skill_intellect && (
+                    <span className="w-6 h-6 rounded-full bg-orange-600 text-white text-xs flex items-center justify-center font-bold">
+                      {card.skill_intellect}
+                    </span>
+                  )}
+                  {card.skill_combat && (
+                    <span className="w-6 h-6 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-bold">
+                      {card.skill_combat}
+                    </span>
+                  )}
+                  {card.skill_agility && (
+                    <span className="w-6 h-6 rounded-full bg-green-600 text-white text-xs flex items-center justify-center font-bold">
+                      {card.skill_agility}
+                    </span>
+                  )}
+                  {card.skill_wild && (
+                    <span className="w-6 h-6 rounded-full bg-gray-600 text-white text-xs flex items-center justify-center font-bold">
+                      {card.skill_wild}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Health/Sanity for assets */}
+              {(card.health !== undefined || card.sanity !== undefined) && (
+                <div className="flex gap-3 mb-3 text-sm">
+                  {card.health !== undefined && (
+                    <span className="text-red-400">Health: {card.health}</span>
+                  )}
+                  {card.sanity !== undefined && (
+                    <span className="text-blue-400">Sanity: {card.sanity}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Weakness badge */}
+              {cardIsWeakness && (
+                <div className="inline-block px-2 py-1 bg-red-900/50 border border-red-700 rounded text-xs text-red-400 mb-3">
+                  Weakness
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Card text */}
+          {card.text && (
+            <div className="mt-4 pt-4 border-t border-cc-border">
+              <p
+                className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ __html: card.text }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </BottomSheet>
   );
 }

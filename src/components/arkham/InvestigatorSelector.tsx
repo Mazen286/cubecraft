@@ -96,7 +96,7 @@ export function InvestigatorSelector({
 
   if (filteredInvestigators.length === 0 || !currentInvestigator) {
     return (
-      <div className="min-h-screen bg-yugi-dark flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-cc-dark flex flex-col items-center justify-center p-4">
         <p className="text-gray-400 mb-2">No investigators found</p>
         <button
           onClick={() => setFactionFilter(null)}
@@ -118,9 +118,9 @@ export function InvestigatorSelector({
   const versionLabel = isParallel ? 'Parallel' : isPromo ? 'Promo' : null;
 
   return (
-    <div className="min-h-screen bg-yugi-dark flex flex-col">
+    <div className="min-h-screen bg-cc-dark flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 bg-yugi-darker border-b border-yugi-border p-3">
+      <div className="flex-shrink-0 bg-cc-darker border-b border-cc-border p-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <h1 className="text-lg font-bold text-white whitespace-nowrap">Choose Investigator</h1>
 
@@ -128,7 +128,7 @@ export function InvestigatorSelector({
           <div className="relative flex-1 max-w-xs">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-yugi-dark border border-yugi-border rounded-lg text-white"
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-cc-dark border border-cc-border rounded-lg text-white"
             >
               <span className="flex items-center gap-2">
                 {factionFilter ? (
@@ -147,10 +147,10 @@ export function InvestigatorSelector({
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-yugi-darker border border-yugi-border rounded-lg overflow-hidden z-20">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-cc-darker border border-cc-border rounded-lg overflow-hidden z-20">
                 <button
                   onClick={() => { setFactionFilter(null); setIsDropdownOpen(false); }}
-                  className={`w-full px-3 py-2 text-left hover:bg-yugi-dark ${!factionFilter ? 'bg-gold-600/20 text-gold-400' : 'text-white'}`}
+                  className={`w-full px-3 py-2 text-left hover:bg-cc-dark ${!factionFilter ? 'bg-gold-600/20 text-gold-400' : 'text-white'}`}
                 >
                   All Factions
                 </button>
@@ -158,7 +158,7 @@ export function InvestigatorSelector({
                   <button
                     key={faction}
                     onClick={() => { setFactionFilter(faction); setIsDropdownOpen(false); }}
-                    className={`w-full px-3 py-2 text-left hover:bg-yugi-dark flex items-center gap-2 ${factionFilter === faction ? 'text-white' : 'text-gray-300'}`}
+                    className={`w-full px-3 py-2 text-left hover:bg-cc-dark flex items-center gap-2 ${factionFilter === faction ? 'text-white' : 'text-gray-300'}`}
                     style={{ backgroundColor: factionFilter === faction ? FACTION_COLORS[faction] + '20' : undefined }}
                   >
                     <span
@@ -177,7 +177,7 @@ export function InvestigatorSelector({
             <select
               value={currentIndex}
               onChange={(e) => setCurrentIndex(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-yugi-dark border border-yugi-border rounded-lg text-white appearance-none cursor-pointer pr-8"
+              className="w-full px-3 py-2 bg-cc-dark border border-cc-border rounded-lg text-white appearance-none cursor-pointer pr-8"
             >
               {filteredInvestigators.map((inv, idx) => {
                 const invIsParallel = /^90/.test(inv.code);
@@ -197,7 +197,7 @@ export function InvestigatorSelector({
             {onImport && (
               <button
                 onClick={onImport}
-                className="flex items-center gap-2 px-3 py-2 bg-yugi-dark hover:bg-yugi-border border border-yugi-border text-white font-medium rounded-lg transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-cc-dark hover:bg-cc-border border border-cc-border text-white font-medium rounded-lg transition-colors"
               >
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Import</span>
@@ -220,7 +220,7 @@ export function InvestigatorSelector({
         {/* Previous button */}
         <button
           onClick={goToPrevious}
-          className="flex-shrink-0 p-3 bg-yugi-darker hover:bg-yugi-dark border border-yugi-border rounded-full text-white transition-colors"
+          className="flex-shrink-0 p-3 bg-cc-darker hover:bg-cc-dark border border-cc-border rounded-full text-white transition-colors"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
@@ -237,10 +237,10 @@ export function InvestigatorSelector({
             }}
           >
             {frontImageFailed && !showBack ? (
-              <div className="flex flex-col items-center justify-center text-gray-400 p-8 bg-yugi-darker rounded-lg" style={{ width: 'min(90vw, 900px)', height: '400px' }}>
+              <div className="flex flex-col items-center justify-center text-gray-400 p-8 bg-cc-darker rounded-lg" style={{ width: 'min(90vw, 900px)', height: '400px' }}>
                 <p className="text-lg mb-2">Image not available</p>
-                <p className="text-sm text-gray-500">{currentInvestigator.name}</p>
-                <p className="text-xs text-gray-600 mt-2">Code: {currentInvestigator.code}</p>
+                <p className="text-sm text-gray-400">{currentInvestigator.name}</p>
+                <p className="text-xs text-gray-500 mt-2">Code: {currentInvestigator.code}</p>
               </div>
             ) : (
               <img
@@ -274,7 +274,7 @@ export function InvestigatorSelector({
 
           {/* Controls below card - always in same position */}
           <div className="mt-4 flex items-center justify-center gap-6 text-gray-400 text-sm">
-            <span className="px-2 py-1 bg-yugi-darker rounded text-white text-sm font-medium">
+            <span className="px-2 py-1 bg-cc-darker rounded text-white text-sm font-medium">
               {backImageFailed ? 'No back available' : (showBack ? 'Back' : 'Front')}
             </span>
 
@@ -286,7 +286,7 @@ export function InvestigatorSelector({
                   setIsLandscape(false);
                   setShowBack(!showBack);
                 }}
-                className="flex items-center gap-2 px-3 py-1 bg-yugi-darker hover:bg-yugi-dark rounded text-white transition-colors"
+                className="flex items-center gap-2 px-3 py-1 bg-cc-darker hover:bg-cc-dark rounded text-white transition-colors"
                 title="Flip card (F)"
               >
                 <RotateCw className="w-4 h-4" />
@@ -299,14 +299,14 @@ export function InvestigatorSelector({
         {/* Next button */}
         <button
           onClick={goToNext}
-          className="flex-shrink-0 p-3 bg-yugi-darker hover:bg-yugi-dark border border-yugi-border rounded-full text-white transition-colors"
+          className="flex-shrink-0 p-3 bg-cc-darker hover:bg-cc-dark border border-cc-border rounded-full text-white transition-colors"
         >
           <ChevronRight className="w-6 h-6" />
         </button>
       </div>
 
       {/* Bottom bar with info and select button */}
-      <div className="flex-shrink-0 bg-yugi-darker border-t border-yugi-border p-4">
+      <div className="flex-shrink-0 bg-cc-darker border-t border-cc-border p-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">

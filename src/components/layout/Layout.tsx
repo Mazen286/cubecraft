@@ -73,12 +73,12 @@ function Header() {
   const showRejoinButton = activeSession && !isOnDraftPage;
 
   return (
-    <header className="sticky top-0 z-50 glass-card border-t-0 border-x-0 rounded-none bg-yugi-darker/95">
+    <header className="sticky top-0 z-50 glass-card border-t-0 border-x-0 rounded-none bg-cc-darker/95">
       <div className="container mx-auto px-4 py-4 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shadow-lg shadow-gold-500/25 group-hover:shadow-gold-500/40 transition-shadow">
-              <Box className="w-6 h-6 text-yugi-darker" strokeWidth={2.5} />
+              <Box className="w-6 h-6 text-cc-darker" strokeWidth={2.5} />
             </div>
             <div>
               <h1 className="text-lg font-bold text-gold-gradient">
@@ -98,7 +98,7 @@ function Header() {
                   <Play className="w-4 h-4 fill-current" />
                   <span className="hidden sm:inline">Rejoin Draft</span>
                 </Link>
-                <div className="w-px h-5 bg-yugi-border hidden sm:block" />
+                <div className="w-px h-5 bg-cc-border hidden sm:block" />
               </>
             )}
             {/* Desktop nav links */}
@@ -120,7 +120,7 @@ function Header() {
             >
               About
             </Link>
-            <div className="w-px h-5 bg-yugi-border hidden sm:block" />
+            <div className="w-px h-5 bg-cc-border hidden sm:block" />
             <UserMenu />
             {/* Mobile menu button */}
             <button
@@ -135,7 +135,7 @@ function Header() {
 
         {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
-          <nav className="sm:hidden mt-4 pt-4 border-t border-yugi-border flex flex-col gap-3">
+          <nav className="sm:hidden mt-4 pt-4 border-t border-cc-border flex flex-col gap-3">
             <Link
               to="/"
               className="text-sm text-gray-300 hover:text-gold-400 transition-colors py-1"
@@ -163,7 +163,7 @@ function Header() {
 
 function Footer() {
   return (
-    <footer className="relative z-10 border-t border-yugi-border mt-auto bg-yugi-darker">
+    <footer className="relative z-10 border-t border-cc-border mt-auto bg-cc-darker">
       <div className="container mx-auto px-4 py-6 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1700px]">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-300">
           <p>

@@ -68,7 +68,7 @@ export function ScoreEditor({ card, onClose }: ScoreEditorProps) {
   }, [card.id, updateAllCopiesScore]);
 
   return (
-    <div className="p-4 bg-yugi-darker">
+    <div className="p-4 bg-cc-darker">
       <div className="flex items-center justify-between mb-3">
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-medium text-white truncate">{card.name}</h4>
@@ -91,7 +91,7 @@ export function ScoreEditor({ card, onClose }: ScoreEditorProps) {
           max="100"
           value={localScore}
           onChange={handleInputChange}
-          className={`w-16 px-2 py-1 bg-yugi-dark border border-yugi-border rounded text-center font-bold ${getTierColor(localScore)}`}
+          className={`w-16 px-2 py-1 bg-cc-dark border border-cc-border rounded text-center font-bold ${getTierColor(localScore)}`}
         />
         <span className={`text-lg font-bold ${getTierColor(localScore)}`}>
           {getTierForScore(localScore)}
@@ -111,7 +111,7 @@ export function ScoreEditor({ card, onClose }: ScoreEditorProps) {
           max="100"
           value={localScore}
           onChange={handleSliderChange}
-          className="w-full h-2 bg-yugi-dark rounded-lg appearance-none cursor-pointer slider-gold"
+          className="w-full h-2 bg-cc-dark rounded-lg appearance-none cursor-pointer slider-gold"
         />
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>0</span>
@@ -129,7 +129,7 @@ export function ScoreEditor({ card, onClose }: ScoreEditorProps) {
             className={`flex-1 py-2 rounded font-bold text-sm transition-all ${
               getTierForScore(localScore) === tier.label
                 ? `${tier.color} text-white`
-                : 'bg-yugi-dark text-gray-400 hover:bg-yugi-border'
+                : 'bg-cc-dark text-gray-400 hover:bg-cc-border'
             }`}
           >
             {tier.label}
@@ -161,7 +161,7 @@ export function BulkScoreEditor({ onClose }: BulkScoreEditorProps) {
   }, [selectedTier, setAllScores, onClose]);
 
   return (
-    <div className="p-4 bg-yugi-darker rounded-lg">
+    <div className="p-4 bg-cc-darker rounded-lg">
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-medium text-white">Set All Scores</h4>
         <button
@@ -184,8 +184,8 @@ export function BulkScoreEditor({ onClose }: BulkScoreEditorProps) {
             onClick={() => setSelectedTier(tier.label)}
             className={`flex-1 py-3 rounded font-bold text-sm transition-all ${
               selectedTier === tier.label
-                ? `${tier.color} text-white ring-2 ring-offset-2 ring-offset-yugi-darker ring-white/20`
-                : 'bg-yugi-dark text-gray-400 hover:bg-yugi-border'
+                ? `${tier.color} text-white ring-2 ring-offset-2 ring-offset-cc-darker ring-white/20`
+                : 'bg-cc-dark text-gray-400 hover:bg-cc-border'
             }`}
           >
             <div>{tier.label}</div>
@@ -198,7 +198,7 @@ export function BulkScoreEditor({ onClose }: BulkScoreEditorProps) {
       <div className="flex gap-2">
         <button
           onClick={onClose}
-          className="flex-1 py-2 bg-yugi-dark text-gray-300 rounded hover:bg-yugi-border transition-colors"
+          className="flex-1 py-2 bg-cc-dark text-gray-300 rounded hover:bg-cc-border transition-colors"
         >
           Cancel
         </button>

@@ -188,7 +188,7 @@ export function CardFilterBar({
               value={filterState.search}
               onChange={(e) => setSearch(e.target.value)}
               className={cn(
-                'w-full bg-yugi-dark border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none',
+                'w-full bg-cc-dark border border-cc-border rounded-lg text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none',
                 compact ? 'pl-7 pr-2 py-1 text-xs' : 'pl-8 pr-3 py-1.5'
               )}
             />
@@ -209,7 +209,7 @@ export function CardFilterBar({
             value={filterState.typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className={cn(
-              'bg-yugi-dark border border-yugi-border rounded-lg text-white focus:border-gold-500 focus:outline-none',
+              'bg-cc-dark border border-cc-border rounded-lg text-white focus:border-gold-500 focus:outline-none',
               compact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5'
             )}
           >
@@ -230,7 +230,7 @@ export function CardFilterBar({
               compact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5',
               hasAdvancedFilters
                 ? 'border-gold-500 bg-gold-500/20 text-gold-400'
-                : 'border-yugi-border bg-yugi-dark text-gray-300 hover:border-gray-500'
+                : 'border-cc-border bg-cc-dark text-gray-300 hover:border-gray-500'
             )}
           >
             <Filter className={compact ? 'w-3 h-3' : 'w-4 h-4'} />
@@ -252,7 +252,7 @@ export function CardFilterBar({
         <div className="flex items-center gap-2 ml-auto">
           {/* View Mode Toggle - only show if game has pile view config, showViewToggle is true, and not on mobile */}
           {showViewToggle && !isMobile && gameConfig.pileViewConfig && onViewModeChange && (
-            <div className="flex items-center border border-yugi-border rounded-lg overflow-hidden">
+            <div className="flex items-center border border-cc-border rounded-lg overflow-hidden">
               <button
                 onClick={() => onViewModeChange('grid')}
                 className={cn(
@@ -260,7 +260,7 @@ export function CardFilterBar({
                   compact ? 'p-1' : 'p-1.5',
                   viewMode === 'grid'
                     ? 'bg-gold-500 text-black'
-                    : 'bg-yugi-dark text-gray-300 hover:bg-yugi-card'
+                    : 'bg-cc-dark text-gray-300 hover:bg-cc-card'
                 )}
                 title="Grid View"
               >
@@ -273,7 +273,7 @@ export function CardFilterBar({
                   compact ? 'p-1' : 'p-1.5',
                   viewMode === 'pile'
                     ? 'bg-gold-500 text-black'
-                    : 'bg-yugi-dark text-gray-300 hover:bg-yugi-card'
+                    : 'bg-cc-dark text-gray-300 hover:bg-cc-card'
                 )}
                 title="Pile View"
               >
@@ -289,7 +289,7 @@ export function CardFilterBar({
                 value={sortState.sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className={cn(
-                  'bg-yugi-dark border border-yugi-border rounded-lg text-white focus:border-gold-500 focus:outline-none',
+                  'bg-cc-dark border border-cc-border rounded-lg text-white focus:border-gold-500 focus:outline-none',
                   compact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5'
                 )}
               >
@@ -302,7 +302,7 @@ export function CardFilterBar({
               <button
                 onClick={toggleSortDirection}
                 className={cn(
-                  'bg-yugi-dark border border-yugi-border rounded-lg hover:border-gold-500 transition-colors',
+                  'bg-cc-dark border border-cc-border rounded-lg hover:border-gold-500 transition-colors',
                   compact ? 'p-1' : 'p-1.5'
                 )}
                 title={sortState.sortDirection === 'asc' ? 'Ascending' : 'Descending'}
@@ -335,8 +335,8 @@ export function CardFilterBar({
                   isActive
                     ? TIER_COLORS[tier]
                     : count === 0
-                      ? 'bg-yugi-dark/50 text-gray-600 cursor-not-allowed'
-                      : 'bg-yugi-dark text-gray-400 hover:bg-yugi-card'
+                      ? 'bg-cc-dark/50 text-gray-600 cursor-not-allowed'
+                      : 'bg-cc-dark text-gray-400 hover:bg-cc-card'
                 )}
               >
                 {tier}{count !== undefined && ` ${count}`}
@@ -359,7 +359,7 @@ export function CardFilterBar({
 
       {/* Advanced filters panel - compact dropdown layout */}
       {showAdvancedFilters && showAdvancedPanel && (showArchetypeFilter || gameConfig.filterGroups) && (
-        <div className="bg-yugi-card border border-yugi-border rounded-lg p-3">
+        <div className="bg-cc-card border border-cc-border rounded-lg p-3">
           {/* All filters as dropdowns in a flex row */}
           <div className="flex flex-wrap items-start gap-2">
             {/* Archetype filter for Yu-Gi-Oh */}
@@ -413,7 +413,7 @@ export function CardFilterBar({
                     setRangeFilter(group.id, [min, currentMax]);
                   }}
                   className={cn(
-                    'w-12 bg-yugi-dark border border-yugi-border rounded px-1.5 py-1 text-white focus:border-gold-500 focus:outline-none',
+                    'w-12 bg-cc-dark border border-cc-border rounded px-1.5 py-1 text-white focus:border-gold-500 focus:outline-none',
                     compact ? 'text-[10px]' : 'text-xs'
                   )}
                 />
@@ -430,7 +430,7 @@ export function CardFilterBar({
                     setRangeFilter(group.id, [currentMin, max]);
                   }}
                   className={cn(
-                    'w-12 bg-yugi-dark border border-yugi-border rounded px-1.5 py-1 text-white focus:border-gold-500 focus:outline-none',
+                    'w-12 bg-cc-dark border border-cc-border rounded px-1.5 py-1 text-white focus:border-gold-500 focus:outline-none',
                     compact ? 'text-[10px]' : 'text-xs'
                   )}
                 />

@@ -1773,10 +1773,10 @@ ${sideDeck}
               )}
             </button>
             {showStats && (
-              <div className="p-4 pt-0 border-t border-yugi-border">
+              <div className="p-4 pt-0 border-t border-cc-border">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
                   {/* Time Stats */}
-                  <div className="bg-yugi-dark/50 rounded-lg p-3">
+                  <div className="bg-cc-dark/50 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
                       <Clock className="w-3 h-3" />
                       Draft Duration
@@ -1785,7 +1785,7 @@ ${sideDeck}
                       {formatTime(draftStats.derived.draftDuration)}
                     </div>
                   </div>
-                  <div className="bg-yugi-dark/50 rounded-lg p-3">
+                  <div className="bg-cc-dark/50 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
                       <Clock className="w-3 h-3" />
                       Avg Pick Time
@@ -1795,7 +1795,7 @@ ${sideDeck}
                     </div>
                   </div>
                   {draftStats.derived.fastestPick && (
-                    <div className="bg-yugi-dark/50 rounded-lg p-3">
+                    <div className="bg-cc-dark/50 rounded-lg p-3">
                       <div className="flex items-center gap-2 text-green-400 text-xs mb-1">
                         <Zap className="w-3 h-3" />
                         Fastest Pick
@@ -1809,7 +1809,7 @@ ${sideDeck}
                     </div>
                   )}
                   {draftStats.derived.slowestPick && (
-                    <div className="bg-yugi-dark/50 rounded-lg p-3">
+                    <div className="bg-cc-dark/50 rounded-lg p-3">
                       <div className="text-gray-400 text-xs mb-1">Slowest Pick</div>
                       <div className="text-sm font-medium text-white truncate">
                         {draftStats.derived.slowestPick.cardName}
@@ -1823,7 +1823,7 @@ ${sideDeck}
 
                 {/* Pick Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-                  <div className="bg-yugi-dark/50 rounded-lg p-3">
+                  <div className="bg-cc-dark/50 rounded-lg p-3">
                     <div className="text-gray-400 text-xs mb-1">First Picks</div>
                     <div className="text-lg font-bold text-gold-400">
                       {draftStats.derived.firstPickCount}
@@ -1832,7 +1832,7 @@ ${sideDeck}
                       of {draftStats.raw.picks.length} total
                     </div>
                   </div>
-                  <div className="bg-yugi-dark/50 rounded-lg p-3">
+                  <div className="bg-cc-dark/50 rounded-lg p-3">
                     <div className="text-gray-400 text-xs mb-1">Wheeled Cards</div>
                     <div className="text-lg font-bold text-blue-400">
                       {draftStats.derived.wheeledCount}
@@ -1841,7 +1841,7 @@ ${sideDeck}
                       picked late in pack
                     </div>
                   </div>
-                  <div className="bg-yugi-dark/50 rounded-lg p-3">
+                  <div className="bg-cc-dark/50 rounded-lg p-3">
                     <div className="text-gray-400 text-xs mb-1">Auto-Picks</div>
                     <div className="text-lg font-bold text-yellow-400">
                       {draftStats.derived.autoPickCount}
@@ -1850,7 +1850,7 @@ ${sideDeck}
                       {draftStats.derived.autoPickPercentage.toFixed(0)}% of picks
                     </div>
                   </div>
-                  <div className="bg-yugi-dark/50 rounded-lg p-3">
+                  <div className="bg-cc-dark/50 rounded-lg p-3">
                     <div className="text-gray-400 text-xs mb-1">Avg Card Score</div>
                     <div className="text-lg font-bold text-purple-400">
                       {draftStats.derived.averageCardScore.toFixed(0)}
@@ -1868,7 +1868,7 @@ ${sideDeck}
                     <div className="flex h-6 rounded-lg overflow-hidden">
                       {draftStats.derived.typeDistribution.Monster && (
                         <div
-                          className="bg-yellow-500 flex items-center justify-center text-xs font-medium text-yugi-dark"
+                          className="bg-yellow-500 flex items-center justify-center text-xs font-medium text-cc-dark"
                           style={{ width: `${(draftStats.derived.typeDistribution.Monster / draftStats.raw.picks.length) * 100}%` }}
                         >
                           {draftStats.derived.typeDistribution.Monster}
@@ -1876,7 +1876,7 @@ ${sideDeck}
                       )}
                       {draftStats.derived.typeDistribution.Spell && (
                         <div
-                          className="bg-green-500 flex items-center justify-center text-xs font-medium text-yugi-dark"
+                          className="bg-green-500 flex items-center justify-center text-xs font-medium text-cc-dark"
                           style={{ width: `${(draftStats.derived.typeDistribution.Spell / draftStats.raw.picks.length) * 100}%` }}
                         >
                           {draftStats.derived.typeDistribution.Spell}
@@ -1884,7 +1884,7 @@ ${sideDeck}
                       )}
                       {draftStats.derived.typeDistribution.Trap && (
                         <div
-                          className="bg-pink-500 flex items-center justify-center text-xs font-medium text-yugi-dark"
+                          className="bg-pink-500 flex items-center justify-center text-xs font-medium text-cc-dark"
                           style={{ width: `${(draftStats.derived.typeDistribution.Trap / draftStats.raw.picks.length) * 100}%` }}
                         >
                           {draftStats.derived.typeDistribution.Trap}
@@ -1919,7 +1919,7 @@ ${sideDeck}
                           <div key={level} className="flex-1 flex flex-col items-center">
                             {count > 0 && (
                               <div
-                                className="w-full bg-orange-500 rounded-t text-[10px] font-medium text-center text-yugi-dark flex items-end justify-center"
+                                className="w-full bg-orange-500 rounded-t text-[10px] font-medium text-center text-cc-dark flex items-end justify-center"
                                 style={{ height: `${height}%`, minHeight: count > 0 ? '16px' : '0' }}
                               >
                                 {count}
@@ -1956,7 +1956,7 @@ ${sideDeck}
               )}
             </button>
             {showFirstPicks && (
-              <div className="pt-0 border-t border-yugi-border">
+              <div className="pt-0 border-t border-cc-border">
                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 mt-4">
                   {firstPickCards.map((card, idx) => (
                     <div
@@ -1995,7 +1995,7 @@ ${sideDeck}
               )}
             </button>
             {showBurnedCards && (
-              <div className="pt-0 border-t border-yugi-border">
+              <div className="pt-0 border-t border-cc-border">
                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 mt-4">
                   {burnedCards.map(({ card, packNumber }, index) => (
                     <div
@@ -2041,7 +2041,7 @@ ${sideDeck}
               )}
             </button>
             {showBasicResources && (
-              <div className="p-4 pt-0 border-t border-yugi-border">
+              <div className="p-4 pt-0 border-t border-cc-border">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4 mt-4">
                   {gameConfig.basicResources.map((resource) => {
                     const count = basicResourceCounts.get(resource.id) || 0;
@@ -2062,7 +2062,7 @@ ${sideDeck}
                               className="w-20 h-28 object-cover rounded shadow-lg"
                             />
                           ) : (
-                            <div className="w-20 h-28 bg-yugi-dark rounded flex items-center justify-center text-xs text-gray-400 text-center p-2">
+                            <div className="w-20 h-28 bg-cc-dark rounded flex items-center justify-center text-xs text-gray-400 text-center p-2">
                               {resource.name}
                             </div>
                           )}
@@ -2076,14 +2076,14 @@ ${sideDeck}
                             <button
                               onClick={(e) => { e.stopPropagation(); updateBasicResourceCount(resource.id, -1); }}
                               disabled={count === 0}
-                              className="w-6 h-6 rounded bg-yugi-dark hover:bg-red-600/50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+                              className="w-6 h-6 rounded bg-cc-dark hover:bg-red-600/50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
                             <span className="w-8 text-center text-white font-bold">{count}</span>
                             <button
                               onClick={(e) => { e.stopPropagation(); updateBasicResourceCount(resource.id, 1); }}
-                              className="w-6 h-6 rounded bg-yugi-dark hover:bg-green-600/50 flex items-center justify-center"
+                              className="w-6 h-6 rounded bg-cc-dark hover:bg-green-600/50 flex items-center justify-center"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
@@ -2136,7 +2136,7 @@ ${sideDeck}
               <button
                 onClick={saveDeck}
                 disabled={isSaving}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-yugi-card hover:bg-yugi-dark disabled:opacity-50 border border-yugi-border rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-cc-card hover:bg-cc-dark disabled:opacity-50 border border-cc-border rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
               >
                 <Save className="w-4 h-4" />
                 <span>{isSaving ? 'Saving...' : saveMessage || 'Save'}</span>
@@ -2146,7 +2146,7 @@ ${sideDeck}
               <button
                 onClick={loadDeck}
                 disabled={!savedDecks.some(d => d.name === 'deck')}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-yugi-card hover:bg-yugi-dark disabled:opacity-50 disabled:cursor-not-allowed border border-yugi-border rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-cc-card hover:bg-cc-dark disabled:opacity-50 disabled:cursor-not-allowed border border-cc-border rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
               >
                 <FolderOpen className="w-4 h-4" />
                 <span>Load</span>
@@ -2235,7 +2235,7 @@ ${sideDeck}
                 />
 
                 {/* Shareable deck zones container */}
-                <div className="space-y-6 bg-yugi-darker p-4 rounded-lg">
+                <div className="space-y-6 bg-cc-darker p-4 rounded-lg">
                   <DeckZoneSection
                     title="Main Deck"
                     count={mainCount}
@@ -2428,7 +2428,7 @@ ${sideDeck}
                             'px-3 py-1.5 text-sm rounded-lg border transition-colors',
                             isInThisStack
                               ? 'bg-gold-500/20 border-gold-500 text-gold-400'
-                              : 'bg-yugi-card border-yugi-border text-gray-300 hover:border-gold-500/50'
+                              : 'bg-cc-card border-cc-border text-gray-300 hover:border-gold-500/50'
                           )}
                         >
                           {stack.name}
@@ -2443,7 +2443,7 @@ ${sideDeck}
                         moveCardToStack(selectedCard.zone, selectedCard.index, newStackId);
                         handleCloseCardDetail();
                       }}
-                      className="px-3 py-1.5 text-sm rounded-lg border border-dashed border-yugi-border text-gray-400 hover:border-gold-500/50 hover:text-gold-400 transition-colors flex items-center gap-1"
+                      className="px-3 py-1.5 text-sm rounded-lg border border-dashed border-cc-border text-gray-400 hover:border-gold-500/50 hover:text-gold-400 transition-colors flex items-center gap-1"
                     >
                       <PlusCircle className="w-3.5 h-3.5" />
                       New Stack
@@ -2467,9 +2467,9 @@ ${sideDeck}
             />
 
             {/* Modal */}
-            <div className="relative bg-yugi-darker border border-yugi-border rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="relative bg-cc-darker border border-cc-border rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
               {/* Header - compact on mobile */}
-              <div className="flex items-center justify-between p-3 sm:p-4 border-b border-yugi-border flex-shrink-0">
+              <div className="flex items-center justify-between p-3 sm:p-4 border-b border-cc-border flex-shrink-0">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <Hand className="w-5 h-5 text-gold-400 flex-shrink-0" />
                   <h2 className="text-base sm:text-lg font-semibold text-white whitespace-nowrap">Hand Simulator</h2>
@@ -2490,7 +2490,7 @@ ${sideDeck}
                       <div
                         key={`hand-${card.id}-${idx}`}
                         className={`transition-transform hover:scale-105 cursor-pointer rounded-lg ${
-                          idx === handHighlightedIndex ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-yugi-darker' : ''
+                          idx === handHighlightedIndex ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-cc-darker' : ''
                         }`}
                         onClick={() => {
                           setHandHighlightedIndex(idx);
@@ -2509,9 +2509,9 @@ ${sideDeck}
               </div>
 
               {/* Footer with actions - fixed at bottom, responsive layout */}
-              <div className="flex items-center justify-center gap-2 sm:gap-4 p-3 sm:p-4 border-t border-yugi-border bg-yugi-dark/50 flex-shrink-0">
+              <div className="flex items-center justify-center gap-2 sm:gap-4 p-3 sm:p-4 border-t border-cc-border bg-cc-dark/50 flex-shrink-0">
                 {/* Deck count badge */}
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-yugi-darker rounded-lg border border-yugi-border">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-cc-darker rounded-lg border border-cc-border">
                   <span className="text-xs sm:text-sm font-bold text-gray-300">{remainingDeck.length}</span>
                   <span className="text-xs text-gray-500 hidden sm:inline">deck</span>
                 </div>
@@ -2688,7 +2688,7 @@ function DeckZoneSection({
       onDrop={handleDrop}
       className={cn(
         'transition-all rounded-lg',
-        isDragOver && 'ring-2 ring-gold-400 ring-offset-4 ring-offset-yugi-darker bg-gold-400/5'
+        isDragOver && 'ring-2 ring-gold-400 ring-offset-4 ring-offset-cc-darker bg-gold-400/5'
       )}
     >
       {/* Sticky header that acts as a drop target */}
@@ -2700,7 +2700,7 @@ function DeckZoneSection({
           'sticky top-0 z-20 py-2 px-3 -mx-3 mb-2 rounded-lg transition-all',
           isHeaderDragOver
             ? 'bg-gold-500/20 ring-2 ring-gold-400 shadow-lg shadow-gold-500/20'
-            : 'bg-yugi-darker/80 backdrop-blur-sm'
+            : 'bg-cc-darker/80 backdrop-blur-sm'
         )}
       >
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -2811,7 +2811,7 @@ function DropZoneBar({
   };
 
   return (
-    <div className="sticky top-0 z-30 mb-4 -mt-2 pt-2 pb-2 bg-yugi-darker/95 backdrop-blur-sm border-b border-yugi-border">
+    <div className="sticky top-0 z-30 mb-4 -mt-2 pt-2 pb-2 bg-cc-darker/95 backdrop-blur-sm border-b border-cc-border">
       <div className="flex gap-2 justify-center flex-wrap">
         {zones.map(zone => {
           const colors = colorClasses[zone.color] || colorClasses.gray;
@@ -2828,7 +2828,7 @@ function DropZoneBar({
                 colors.hover,
                 isOver
                   ? `${colors.bg} ${colors.border} scale-105 shadow-lg`
-                  : 'border-yugi-border bg-yugi-card/50'
+                  : 'border-cc-border bg-cc-card/50'
               )}
             >
               <div className={cn('font-semibold text-sm', isOver ? colors.text : 'text-gray-300')}>

@@ -65,7 +65,7 @@ export function MultiSelectDropdown({
           compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm",
           hasSelection
             ? "bg-gold-500/20 text-gold-400 ring-1 ring-gold-500"
-            : "bg-yugi-card text-gray-300 hover:bg-white/5 border border-yugi-border"
+            : "bg-cc-card text-gray-300 hover:bg-white/5 border border-cc-border"
         )}
       >
         <span>{label}</span>
@@ -85,10 +85,10 @@ export function MultiSelectDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 mt-1 min-w-[180px] bg-yugi-dark border border-yugi-border rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute z-50 top-full left-0 mt-1 min-w-[180px] bg-cc-dark border border-cc-border rounded-lg shadow-xl overflow-hidden">
           {/* Clear button */}
           {hasSelection && (
-            <div className="p-1.5 border-b border-yugi-border">
+            <div className="p-1.5 border-b border-cc-border">
               <button
                 onClick={() => {
                   onClear();

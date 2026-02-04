@@ -184,7 +184,7 @@ export function Lobby() {
               </span>
               <button
                 onClick={handleCopyCode}
-                className="p-2 rounded-lg bg-yugi-card border border-yugi-border hover:border-gold-500 transition-colors"
+                className="p-2 rounded-lg bg-cc-card border border-cc-border hover:border-gold-500 transition-colors"
                 title="Copy room code"
               >
                 {copied ? (
@@ -236,8 +236,8 @@ export function Lobby() {
                 key={player.id}
                 className={cn(
                   'flex items-center justify-between p-3 rounded-lg',
-                  'bg-yugi-dark border',
-                  player.is_bot ? 'border-purple-500/50' : 'border-yugi-border'
+                  'bg-cc-dark border',
+                  player.is_bot ? 'border-purple-500/50' : 'border-cc-border'
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -245,10 +245,10 @@ export function Lobby() {
                     className={cn(
                       'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold',
                       player.is_host
-                        ? 'bg-gold-500 text-yugi-dark'
+                        ? 'bg-gold-500 text-cc-dark'
                         : player.is_bot
                           ? 'bg-purple-500/20 text-purple-400'
-                          : 'bg-yugi-card text-white'
+                          : 'bg-cc-card text-white'
                     )}
                   >
                     {player.is_bot ? <Bot className="w-4 h-4" /> : index + 1}
@@ -298,10 +298,10 @@ export function Lobby() {
             {Array.from({ length: waitingFor }).map((_, index) => (
               <div
                 key={`empty-${index}`}
-                className="flex items-center justify-between p-3 rounded-lg bg-yugi-dark/50 border border-yugi-border/50"
+                className="flex items-center justify-between p-3 rounded-lg bg-cc-dark/50 border border-cc-border/50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-yugi-card/50 flex items-center justify-center text-sm text-gray-500">
+                  <div className="w-8 h-8 rounded-full bg-cc-card/50 flex items-center justify-center text-sm text-gray-500">
                     {players.length + index + 1}
                   </div>
                   <p className="text-gray-500">Waiting for player...</p>

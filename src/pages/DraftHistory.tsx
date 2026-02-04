@@ -89,9 +89,9 @@ export function DraftHistory() {
           <h1 className="text-2xl font-bold text-white mb-6">Draft History</h1>
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-yugi-card border border-yugi-border rounded-lg p-4 animate-pulse">
-                <div className="h-5 bg-yugi-darker rounded w-1/3 mb-2" />
-                <div className="h-4 bg-yugi-darker rounded w-1/4" />
+              <div key={i} className="bg-cc-card border border-cc-border rounded-lg p-4 animate-pulse">
+                <div className="h-5 bg-cc-darker rounded w-1/3 mb-2" />
+                <div className="h-4 bg-cc-darker rounded w-1/4" />
               </div>
             ))}
           </div>
@@ -117,7 +117,7 @@ export function DraftHistory() {
         )}
 
         {drafts.length === 0 ? (
-          <div className="bg-yugi-card border border-yugi-border rounded-lg p-8 text-center">
+          <div className="bg-cc-card border border-cc-border rounded-lg p-8 text-center">
             <Layers className="w-12 h-12 text-gray-500 mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-white mb-2">No drafts yet</h2>
             <p className="text-gray-400 mb-4">
@@ -136,7 +136,7 @@ export function DraftHistory() {
               <button
                 key={draft.sessionId}
                 onClick={() => navigate(`/results/${draft.sessionId}`)}
-                className="w-full bg-yugi-card border border-yugi-border rounded-lg p-4 hover:border-gold-500/50 transition-colors text-left group"
+                className="w-full bg-cc-card border border-cc-border rounded-lg p-4 hover:border-gold-500/50 transition-colors text-left group"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
@@ -145,7 +145,7 @@ export function DraftHistory() {
                         {draft.cubeName}
                       </h3>
                       {draft.mode && (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-yugi-darker text-gray-400 border border-yugi-border">
+                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-cc-darker text-gray-400 border border-cc-border">
                           {getModeDisplay(draft.mode)}
                         </span>
                       )}

@@ -38,7 +38,7 @@ export function XPTracker({ compact = false }: XPTrackerProps) {
   }
 
   return (
-    <div className="bg-yugi-darker rounded-lg p-4 border border-yugi-border">
+    <div className="bg-cc-darker rounded-lg p-4 border border-cc-border">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <Award className="w-5 h-5 text-yellow-400" />
@@ -71,7 +71,7 @@ export function XPTracker({ compact = false }: XPTrackerProps) {
       </div>
 
       {/* XP Bar */}
-      <div className="h-2 bg-yugi-border rounded-full overflow-hidden mb-4">
+      <div className="h-2 bg-cc-border rounded-full overflow-hidden mb-4">
         {state.xpEarned > 0 && (
           <div
             className={`h-full transition-all ${
@@ -84,12 +84,12 @@ export function XPTracker({ compact = false }: XPTrackerProps) {
 
       {/* Add XP form */}
       {showAddXP && (
-        <div className="flex items-center gap-2 pt-3 border-t border-yugi-border">
+        <div className="flex items-center gap-2 pt-3 border-t border-cc-border">
           <span className="text-sm text-gray-400">Scenario XP:</span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setXpToAdd(Math.max(0, xpToAdd - 1))}
-              className="p-1 text-gray-400 hover:text-white hover:bg-yugi-border rounded transition-colors"
+              className="p-1 text-gray-400 hover:text-white hover:bg-cc-border rounded transition-colors"
             >
               <Minus className="w-4 h-4" />
             </button>
@@ -99,11 +99,11 @@ export function XPTracker({ compact = false }: XPTrackerProps) {
               max="20"
               value={xpToAdd}
               onChange={(e) => setXpToAdd(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-12 text-center px-2 py-1 bg-yugi-dark border border-yugi-border rounded text-white text-sm"
+              className="w-12 text-center px-2 py-1 bg-cc-dark border border-cc-border rounded text-white text-sm"
             />
             <button
               onClick={() => setXpToAdd(xpToAdd + 1)}
-              className="p-1 text-gray-400 hover:text-white hover:bg-yugi-border rounded transition-colors"
+              className="p-1 text-gray-400 hover:text-white hover:bg-cc-border rounded transition-colors"
             >
               <Plus className="w-4 h-4" />
             </button>

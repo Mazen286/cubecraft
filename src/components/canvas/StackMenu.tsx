@@ -109,7 +109,7 @@ export function StackMenu({
         <div
           className={cn(
             'absolute z-50 top-full right-0 mt-1',
-            'bg-yugi-card border border-yugi-border rounded-lg shadow-xl',
+            'bg-cc-card border border-cc-border rounded-lg shadow-xl',
             'min-w-[140px] py-1',
             'animate-in fade-in slide-in-from-top-2 duration-150'
           )}

@@ -180,8 +180,8 @@ export function ZoneCanvas({
       <button
         className={cn(
           'w-full flex items-center gap-2 px-3 py-2 rounded-t-lg',
-          'bg-yugi-card/70 border border-b-0 border-yugi-border',
-          'hover:bg-yugi-card transition-colors',
+          'bg-cc-card/70 border border-b-0 border-cc-border',
+          'hover:bg-cc-card transition-colors',
           'text-left'
         )}
         onClick={() => onZoneCollapsedChange(!zone.collapsed)}
@@ -207,7 +207,7 @@ export function ZoneCanvas({
           }}
           className={cn(
             'relative overflow-x-hidden',
-            'bg-yugi-dark/50 border border-yugi-border rounded-b-lg',
+            'bg-cc-dark/50 border border-cc-border rounded-b-lg',
             'transition-colors'
           )}
           style={{

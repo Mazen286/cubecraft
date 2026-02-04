@@ -249,7 +249,7 @@ export function CubeStats({ cards, filteredCards, onFilterClick, activeFilters }
   if (cards.length === 0) return null;
 
   return (
-    <div className="border-b border-yugi-border bg-yugi-dark/30">
+    <div className="border-b border-cc-border bg-cc-dark/30">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full p-3 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
@@ -279,7 +279,7 @@ export function CubeStats({ cards, filteredCards, onFilterClick, activeFilters }
             const hasMore = group.distributions.length > 12;
 
             return (
-              <div key={group.id} className="bg-yugi-card/30 rounded p-1.5">
+              <div key={group.id} className="bg-cc-card/30 rounded p-1.5">
                 <h4 className="text-[9px] font-semibold text-gray-500 uppercase mb-0.5">{group.label}</h4>
                 <div className="space-y-0">
                   {group.distributions.slice(0, displayLimit).map((dist) => {
@@ -309,7 +309,7 @@ export function CubeStats({ cards, filteredCards, onFilterClick, activeFilters }
                         <span className={cn("w-12 text-left truncate", isDimmed ? "text-gray-500" : "text-gray-300")} title={dist.label}>
                           {dist.label}
                         </span>
-                        <div className="flex-1 h-2 bg-yugi-darker rounded overflow-hidden">
+                        <div className="flex-1 h-2 bg-cc-darker rounded overflow-hidden">
                           <div
                             className={cn(
                               "h-full transition-all",

@@ -48,7 +48,7 @@ export function NewCubeWizard({ initialGameId, onComplete }: NewCubeWizardProps)
   const canProceed = step === 'game' ? !!selectedGame : !!cubeName.trim();
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-gradient-to-b from-yugi-darker to-yugi-dark">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-gradient-to-b from-cc-darker to-cc-dark">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
@@ -72,15 +72,15 @@ export function NewCubeWizard({ initialGameId, onComplete }: NewCubeWizardProps)
             step === 'game' ? 'bg-gold-500' : 'bg-gold-500/50'
           }`} />
           <div className={`w-8 h-0.5 transition-colors ${
-            step === 'details' ? 'bg-gold-500' : 'bg-yugi-border'
+            step === 'details' ? 'bg-gold-500' : 'bg-cc-border'
           }`} />
           <div className={`w-3 h-3 rounded-full transition-colors ${
-            step === 'details' ? 'bg-gold-500' : 'bg-yugi-border'
+            step === 'details' ? 'bg-gold-500' : 'bg-cc-border'
           }`} />
         </div>
 
         {/* Step content */}
-        <div className="bg-yugi-darker rounded-xl border border-yugi-border p-6 sm:p-8">
+        <div className="bg-cc-darker rounded-xl border border-cc-border p-6 sm:p-8">
           {step === 'game' && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-white mb-4">Select Game</h2>
@@ -99,7 +99,7 @@ export function NewCubeWizard({ initialGameId, onComplete }: NewCubeWizardProps)
 
           {step === 'details' && (
             <div className="space-y-6">
-              <div className="flex items-center gap-3 p-3 bg-yugi-dark rounded-lg border border-yugi-border">
+              <div className="flex items-center gap-3 p-3 bg-cc-dark rounded-lg border border-cc-border">
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: getGameColors(selectedGame).bg }}
@@ -123,7 +123,7 @@ export function NewCubeWizard({ initialGameId, onComplete }: NewCubeWizardProps)
                   value={cubeName}
                   onChange={(e) => setCubeName(e.target.value)}
                   placeholder="e.g., My Draft Cube, Vintage Cube, Starter Cube"
-                  className="w-full px-4 py-3 bg-yugi-dark border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50"
+                  className="w-full px-4 py-3 bg-cc-dark border border-cc-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50"
                   autoFocus
                 />
               </div>
@@ -137,7 +137,7 @@ export function NewCubeWizard({ initialGameId, onComplete }: NewCubeWizardProps)
                   onChange={(e) => setCubeDescription(e.target.value)}
                   placeholder="Describe your cube's theme, rules, or what makes it unique..."
                   rows={3}
-                  className="w-full px-4 py-3 bg-yugi-dark border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 resize-none"
+                  className="w-full px-4 py-3 bg-cc-dark border border-cc-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 resize-none"
                 />
               </div>
             </div>
@@ -190,7 +190,7 @@ function GameCard({ game, isSelected, onSelect }: { game: GameConfig; isSelected
       className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all text-left ${
         isSelected
           ? 'border-gold-500 bg-gold-500/10'
-          : 'border-yugi-border hover:border-gray-600 bg-yugi-dark'
+          : 'border-cc-border hover:border-gray-600 bg-cc-dark'
       }`}
     >
       <div

@@ -80,7 +80,7 @@ export function ArchetypeFilter({
           compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm",
           hasSelection
             ? "bg-gold-500/20 text-gold-400 ring-1 ring-gold-500"
-            : "bg-yugi-card text-gray-300 hover:bg-white/5 border border-yugi-border"
+            : "bg-cc-card text-gray-300 hover:bg-white/5 border border-cc-border"
         )}
       >
         <span>Archetype</span>
@@ -100,9 +100,9 @@ export function ArchetypeFilter({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 mt-2 w-64 bg-yugi-dark border border-yugi-border rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute z-50 top-full left-0 mt-2 w-64 bg-cc-dark border border-cc-border rounded-lg shadow-xl overflow-hidden">
           {/* Search input */}
-          <div className="p-2 border-b border-yugi-border">
+          <div className="p-2 border-b border-cc-border">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
@@ -111,7 +111,7 @@ export function ArchetypeFilter({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search archetypes..."
-                className="w-full pl-8 pr-8 py-1.5 bg-yugi-darker border border-yugi-border rounded text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-gold-500"
+                className="w-full pl-8 pr-8 py-1.5 bg-cc-darker border border-cc-border rounded text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-gold-500"
               />
               {search && (
                 <button
@@ -126,7 +126,7 @@ export function ArchetypeFilter({
 
           {/* Clear button */}
           {hasSelection && (
-            <div className="p-2 border-b border-yugi-border">
+            <div className="p-2 border-b border-cc-border">
               <button
                 onClick={() => {
                   onClearArchetypes();
@@ -170,7 +170,7 @@ export function ArchetypeFilter({
           </div>
 
           {/* Footer with count */}
-          <div className="p-2 border-t border-yugi-border text-center">
+          <div className="p-2 border-t border-cc-border text-center">
             <span className="text-xs text-gray-500">
               {archetypesWithCounts.length} archetypes in cube
             </span>

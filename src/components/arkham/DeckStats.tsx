@@ -160,16 +160,16 @@ export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl max-h-[90vh] bg-yugi-card border border-yugi-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-2xl max-h-[90vh] bg-cc-card border border-cc-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+        <div className="flex items-center justify-between p-4 border-b border-cc-border">
           <div className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-gold-400" />
             <h2 className="text-lg font-semibold text-white">Deck Statistics</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-yugi-border"
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-cc-border"
           >
             <X className="w-5 h-5" />
           </button>
@@ -198,9 +198,9 @@ export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
                 <button
                   onClick={() => handleFilter({ type: 'asset' })}
                   disabled={!isClickable || analysis.totalAssets === 0}
-                  className={`bg-yugi-darker rounded-lg p-3 transition-all ${
+                  className={`bg-cc-darker rounded-lg p-3 transition-all ${
                     isClickable && analysis.totalAssets > 0
-                      ? 'hover:bg-yugi-border hover:ring-2 hover:ring-gold-500/50 cursor-pointer'
+                      ? 'hover:bg-cc-border hover:ring-2 hover:ring-gold-500/50 cursor-pointer'
                       : ''
                   } disabled:opacity-50 disabled:cursor-default`}
                 >
@@ -210,9 +210,9 @@ export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
                 <button
                   onClick={() => handleFilter({ type: 'event' })}
                   disabled={!isClickable || analysis.totalEvents === 0}
-                  className={`bg-yugi-darker rounded-lg p-3 transition-all ${
+                  className={`bg-cc-darker rounded-lg p-3 transition-all ${
                     isClickable && analysis.totalEvents > 0
-                      ? 'hover:bg-yugi-border hover:ring-2 hover:ring-gold-500/50 cursor-pointer'
+                      ? 'hover:bg-cc-border hover:ring-2 hover:ring-gold-500/50 cursor-pointer'
                       : ''
                   } disabled:opacity-50 disabled:cursor-default`}
                 >
@@ -222,9 +222,9 @@ export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
                 <button
                   onClick={() => handleFilter({ type: 'skill' })}
                   disabled={!isClickable || analysis.totalSkills === 0}
-                  className={`bg-yugi-darker rounded-lg p-3 transition-all ${
+                  className={`bg-cc-darker rounded-lg p-3 transition-all ${
                     isClickable && analysis.totalSkills > 0
-                      ? 'hover:bg-yugi-border hover:ring-2 hover:ring-gold-500/50 cursor-pointer'
+                      ? 'hover:bg-cc-border hover:ring-2 hover:ring-gold-500/50 cursor-pointer'
                       : ''
                   } disabled:opacity-50 disabled:cursor-default`}
                 >
@@ -293,7 +293,7 @@ export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
                         disabled={!isClickable || value === 0}
                         className={`w-full flex items-center gap-2 p-1 rounded transition-all ${
                           isClickable && value > 0
-                            ? 'hover:bg-yugi-darker cursor-pointer'
+                            ? 'hover:bg-cc-darker cursor-pointer'
                             : 'cursor-default'
                         } disabled:opacity-50`}
                       >
@@ -301,7 +301,7 @@ export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
                           <SingleSkillIcon type={key as any} />
                           <span className="text-xs text-gray-400">{label}</span>
                         </div>
-                        <div className="flex-1 h-4 bg-yugi-darker rounded overflow-hidden">
+                        <div className="flex-1 h-4 bg-cc-darker rounded overflow-hidden">
                           <div
                             className="h-full rounded transition-all"
                             style={{
@@ -334,7 +334,7 @@ export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
                           disabled={!isClickable}
                           className={`w-full flex items-center gap-2 p-1 rounded transition-all ${
                             isClickable
-                              ? 'hover:bg-yugi-darker cursor-pointer'
+                              ? 'hover:bg-cc-darker cursor-pointer'
                               : 'cursor-default'
                           }`}
                         >
@@ -343,7 +343,7 @@ export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
                               {name}
                             </span>
                           </div>
-                          <div className="flex-1 h-4 bg-yugi-darker rounded overflow-hidden">
+                          <div className="flex-1 h-4 bg-cc-darker rounded overflow-hidden">
                             <div
                               className="h-full rounded transition-all"
                               style={{
@@ -374,14 +374,14 @@ export function DeckStats({ isOpen, onClose, onFilter }: DeckStatsProps) {
                         disabled={!isClickable}
                         className={`w-full flex items-center gap-2 p-1 rounded transition-all ${
                           isClickable
-                            ? 'hover:bg-yugi-darker cursor-pointer'
+                            ? 'hover:bg-cc-darker cursor-pointer'
                             : 'cursor-default'
                         }`}
                       >
                         <div className="w-20">
                           <span className="text-xs text-gray-400">{slot}</span>
                         </div>
-                        <div className="flex-1 h-4 bg-yugi-darker rounded overflow-hidden">
+                        <div className="flex-1 h-4 bg-cc-darker rounded overflow-hidden">
                           <div
                             className="h-full bg-blue-500/80 rounded transition-all"
                             style={{

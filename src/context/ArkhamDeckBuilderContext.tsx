@@ -15,7 +15,7 @@ import type {
 } from '../types/arkham';
 import { arkhamCardService } from '../services/arkhamCardService';
 import { arkhamDeckService } from '../services/arkhamDeckService';
-import { validateArkhamDeck, calculateXpCost, canIncludeCard } from '../services/arkhamDeckValidation';
+import { validateArkhamDeck, canIncludeCard } from '../services/arkhamDeckValidation';
 import { parseArkhamDeck } from '../services/arkhamDeckImport';
 import { useAuth } from './AuthContext';
 
@@ -34,6 +34,14 @@ export interface ArkhamDeckBuilderState {
   // Cards: code -> quantity
   slots: Record<string, number>;
   sideSlots: Record<string, number>;
+
+  // Cards that don't count towards deck size (campaign additions, etc.)
+  // code -> number of copies that don't count (0 = all count, 2 = 2 copies don't count)
+  ignoreDeckSizeSlots: Record<string, number>;
+
+  // XP discounts per card (e.g., from Arcane Research, Down the Rabbit Hole)
+  // code -> total XP discount applied to this card (can be any amount)
+  xpDiscountSlots: Record<string, number>;
 
   // XP tracking
   xpEarned: number;
@@ -91,9 +99,38 @@ type ArkhamDeckBuilderAction =
   | { type: 'ADD_TO_SIDE'; payload: { code: string; quantity?: number } }
   | { type: 'REMOVE_FROM_SIDE'; payload: { code: string; quantity?: number } }
   | { type: 'MOVE_TO_SIDE'; payload: { code: string } }
-  | { type: 'MOVE_TO_MAIN'; payload: { code: string } };
+  // Deck size ignore - per-copy control
+  | { type: 'SET_IGNORE_DECK_SIZE_COUNT'; payload: { code: string; count: number } }
+  | { type: 'MOVE_TO_MAIN'; payload: { code: string } }
+  // XP discount tracking
+  | { type: 'SET_XP_DISCOUNT'; payload: { code: string; discount: number } };
 
 const MAX_HISTORY = 50;
+
+/**
+ * Calculate XP cost with discounts applied (e.g., from Arcane Research)
+ */
+function calculateXpCostWithDiscounts(
+  slots: Record<string, number>,
+  xpDiscountSlots: Record<string, number>
+): number {
+  let totalXp = 0;
+
+  for (const [code, quantity] of Object.entries(slots)) {
+    const card = arkhamCardService.getCard(code);
+    if (card && card.xp) {
+      // Base XP for all copies
+      const baseXp = card.xp * quantity;
+      totalXp += baseXp;
+
+      // Subtract discount (capped at base XP - can't go negative per card)
+      const discount = xpDiscountSlots[code] || 0;
+      totalXp -= Math.min(discount, baseXp);
+    }
+  }
+
+  return Math.max(0, totalXp);
+}
 
 /**
  * Push current state to history
@@ -123,7 +160,7 @@ function runValidation(state: ArkhamDeckBuilderState): ArkhamValidationResult | 
   if (!state.investigator) return null;
 
   const xpBudget = state.xpEarned > 0 ? state.xpEarned : 0;
-  return validateArkhamDeck(state.investigator, state.slots, xpBudget);
+  return validateArkhamDeck(state.investigator, state.slots, xpBudget, state.ignoreDeckSizeSlots);
 }
 
 /**
@@ -191,8 +228,8 @@ function arkhamDeckBuilderReducer(
       const currentQty = newSlots[code] || 0;
       newSlots[code] = currentQty + quantity;
 
-      // Recalculate XP spent
-      const newXpSpent = calculateXpCost(newSlots);
+      // Recalculate XP spent with discounts
+      const newXpSpent = calculateXpCostWithDiscounts(newSlots, state.xpDiscountSlots);
 
       const newState = {
         ...stateWithHistory,
@@ -215,18 +252,37 @@ function arkhamDeckBuilderReducer(
       const currentQty = newSlots[code] || 0;
       const newQty = Math.max(0, currentQty - quantity);
 
+      // Clean up XP discounts and ignore slots if card quantity changed
+      const newXpDiscountSlots = { ...state.xpDiscountSlots };
+      const newIgnoreDeckSizeSlots = { ...state.ignoreDeckSizeSlots };
       if (newQty === 0) {
         delete newSlots[code];
+        delete newXpDiscountSlots[code];
+        delete newIgnoreDeckSizeSlots[code];
       } else {
         newSlots[code] = newQty;
+        // Cap discount at new max XP (card.xp * newQty)
+        if (newXpDiscountSlots[code]) {
+          const card = arkhamCardService.getCard(code);
+          const maxXp = (card?.xp || 0) * newQty;
+          if (newXpDiscountSlots[code] > maxXp) {
+            newXpDiscountSlots[code] = maxXp;
+          }
+        }
+        // Cap ignore count at new quantity
+        if (newIgnoreDeckSizeSlots[code] && newIgnoreDeckSizeSlots[code] > newQty) {
+          newIgnoreDeckSizeSlots[code] = newQty;
+        }
       }
 
-      // Recalculate XP spent
-      const newXpSpent = calculateXpCost(newSlots);
+      // Recalculate XP spent with discounts
+      const newXpSpent = calculateXpCostWithDiscounts(newSlots, newXpDiscountSlots);
 
       const newState = {
         ...stateWithHistory,
         slots: newSlots,
+        xpDiscountSlots: newXpDiscountSlots,
+        ignoreDeckSizeSlots: newIgnoreDeckSizeSlots,
         xpSpent: newXpSpent,
         isDirty: true,
       };
@@ -242,19 +298,37 @@ function arkhamDeckBuilderReducer(
       const stateWithHistory = pushHistory(state);
 
       const newSlots = { ...stateWithHistory.slots };
+      const newXpDiscountSlots = { ...state.xpDiscountSlots };
+      const newIgnoreDeckSizeSlots = { ...state.ignoreDeckSizeSlots };
 
       if (quantity <= 0) {
         delete newSlots[code];
+        delete newXpDiscountSlots[code];
+        delete newIgnoreDeckSizeSlots[code];
       } else {
         newSlots[code] = quantity;
+        // Cap discount at new max XP (card.xp * quantity)
+        if (newXpDiscountSlots[code]) {
+          const card = arkhamCardService.getCard(code);
+          const maxXp = (card?.xp || 0) * quantity;
+          if (newXpDiscountSlots[code] > maxXp) {
+            newXpDiscountSlots[code] = maxXp;
+          }
+        }
+        // Cap ignore count at new quantity
+        if (newIgnoreDeckSizeSlots[code] && newIgnoreDeckSizeSlots[code] > quantity) {
+          newIgnoreDeckSizeSlots[code] = quantity;
+        }
       }
 
-      // Recalculate XP spent
-      const newXpSpent = calculateXpCost(newSlots);
+      // Recalculate XP spent with discounts
+      const newXpSpent = calculateXpCostWithDiscounts(newSlots, newXpDiscountSlots);
 
       const newState = {
         ...stateWithHistory,
         slots: newSlots,
+        xpDiscountSlots: newXpDiscountSlots,
+        ignoreDeckSizeSlots: newIgnoreDeckSizeSlots,
         xpSpent: newXpSpent,
         isDirty: true,
       };
@@ -270,24 +344,31 @@ function arkhamDeckBuilderReducer(
       const stateWithHistory = pushHistory(state);
 
       const newSlots = { ...stateWithHistory.slots };
+      const newXpDiscountSlots = { ...state.xpDiscountSlots };
 
       // Remove old card
       const oldQty = newSlots[oldCode] || 0;
       if (oldQty > 1) {
         newSlots[oldCode] = oldQty - 1;
+        // Cap discount at new quantity
+        if (newXpDiscountSlots[oldCode] && newXpDiscountSlots[oldCode] > oldQty - 1) {
+          newXpDiscountSlots[oldCode] = oldQty - 1;
+        }
       } else {
         delete newSlots[oldCode];
+        delete newXpDiscountSlots[oldCode];
       }
 
       // Add new card
       newSlots[newCode] = (newSlots[newCode] || 0) + 1;
 
-      // Recalculate XP spent
-      const newXpSpent = calculateXpCost(newSlots);
+      // Recalculate XP spent with discounts
+      const newXpSpent = calculateXpCostWithDiscounts(newSlots, newXpDiscountSlots);
 
       const newState = {
         ...stateWithHistory,
         slots: newSlots,
+        xpDiscountSlots: newXpDiscountSlots,
         xpSpent: newXpSpent,
         isDirty: true,
       };
@@ -332,6 +413,8 @@ function arkhamDeckBuilderReducer(
         investigator,
         slots: deckData.slots,
         sideSlots: deckData.sideSlots || {},
+        ignoreDeckSizeSlots: deckData.ignoreDeckSizeSlots || {},
+        xpDiscountSlots: deckData.xpDiscountSlots || {},
         xpEarned: deckData.xp_earned,
         xpSpent: deckData.xp_spent,
         campaignId: deckData.campaign_id || null,
@@ -406,8 +489,8 @@ function arkhamDeckBuilderReducer(
         slots[code] = qty;
       }
 
-      // Calculate XP spent
-      const xpSpent = calculateXpCost(slots);
+      // Calculate XP spent (no discounts for fresh import)
+      const xpSpent = calculateXpCostWithDiscounts(slots, {});
 
       const newState: ArkhamDeckBuilderState = {
         ...createInitialState(),
@@ -603,6 +686,55 @@ function arkhamDeckBuilderReducer(
       };
     }
 
+    case 'SET_IGNORE_DECK_SIZE_COUNT': {
+      const { code, count } = action.payload;
+      const newIgnoreSlots = { ...state.ignoreDeckSizeSlots };
+
+      if (count <= 0) {
+        delete newIgnoreSlots[code];
+      } else {
+        // Cap at quantity in deck
+        const maxQty = state.slots[code] || 0;
+        newIgnoreSlots[code] = Math.min(count, maxQty);
+      }
+
+      const newState = {
+        ...state,
+        ignoreDeckSizeSlots: newIgnoreSlots,
+        isDirty: true,
+      };
+
+      return {
+        ...newState,
+        validationResult: runValidation(newState),
+      };
+    }
+
+    case 'SET_XP_DISCOUNT': {
+      const { code, discount } = action.payload;
+      const newXpDiscountSlots = { ...state.xpDiscountSlots };
+
+      if (discount <= 0) {
+        delete newXpDiscountSlots[code];
+      } else {
+        // Cap at max XP for this card (card.xp * quantity)
+        const card = arkhamCardService.getCard(code);
+        const quantity = state.slots[code] || 0;
+        const maxXp = (card?.xp || 0) * quantity;
+        newXpDiscountSlots[code] = Math.min(discount, maxXp);
+      }
+
+      // Recalculate XP spent with discounts
+      const newXpSpent = calculateXpCostWithDiscounts(state.slots, newXpDiscountSlots);
+
+      return {
+        ...state,
+        xpDiscountSlots: newXpDiscountSlots,
+        xpSpent: newXpSpent,
+        isDirty: true,
+      };
+    }
+
     default:
       return state;
   }
@@ -619,6 +751,8 @@ function createInitialState(): ArkhamDeckBuilderState {
     investigator: null,
     slots: {},
     sideSlots: {},
+    ignoreDeckSizeSlots: {},
+    xpDiscountSlots: {},
     xpEarned: 0,
     xpSpent: 0,
     campaignId: null,
@@ -686,6 +820,14 @@ interface ArkhamDeckBuilderContextValue {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+
+  // Deck size per-copy control (for cards that don't count towards deck size)
+  getIgnoreDeckSizeCount: (code: string) => number;
+  setIgnoreDeckSizeCount: (code: string, count: number) => void;
+
+  // XP discount tracking (for Arcane Research, Down the Rabbit Hole, etc.)
+  getXpDiscount: (code: string) => number;
+  setXpDiscount: (code: string, discount: number) => void;
 
   // Utilities
   clearError: () => void;
@@ -823,6 +965,18 @@ export function ArkhamDeckBuilderProvider({
   }, [state.investigator, state.slots]);
 
   const getTotalCardCount = useCallback((): number => {
+    if (!state.investigator) return 0;
+
+    // Get signature card codes (these don't count towards deck size)
+    const signatureCardCodes = new Set<string>(
+      state.investigator.deck_requirements?.card
+        ? Object.keys(state.investigator.deck_requirements.card)
+        : []
+    );
+
+    // Track cards that don't count towards deck size due to option.size
+    const optionSizeUsage = new Map<string, number>();
+
     let total = 0;
     for (const [code, qty] of Object.entries(state.slots)) {
       const card = arkhamCardService.getCard(code);
@@ -834,10 +988,36 @@ export function ArkhamDeckBuilderProvider({
       // Skip weaknesses - they don't count towards deck size
       if (card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness') continue;
 
-      total += qty;
+      // Skip signature cards - they don't count towards deck size
+      if (signatureCardCodes.has(code)) continue;
+
+      // Handle per-copy exclusion: only exclude the specified number of copies
+      const ignoredCount = state.ignoreDeckSizeSlots[code] || 0;
+      if (ignoredCount >= qty) continue; // All copies excluded
+      const countedQuantity = qty - ignoredCount;
+
+      // Check if this card matches a deck option with a size modifier
+      // (cards matching these options don't count towards deck size, up to the size limit)
+      const eligibility = canIncludeCard(state.investigator, card);
+      if (eligibility.matchedOption?.size !== undefined && eligibility.matchedOption.id) {
+        const optionId = eligibility.matchedOption.id;
+        const sizeLimit = eligibility.matchedOption.size;
+        const alreadyUsed = optionSizeUsage.get(optionId) || 0;
+
+        // How many of these cards can be "free" (not count towards deck size)?
+        const freeSlots = Math.max(0, sizeLimit - alreadyUsed);
+        const freeCards = Math.min(countedQuantity, freeSlots);
+
+        // Only count cards beyond the free slots
+        total += countedQuantity - freeCards;
+        optionSizeUsage.set(optionId, alreadyUsed + freeCards);
+      } else {
+        // No size modifier - count non-excluded cards
+        total += countedQuantity;
+      }
     }
     return total;
-  }, [state.slots]);
+  }, [state.slots, state.investigator, state.ignoreDeckSizeSlots]);
 
   const getCard = useCallback((code: string): ArkhamCard | null => {
     return arkhamCardService.getCard(code);
@@ -941,6 +1121,8 @@ export function ArkhamDeckBuilderProvider({
           description: state.deckDescription,
           slots: state.slots,
           sideSlots: state.sideSlots,
+          ignoreDeckSizeSlots: state.ignoreDeckSizeSlots,
+          xpDiscountSlots: state.xpDiscountSlots,
           xpEarned: state.xpEarned,
           xpSpent: state.xpSpent,
         });
@@ -961,6 +1143,8 @@ export function ArkhamDeckBuilderProvider({
           investigatorName: state.investigator.name,
           slots: state.slots,
           sideSlots: state.sideSlots,
+          ignoreDeckSizeSlots: state.ignoreDeckSizeSlots,
+          xpDiscountSlots: state.xpDiscountSlots,
           xpEarned: state.xpEarned,
           xpSpent: state.xpSpent,
           campaignId: state.campaignId || undefined,
@@ -1026,6 +1210,22 @@ export function ArkhamDeckBuilderProvider({
     dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 
+  const getIgnoreDeckSizeCount = useCallback((code: string): number => {
+    return state.ignoreDeckSizeSlots[code] || 0;
+  }, [state.ignoreDeckSizeSlots]);
+
+  const setIgnoreDeckSizeCount = useCallback((code: string, count: number) => {
+    dispatch({ type: 'SET_IGNORE_DECK_SIZE_COUNT', payload: { code, count } });
+  }, []);
+
+  const getXpDiscount = useCallback((code: string): number => {
+    return state.xpDiscountSlots[code] || 0;
+  }, [state.xpDiscountSlots]);
+
+  const setXpDiscount = useCallback((code: string, discount: number) => {
+    dispatch({ type: 'SET_XP_DISCOUNT', payload: { code, discount } });
+  }, []);
+
   const investigators = state.isInitialized ? arkhamCardService.getInvestigators() : [];
 
   const value: ArkhamDeckBuilderContextValue = {
@@ -1060,6 +1260,10 @@ export function ArkhamDeckBuilderProvider({
     canUndo: state.historyIndex > 0,
     canRedo: state.historyIndex < state.history.length - 1,
     clearError,
+    getIgnoreDeckSizeCount,
+    setIgnoreDeckSizeCount,
+    getXpDiscount,
+    setXpDiscount,
   };
 
   return (

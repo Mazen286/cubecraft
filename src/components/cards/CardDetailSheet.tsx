@@ -126,14 +126,14 @@ export function CardDetailSheet({
                   // MTG mana cost - render with colored symbols
                   if (gameConfig.id === 'mtg' && info.label === 'Mana') {
                     return (
-                      <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-yugi-card rounded text-xs md:text-sm flex items-center gap-1">
+                      <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-cc-card rounded text-xs md:text-sm flex items-center gap-1">
                         <ManaCostWithFaces cost={value} size="xs" />
                       </span>
                     );
                   }
 
                   return (
-                    <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-yugi-card rounded text-xs md:text-sm text-gray-300">
+                    <span key={info.label} className="px-2 py-0.5 md:px-3 md:py-1 bg-cc-card rounded text-xs md:text-sm text-gray-300">
                       {value}
                     </span>
                   );
@@ -301,7 +301,7 @@ export function CardDetailSheet({
             if (!hasAbilitiesOrAttacks && !cardDescription && !hasStats) return null;
 
             return (
-              <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border space-y-4">
+              <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-cc-border space-y-4">
                 {/* Pokemon Abilities */}
                 {abilities && abilities.length > 0 && (
                   <div className="space-y-2">
@@ -323,7 +323,7 @@ export function CardDetailSheet({
                 {attacks && attacks.length > 0 && (
                   <div className="space-y-2">
                     {attacks.map((attack, idx) => (
-                      <div key={idx} className="p-2 md:p-3 bg-yugi-card rounded">
+                      <div key={idx} className="p-2 md:p-3 bg-cc-card rounded">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
                             {/* Energy cost */}
@@ -355,7 +355,7 @@ export function CardDetailSheet({
 
                 {/* Trainer/Energy card effect (when no abilities or attacks) */}
                 {!hasAbilitiesOrAttacks && cardDescription && (
-                  <div className="p-2 md:p-3 bg-yugi-card rounded">
+                  <div className="p-2 md:p-3 bg-cc-card rounded">
                     <p className="text-xs md:text-sm text-gray-300 leading-relaxed">{cardDescription}</p>
                   </div>
                 )}
@@ -386,7 +386,7 @@ export function CardDetailSheet({
 
           {/* Description (Yu-Gi-Oh / MTG / non-Pokemon) */}
           {gameConfig.id !== 'pokemon' && (
-            <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-yugi-border">
+            <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-cc-border">
               {(() => {
                 const errata = getErrata(card.id);
                 if (errata) {

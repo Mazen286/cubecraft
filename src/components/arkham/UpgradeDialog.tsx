@@ -54,9 +54,9 @@ export function UpgradeDialog({ isOpen, onClose, onComplete }: UpgradeDialogProp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-      <div className="bg-yugi-darker rounded-lg border border-yugi-border max-w-md w-full">
+      <div className="bg-cc-darker rounded-lg border border-cc-border max-w-md w-full">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-yugi-border">
+        <div className="flex items-center justify-between p-4 border-b border-cc-border">
           <h2 className="text-lg font-semibold text-white">Upgrade Deck</h2>
           <button
             onClick={onClose}
@@ -74,7 +74,7 @@ export function UpgradeDialog({ isOpen, onClose, onComplete }: UpgradeDialogProp
           </p>
 
           {/* Current version info */}
-          <div className="bg-yugi-dark rounded-lg p-3 mb-4">
+          <div className="bg-cc-dark rounded-lg p-3 mb-4">
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-gray-400">Current Version</span>
               <span className="text-white font-medium">v{state.version}</span>
@@ -95,7 +95,7 @@ export function UpgradeDialog({ isOpen, onClose, onComplete }: UpgradeDialogProp
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setXpEarned(Math.max(0, xpEarned - 1))}
-                className="px-3 py-2 bg-yugi-dark border border-yugi-border rounded-lg text-white hover:bg-yugi-border transition-colors"
+                className="px-3 py-2 bg-cc-dark border border-cc-border rounded-lg text-white hover:bg-cc-border transition-colors"
               >
                 -
               </button>
@@ -105,11 +105,11 @@ export function UpgradeDialog({ isOpen, onClose, onComplete }: UpgradeDialogProp
                 max="20"
                 value={xpEarned}
                 onChange={(e) => setXpEarned(Math.max(0, parseInt(e.target.value) || 0))}
-                className="flex-1 px-3 py-2 bg-yugi-dark border border-yugi-border rounded-lg text-white text-center focus:outline-none focus:border-gold-500/50"
+                className="flex-1 px-3 py-2 bg-cc-dark border border-cc-border rounded-lg text-white text-center focus:outline-none focus:border-gold-500/50"
               />
               <button
                 onClick={() => setXpEarned(xpEarned + 1)}
-                className="px-3 py-2 bg-yugi-dark border border-yugi-border rounded-lg text-white hover:bg-yugi-border transition-colors"
+                className="px-3 py-2 bg-cc-dark border border-cc-border rounded-lg text-white hover:bg-cc-border transition-colors"
               >
                 +
               </button>
@@ -150,7 +150,7 @@ export function UpgradeDialog({ isOpen, onClose, onComplete }: UpgradeDialogProp
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t border-yugi-border">
+        <div className="flex items-center justify-end gap-3 p-4 border-t border-cc-border">
           <button
             onClick={onClose}
             disabled={isCreating}

@@ -156,7 +156,7 @@ export function DeckCardBrowser({ onCardAdded }: DeckCardBrowserProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Search header */}
-      <div className="flex-shrink-0 p-4 border-b border-yugi-border">
+      <div className="flex-shrink-0 p-4 border-b border-cc-border">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-white">Card Browser</h3>
           {!isStandalone && (
@@ -184,7 +184,7 @@ export function DeckCardBrowser({ onCardAdded }: DeckCardBrowserProps) {
                 handleSearchSubmit();
               }
             }}
-            className="w-full pl-9 pr-20 py-2 bg-yugi-darker border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
+            className="w-full pl-9 pr-20 py-2 bg-cc-darker border border-cc-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {isLoading && (
@@ -233,7 +233,7 @@ export function DeckCardBrowser({ onCardAdded }: DeckCardBrowserProps) {
               className={`px-2 py-1 text-xs rounded transition-colors ${
                 !typeFilter
                   ? 'bg-gold-600/20 text-gold-400'
-                  : 'bg-yugi-darker text-gray-400 hover:text-white'
+                  : 'bg-cc-darker text-gray-400 hover:text-white'
               }`}
             >
               All
@@ -245,7 +245,7 @@ export function DeckCardBrowser({ onCardAdded }: DeckCardBrowserProps) {
                 className={`px-2 py-1 text-xs rounded transition-colors truncate max-w-[100px] ${
                   typeFilter === type
                     ? 'bg-gold-600/20 text-gold-400'
-                    : 'bg-yugi-darker text-gray-400 hover:text-white'
+                    : 'bg-cc-darker text-gray-400 hover:text-white'
                 }`}
                 title={type}
               >
@@ -298,7 +298,7 @@ export function DeckCardBrowser({ onCardAdded }: DeckCardBrowserProps) {
         {/* Empty state for standalone */}
         {!isPreloading && !error && !query && isStandalone && (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-yugi-darker flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-cc-darker flex items-center justify-center mb-4">
               <Search className="w-8 h-8 text-gray-500" />
             </div>
             <p className="text-gray-400 mb-2">Search for cards to add</p>
@@ -426,7 +426,7 @@ export function DeckCardBrowser({ onCardAdded }: DeckCardBrowserProps) {
         onClose={closeSheet}
         hideScores
         footer={sheetCard && (() => (
-          <div className="p-4 border-t border-yugi-border bg-yugi-darker">
+          <div className="p-4 border-t border-cc-border bg-cc-darker">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-400">
                 {sheetCardCopyCount > 0 ? (

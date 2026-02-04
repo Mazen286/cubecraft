@@ -78,7 +78,7 @@ export function MigrationPrompt() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 bg-yugi-dark border border-yugi-border rounded-lg p-4 max-w-sm shadow-xl">
+    <div className="fixed bottom-4 right-4 z-50 bg-cc-dark border border-cc-border rounded-lg p-4 max-w-sm shadow-xl">
       <button
         onClick={() => setIsDismissed(true)}
         className="absolute top-2 right-2 text-gray-500 hover:text-gray-300 text-lg"

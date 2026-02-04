@@ -95,7 +95,7 @@ export function ColorPicker({
         <div
           className={cn(
             'absolute z-50 top-full left-0 mt-2',
-            'bg-yugi-card border border-yugi-border rounded-lg shadow-xl',
+            'bg-cc-card border border-cc-border rounded-lg shadow-xl',
             'p-2 animate-in fade-in slide-in-from-top-2 duration-150'
           )}
           onClick={(e) => e.stopPropagation()}
@@ -111,7 +111,7 @@ export function ColorPicker({
                 className={cn(
                   'w-5 h-5 rounded-full transition-transform',
                   'hover:scale-125',
-                  color === c.value && 'ring-2 ring-white ring-offset-1 ring-offset-yugi-card'
+                  color === c.value && 'ring-2 ring-white ring-offset-1 ring-offset-cc-card'
                 )}
                 style={{ backgroundColor: c.value }}
                 title={c.label}

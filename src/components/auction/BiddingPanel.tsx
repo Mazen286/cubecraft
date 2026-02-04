@@ -95,7 +95,7 @@ export function BiddingPanel({
   // No auction state means we're in selection phase
   if (!auctionState || auctionState.phase === 'selecting') {
     return (
-      <div className="bg-yugi-card border border-yugi-border rounded-lg p-4">
+      <div className="bg-cc-card border border-cc-border rounded-lg p-4">
         <div className="text-center text-gray-400">
           <Gavel className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p>Waiting for card selection...</p>
@@ -127,10 +127,10 @@ export function BiddingPanel({
   const isTimerLow = bidTimeRemaining !== undefined && bidTimeRemaining <= 5;
 
   return (
-    <div className="bg-yugi-card border border-yugi-border rounded-lg overflow-hidden">
+    <div className="bg-cc-card border border-cc-border rounded-lg overflow-hidden">
       {/* Bidding Timer Bar */}
       {auctionState?.phase === 'bidding' && bidTimeRemaining !== undefined && (
-        <div className="h-1.5 bg-yugi-dark">
+        <div className="h-1.5 bg-cc-dark">
           <div
             className={cn(
               'h-full transition-all duration-1000 ease-linear',
@@ -143,7 +143,7 @@ export function BiddingPanel({
 
       {/* Current card being auctioned */}
       {currentCard && (
-        <div className="p-4 border-b border-yugi-border bg-yugi-darker">
+        <div className="p-4 border-b border-cc-border bg-cc-darker">
           <div className="flex gap-4">
             <div
               className={cn(
@@ -165,7 +165,7 @@ export function BiddingPanel({
               <p className="text-sm text-gray-400">{currentCard.type}</p>
 
               {/* Current bid display */}
-              <div className="mt-3 p-3 bg-yugi-dark rounded-lg">
+              <div className="mt-3 p-3 bg-cc-dark rounded-lg">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-400">Current Bid:</span>
                   <span className="text-2xl font-bold text-gold-400">{currentBid}</span>
@@ -251,7 +251,7 @@ export function BiddingPanel({
                   value={customBidAmount}
                   onChange={(e) => setCustomBidAmount(e.target.value)}
                   placeholder={`${minBid}-${maxBid}`}
-                  className="flex-1 px-3 py-2 bg-yugi-dark border border-yugi-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500"
+                  className="flex-1 px-3 py-2 bg-cc-dark border border-cc-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500"
                   disabled={disabled}
                 />
                 <Button
@@ -296,7 +296,7 @@ export function BiddingPanel({
 
       {/* Bid history */}
       {auctionState.bids.length > 0 && (
-        <div className="p-4 border-b border-yugi-border">
+        <div className="p-4 border-b border-cc-border">
           <h4 className="text-sm font-medium text-gray-400 mb-2">Bid History</h4>
           <div className="space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
             {[...auctionState.bids].reverse().map((bid, idx) => (

@@ -328,7 +328,7 @@ export function CubeEditor(_props: CubeEditorProps) {
       onDrop={handleDrop}
     >
       {/* Header */}
-      <div className="flex-shrink-0 p-3 sm:p-4 border-b border-yugi-border">
+      <div className="flex-shrink-0 p-3 sm:p-4 border-b border-cc-border">
         <div className="flex items-center justify-between mb-2 sm:mb-3">
           <h3 className="text-base sm:text-lg font-semibold text-white">
             Cube Contents
@@ -340,7 +340,7 @@ export function CubeEditor(_props: CubeEditorProps) {
                 : `${uniqueCards.length} unique (${cards.length} total)`}
             </span>
             {/* View mode toggle */}
-            <div className="flex border border-yugi-border rounded-lg overflow-hidden">
+            <div className="flex border border-cc-border rounded-lg overflow-hidden">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 transition-colors ${
@@ -354,7 +354,7 @@ export function CubeEditor(_props: CubeEditorProps) {
               </button>
               <button
                 onClick={() => setViewMode('tier')}
-                className={`p-1.5 transition-colors border-l border-yugi-border ${
+                className={`p-1.5 transition-colors border-l border-cc-border ${
                   viewMode === 'tier'
                     ? 'bg-gold-600/20 text-gold-400'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -375,7 +375,7 @@ export function CubeEditor(_props: CubeEditorProps) {
             placeholder="Search cards in cube..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 sm:py-2 bg-yugi-darker border border-yugi-border rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-gold-500/50"
+            className="w-full pl-9 pr-3 py-1.5 sm:py-2 bg-cc-darker border border-cc-border rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-gold-500/50"
           />
           {searchTerm && (
             <button
@@ -427,7 +427,7 @@ export function CubeEditor(_props: CubeEditorProps) {
       >
         {cards.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-yugi-darker flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-cc-darker flex items-center justify-center mb-4">
               <Search className="w-8 h-8 text-gray-500" />
             </div>
             <p className="text-gray-400 mb-2">No cards in cube yet</p>
@@ -549,7 +549,7 @@ export function CubeEditor(_props: CubeEditorProps) {
           // Reverse tiers so F is on left (low score) and S is on right (high score)
           const reversedTiers = [...TIERS].reverse();
           return (
-            <div className="p-4 md:p-6 border-t border-yugi-border bg-yugi-darker">
+            <div className="p-4 md:p-6 border-t border-cc-border bg-cc-darker">
               <div className="max-w-3xl mx-auto space-y-4">
                 {/* Score Editor */}
                 <div>
@@ -567,7 +567,7 @@ export function CubeEditor(_props: CubeEditorProps) {
                           updateAllCopiesScore(selectedCard.id, val);
                         }
                       }}
-                      className={`w-16 px-2 py-1 bg-yugi-dark border border-yugi-border rounded text-center font-bold ${getTierColorClass(localScore)}`}
+                      className={`w-16 px-2 py-1 bg-cc-dark border border-cc-border rounded text-center font-bold ${getTierColorClass(localScore)}`}
                     />
                     <span className={`text-lg font-bold ${getTierColorClass(localScore)}`}>
                       {getTierForScore(localScore)}
@@ -590,7 +590,7 @@ export function CubeEditor(_props: CubeEditorProps) {
                       setLocalScore(val);
                       updateAllCopiesScore(selectedCard.id, val);
                     }}
-                    className="w-full h-2 bg-yugi-dark rounded-lg appearance-none cursor-pointer slider-gold mb-3"
+                    className="w-full h-2 bg-cc-dark rounded-lg appearance-none cursor-pointer slider-gold mb-3"
                   />
 
                   {/* Tier quick buttons - F on left, S on right to match slider */}
@@ -605,7 +605,7 @@ export function CubeEditor(_props: CubeEditorProps) {
                         className={`flex-1 py-2 rounded font-bold text-sm transition-all ${
                           getTierForScore(localScore) === tier.label
                             ? `${tier.color} text-white`
-                            : 'bg-yugi-dark text-gray-400 hover:bg-yugi-border'
+                            : 'bg-cc-dark text-gray-400 hover:bg-cc-border'
                         }`}
                       >
                         {tier.label}
@@ -615,7 +615,7 @@ export function CubeEditor(_props: CubeEditorProps) {
                 </div>
 
                 {/* Quantity controls */}
-                <div className="flex items-center justify-between pt-2 border-t border-yugi-border">
+                <div className="flex items-center justify-between pt-2 border-t border-cc-border">
                   <span className="text-sm text-gray-400">
                     {copyCount > 0 ? `${copyCount} in cube` : 'Not in cube'}
                     {!canAddCard(selectedCard.id) && (
@@ -634,7 +634,7 @@ export function CubeEditor(_props: CubeEditorProps) {
                         }
                       }}
                       disabled={copyCount === 0}
-                      className="p-2 bg-yugi-dark hover:bg-red-600/30 text-gray-400 hover:text-red-400 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed border border-yugi-border"
+                      className="p-2 bg-cc-dark hover:bg-red-600/30 text-gray-400 hover:text-red-400 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed border border-cc-border"
                     >
                       <Minus className="w-5 h-5" />
                     </button>

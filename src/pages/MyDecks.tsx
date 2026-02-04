@@ -175,7 +175,7 @@ export function MyDecks() {
             {isArkhamSelected && (
               <button
                 onClick={() => navigate('/arkham/deck-builder?import=true')}
-                className="flex items-center gap-2 px-4 py-2 bg-yugi-card hover:bg-yugi-border border border-yugi-border text-white font-medium rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-cc-card hover:bg-cc-border border border-cc-border text-white font-medium rounded-lg transition-colors"
               >
                 <Upload className="w-5 h-5" />
                 <span className="hidden sm:inline">Import</span>
@@ -198,7 +198,7 @@ export function MyDecks() {
             className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               !gameFilter
                 ? 'bg-gold-600/20 text-gold-400'
-                : 'bg-yugi-darker text-gray-400 hover:text-white'
+                : 'bg-cc-darker text-gray-400 hover:text-white'
             }`}
           >
             All Games
@@ -210,7 +210,7 @@ export function MyDecks() {
               className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 gameFilter === game.id
                   ? 'bg-gold-600/20 text-gold-400'
-                  : 'bg-yugi-darker text-gray-400 hover:text-white'
+                  : 'bg-cc-darker text-gray-400 hover:text-white'
               }`}
             >
               {game.shortName}
@@ -226,7 +226,7 @@ export function MyDecks() {
               className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 !factionFilter
                   ? 'bg-white/10 text-white'
-                  : 'bg-yugi-darker text-gray-400 hover:text-white'
+                  : 'bg-cc-darker text-gray-400 hover:text-white'
               }`}
             >
               All Factions
@@ -265,7 +265,7 @@ export function MyDecks() {
         {/* Empty state */}
         {!isLoading && !showInitLoading && decks.length === 0 && (
           <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-full bg-yugi-darker flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-full bg-cc-darker flex items-center justify-center mx-auto mb-4">
               <Layers className="w-8 h-8 text-gray-500" />
             </div>
             <p className="text-gray-400 mb-4">
@@ -303,7 +303,7 @@ export function MyDecks() {
                 return (
                   <div
                     key={deck.id}
-                    className={`bg-yugi-darker rounded-lg border border-yugi-border overflow-hidden transition-opacity ${
+                    className={`bg-cc-darker rounded-lg border border-cc-border overflow-hidden transition-opacity ${
                       isDeleting ? 'opacity-50' : ''
                     }`}
                   >
@@ -369,7 +369,7 @@ export function MyDecks() {
                       <div className="flex items-center gap-2 ml-4">
                         <button
                           onClick={() => handleEditDeck(deck)}
-                          className="p-2 text-gray-400 hover:text-white hover:bg-yugi-border rounded-lg transition-colors"
+                          className="p-2 text-gray-400 hover:text-white hover:bg-cc-border rounded-lg transition-colors"
                           title="Edit deck"
                         >
                           <Edit className="w-5 h-5" />
@@ -378,13 +378,13 @@ export function MyDecks() {
                         <div className="relative">
                           <button
                             onClick={() => setMenuOpen(menuOpen === deck.id ? null : deck.id)}
-                            className="p-2 text-gray-400 hover:text-white hover:bg-yugi-border rounded-lg transition-colors"
+                            className="p-2 text-gray-400 hover:text-white hover:bg-cc-border rounded-lg transition-colors"
                           >
                             <MoreVertical className="w-5 h-5" />
                           </button>
 
                           {menuOpen === deck.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-yugi-darker border border-yugi-border rounded-lg shadow-lg z-10 min-w-[120px]">
+                            <div className="absolute right-0 top-full mt-1 bg-cc-darker border border-cc-border rounded-lg shadow-lg z-10 min-w-[120px]">
                               <button
                                 onClick={() => handleDeleteDeck(deck.id, true)}
                                 disabled={isDeleting}
@@ -417,7 +417,7 @@ export function MyDecks() {
                 return (
                   <div
                     key={deck.id}
-                    className={`bg-yugi-darker rounded-lg border border-yugi-border overflow-hidden transition-opacity ${
+                    className={`bg-cc-darker rounded-lg border border-cc-border overflow-hidden transition-opacity ${
                       isDeleting ? 'opacity-50' : ''
                     }`}
                   >
@@ -467,7 +467,7 @@ export function MyDecks() {
                       <div className="flex items-center gap-2 ml-4">
                         <button
                           onClick={() => handleEditDeck(deck)}
-                          className="p-2 text-gray-400 hover:text-white hover:bg-yugi-border rounded-lg transition-colors"
+                          className="p-2 text-gray-400 hover:text-white hover:bg-cc-border rounded-lg transition-colors"
                           title="Edit deck"
                         >
                           <Edit className="w-5 h-5" />
@@ -476,13 +476,13 @@ export function MyDecks() {
                         <div className="relative">
                           <button
                             onClick={() => setMenuOpen(menuOpen === deck.id ? null : deck.id)}
-                            className="p-2 text-gray-400 hover:text-white hover:bg-yugi-border rounded-lg transition-colors"
+                            className="p-2 text-gray-400 hover:text-white hover:bg-cc-border rounded-lg transition-colors"
                           >
                             <MoreVertical className="w-5 h-5" />
                           </button>
 
                           {menuOpen === deck.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-yugi-darker border border-yugi-border rounded-lg shadow-lg z-10 min-w-[120px]">
+                            <div className="absolute right-0 top-full mt-1 bg-cc-darker border border-cc-border rounded-lg shadow-lg z-10 min-w-[120px]">
                               <button
                                 onClick={() => handleDeleteDeck(deck.id, false)}
                                 disabled={isDeleting}

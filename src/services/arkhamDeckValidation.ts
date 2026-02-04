@@ -143,7 +143,8 @@ function getRequiredCardCodes(investigator: Investigator): string[] {
 export function validateArkhamDeck(
   investigator: Investigator,
   slots: Record<string, number>,
-  xpBudget: number = 0
+  xpBudget: number = 0,
+  ignoreDeckSizeSlots: Record<string, number> = {}
 ): ArkhamValidationResult {
   const errors: ArkhamValidationError[] = [];
   const warnings: ArkhamValidationError[] = [];
@@ -151,7 +152,14 @@ export function validateArkhamDeck(
   // Get required deck size
   const requiredSize = investigator.deck_requirements?.size || 30;
 
-  // Count total cards (excluding permanents and weaknesses which don't count towards deck size)
+  // Get signature card codes (these don't count towards deck size)
+  const signatureCardCodes = new Set(getRequiredCardCodes(investigator));
+
+  // Track cards that don't count towards deck size due to option.size
+  // Key: option id, Value: number of cards used from this option's "free" slots
+  const optionSizeUsage = new Map<string, number>();
+
+  // Count total cards (excluding permanents, weaknesses, signature cards, and cards matching options with size limits)
   let deckSize = 0;
   for (const [code, quantity] of Object.entries(slots)) {
     const card = arkhamCardService.getCard(code);
@@ -163,7 +171,33 @@ export function validateArkhamDeck(
     // Skip weaknesses - they don't count towards deck size
     if (card.subtype_code === 'weakness' || card.subtype_code === 'basicweakness') continue;
 
-    deckSize += quantity;
+    // Skip signature cards - they don't count towards deck size
+    if (signatureCardCodes.has(code)) continue;
+
+    // Handle per-copy exclusion: only exclude the specified number of copies
+    const ignoredCount = ignoreDeckSizeSlots[code] || 0;
+    if (ignoredCount >= quantity) continue; // All copies excluded
+    const countedQuantity = quantity - ignoredCount;
+
+    // Check if this card matches a deck option with a size modifier
+    // (cards matching these options don't count towards deck size, up to the size limit)
+    const eligibility = canIncludeCard(investigator, card);
+    if (eligibility.matchedOption?.size !== undefined && eligibility.matchedOption.id) {
+      const optionId = eligibility.matchedOption.id;
+      const sizeLimit = eligibility.matchedOption.size;
+      const alreadyUsed = optionSizeUsage.get(optionId) || 0;
+
+      // How many of these cards can be "free" (not count towards deck size)?
+      const freeSlots = Math.max(0, sizeLimit - alreadyUsed);
+      const freeCards = Math.min(countedQuantity, freeSlots);
+
+      // Only count cards beyond the free slots
+      deckSize += countedQuantity - freeCards;
+      optionSizeUsage.set(optionId, alreadyUsed + freeCards);
+    } else {
+      // No size modifier - count non-excluded cards
+      deckSize += countedQuantity;
+    }
   }
 
   // Calculate XP spent

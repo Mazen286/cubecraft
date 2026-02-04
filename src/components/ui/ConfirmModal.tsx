@@ -38,7 +38,7 @@ export function ConfirmModal({
       onClick={handleBackdropClick}
     >
       <div className="fixed inset-0 bg-black/60" />
-      <div className="relative bg-yugi-dark border border-yugi-border rounded-lg p-6 w-full max-w-md">
+      <div className="relative bg-cc-dark border border-cc-border rounded-lg p-6 w-full max-w-md">
         <h2 className={`text-xl font-bold mb-3 ${
           variant === 'danger' ? 'text-red-400' : 'text-gold-400'
         }`}>

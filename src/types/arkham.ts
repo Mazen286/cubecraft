@@ -291,6 +291,10 @@ export interface ArkhamDeckData {
   sideSlots?: Record<string, number>;
   /** Ignored deck building errors */
   ignoreDeckLimitSlots?: Record<string, number>;
+  /** Cards that don't count towards deck size (campaign additions): code -> how many copies excluded */
+  ignoreDeckSizeSlots?: Record<string, number>;
+  /** XP discounts per card (from Arcane Research, etc.): code -> discounted count */
+  xpDiscountSlots?: Record<string, number>;
 
   /** Taboo list ID */
   taboo_id?: number;

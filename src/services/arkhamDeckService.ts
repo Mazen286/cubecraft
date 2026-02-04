@@ -8,6 +8,11 @@ import type { ArkhamDeckData, ArkhamDeckInfo } from '../types/arkham';
 /**
  * Database row type for arkham_decks table
  */
+interface ArkhamDeckMeta {
+  ignoreDeckSizeSlots?: Record<string, number>;
+  xpDiscountSlots?: Record<string, number>;
+}
+
 interface ArkhamDeckRow {
   id: string;
   name: string;
@@ -21,6 +26,7 @@ interface ArkhamDeckRow {
   previous_version_id: string | null;
   card_data: Record<string, number>;
   side_slots: Record<string, number> | null;
+  meta: ArkhamDeckMeta | null;
   taboo_id: number | null;
   card_count: number;
   creator_id: string | null;
@@ -46,6 +52,7 @@ interface ArkhamDeckInsert {
   previous_version_id?: string | null;
   card_data: Record<string, number>;
   side_slots?: Record<string, number> | null;
+  meta?: ArkhamDeckMeta | null;
   taboo_id?: number | null;
   card_count: number;
   creator_id?: string | null;
@@ -67,6 +74,8 @@ export const arkhamDeckService = {
     investigatorName: string;
     slots: Record<string, number>;
     sideSlots?: Record<string, number>;
+    ignoreDeckSizeSlots?: Record<string, number>;
+    xpDiscountSlots?: Record<string, number>;
     xpEarned?: number;
     xpSpent?: number;
     campaignId?: string;
@@ -87,6 +96,16 @@ export const arkhamDeckService = {
         cardCount += quantity;
       }
 
+      // Build meta object only if there's data to store
+      const meta: ArkhamDeckMeta | null =
+        (data.ignoreDeckSizeSlots && Object.keys(data.ignoreDeckSizeSlots).length > 0) ||
+        (data.xpDiscountSlots && Object.keys(data.xpDiscountSlots).length > 0)
+          ? {
+              ignoreDeckSizeSlots: data.ignoreDeckSizeSlots,
+              xpDiscountSlots: data.xpDiscountSlots,
+            }
+          : null;
+
       const insertData: ArkhamDeckInsert = {
         id: deckId,
         name: data.name,
@@ -100,6 +119,7 @@ export const arkhamDeckService = {
         previous_version_id: data.previousVersionId || null,
         card_data: data.slots,
         side_slots: data.sideSlots || null,
+        meta,
         taboo_id: data.tabooId || null,
         card_count: cardCount,
         creator_id: data.creatorId || null,
@@ -135,6 +155,8 @@ export const arkhamDeckService = {
       description?: string;
       slots?: Record<string, number>;
       sideSlots?: Record<string, number>;
+      ignoreDeckSizeSlots?: Record<string, number>;
+      xpDiscountSlots?: Record<string, number>;
       xpEarned?: number;
       xpSpent?: number;
       tabooId?: number;
@@ -188,6 +210,19 @@ export const arkhamDeckService = {
 
       if (updates.tags !== undefined) {
         updateData.tags = updates.tags;
+      }
+
+      // Update meta if any meta fields are provided
+      if (updates.ignoreDeckSizeSlots !== undefined || updates.xpDiscountSlots !== undefined) {
+        const meta: ArkhamDeckMeta | null =
+          (updates.ignoreDeckSizeSlots && Object.keys(updates.ignoreDeckSizeSlots).length > 0) ||
+          (updates.xpDiscountSlots && Object.keys(updates.xpDiscountSlots).length > 0)
+            ? {
+                ignoreDeckSizeSlots: updates.ignoreDeckSizeSlots,
+                xpDiscountSlots: updates.xpDiscountSlots,
+              }
+            : null;
+        updateData.meta = meta;
       }
 
       const { error } = await supabase
@@ -292,6 +327,8 @@ export const arkhamDeckService = {
         previous_version_id: row.previous_version_id || undefined,
         slots: row.card_data,
         sideSlots: row.side_slots || undefined,
+        ignoreDeckSizeSlots: row.meta?.ignoreDeckSizeSlots || undefined,
+        xpDiscountSlots: row.meta?.xpDiscountSlots || undefined,
         taboo_id: row.taboo_id || undefined,
         creator_id: row.creator_id || undefined,
         is_public: row.is_public,

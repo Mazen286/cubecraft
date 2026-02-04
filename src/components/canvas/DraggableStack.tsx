@@ -105,8 +105,8 @@ export function DraggableStack({
       data-stack-id={stack.id}
       className={cn(
         'absolute flex flex-col rounded',
-        'bg-yugi-card/50 backdrop-blur-sm',
-        'border border-yugi-border',
+        'bg-cc-card/50 backdrop-blur-sm',
+        'border border-cc-border',
         isOver && 'border-gold-400 bg-gold-400/10 shadow-lg shadow-gold-400/20',
         isDropTarget && 'border-gold-400/50',
         isFocused && !dragState.isDragging && 'border-blue-400 shadow-lg shadow-blue-400/20',

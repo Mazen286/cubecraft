@@ -127,8 +127,8 @@ export function Rulebook() {
       <div className="max-w-7xl mx-auto flex gap-8">
         {/* Sidebar - Table of Contents */}
         <aside className="hidden lg:block w-64 flex-shrink-0 print:hidden">
-          <div className="sticky top-24 bg-yugi-dark border border-yugi-border rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-yugi-border">
+          <div className="sticky top-24 bg-cc-dark border border-cc-border rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-cc-border">
               <BookOpen className="w-5 h-5 text-gold-400" />
               <h2 className="font-semibold text-white">Contents</h2>
             </div>
@@ -151,7 +151,7 @@ export function Rulebook() {
                     <span className={!item.children ? 'ml-5' : ''}>{item.title}</span>
                   </button>
                   {item.children && expandedSections.has(item.id) && (
-                    <div className="ml-4 mt-1 space-y-1 border-l border-yugi-border pl-2">
+                    <div className="ml-4 mt-1 space-y-1 border-l border-cc-border pl-2">
                       {item.children.map(child => (
                         <button
                           key={child.id}
@@ -184,7 +184,7 @@ export function Rulebook() {
             <div className="flex gap-2">
               <button
                 onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 bg-yugi-dark border border-yugi-border rounded-lg text-gray-300 hover:text-white hover:border-gold-500 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-cc-dark border border-cc-border rounded-lg text-gray-300 hover:text-white hover:border-gold-500 transition-colors"
               >
                 <Printer className="w-4 h-4" />
                 <span className="hidden sm:inline">Print</span>
@@ -200,15 +200,15 @@ export function Rulebook() {
           </div>
 
           {/* Rulebook Content */}
-          <div ref={contentRef} className="print-content bg-yugi-dark border border-yugi-border rounded-lg p-6 sm:p-8 prose prose-invert prose-gold max-w-none">
+          <div ref={contentRef} className="print-content bg-cc-dark border border-cc-border rounded-lg p-6 sm:p-8 prose prose-invert prose-gold max-w-none">
             {/* Introduction */}
             <section id="introduction" className="mb-12">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gold-400 mb-6 pb-3 border-b border-yugi-border">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gold-400 mb-6 pb-3 border-b border-cc-border">
                 CubeCraft: Cube Drafting System Rulebook
               </h1>
 
               {/* Hero Image */}
-              <div className="my-6 rounded-lg overflow-hidden border border-yugi-border">
+              <div className="my-6 rounded-lg overflow-hidden border border-cc-border">
                 <img
                   src="/images/rulebook-hero.png"
                   alt="Players gathered around a table drafting cards from a grid"
@@ -233,7 +233,7 @@ export function Rulebook() {
 
               <div className="grid gap-4 md:grid-cols-3">
                 {/* Pack Draft */}
-                <div className="bg-yugi-darker rounded-lg p-4">
+                <div className="bg-cc-darker rounded-lg p-4">
                   <h3 className="text-gold-400 font-semibold mb-3">Pack Draft</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>Cards per Pack: <span className="text-white">{DEFAULTS.pack.packSize}</span></li>
@@ -245,7 +245,7 @@ export function Rulebook() {
                 </div>
 
                 {/* Auction Grid */}
-                <div className="bg-yugi-darker rounded-lg p-4">
+                <div className="bg-cc-darker rounded-lg p-4">
                   <h3 className="text-gold-400 font-semibold mb-3">Auction Grid</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>Cards Acquired/Grid: <span className="text-white">{DEFAULTS.auction.cardsAcquiredPerGrid}</span></li>
@@ -258,7 +258,7 @@ export function Rulebook() {
                 </div>
 
                 {/* Open Draft */}
-                <div className="bg-yugi-darker rounded-lg p-4">
+                <div className="bg-cc-darker rounded-lg p-4">
                   <h3 className="text-gold-400 font-semibold mb-3">Open Draft</h3>
                   <ul className="text-sm text-gray-300 space-y-1">
                     <li>Cards Acquired/Grid: <span className="text-white">{DEFAULTS.open.cardsAcquiredPerGrid}</span></li>
@@ -320,7 +320,7 @@ export function Rulebook() {
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">2. Drafting Modes</h2>
 
               {/* 2.1 Pack Draft */}
-              <section id="pack-drafting" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="pack-drafting" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">2.1 Pack Draft</h3>
                 <p className="text-gray-300 mb-4">
                   The classic drafting format. Players receive packs, pick one card, and pass the rest to their neighbor. Simple, fast, and familiar to TCG players.
@@ -344,7 +344,7 @@ export function Rulebook() {
                   <li>Timer is configurable from 30-300 seconds.</li>
                 </ul>
 
-                <div className="bg-yugi-darker rounded-lg p-4 example-box">
+                <div className="bg-cc-darker rounded-lg p-4 example-box">
                   <p className="text-gold-400 font-semibold mb-2">Example (4 Players, Default Settings):</p>
                   <ul className="text-gray-300 text-sm space-y-1">
                     <li>Packs needed: 4 players × 6 packs = 24 packs</li>
@@ -356,7 +356,7 @@ export function Rulebook() {
               </section>
 
               {/* 2.2 Auction Grid */}
-              <section id="auction-grid" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="auction-grid" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">2.2 Auction Grid Draft</h3>
                 <p className="text-gray-300 mb-4">
                   A strategic format where players bid on cards using limited points. Combines open information with resource management for deep tactical play.
@@ -392,7 +392,7 @@ export function Rulebook() {
                   <li>Bidding points do <strong className="text-red-400">NOT</strong> reset between grids - budget wisely!</li>
                 </ul>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mt-4 example-box">
+                <div className="bg-cc-darker rounded-lg p-4 mt-4 example-box">
                   <p className="text-gold-400 font-semibold mb-2">Example Auction:</p>
                   <p className="text-gray-300 text-sm mb-2">
                     <strong>Alice</strong> selects a powerful card. <strong>Bob</strong> bids 5, <strong>Carol</strong> bids 8, <strong>Dave</strong> passes, Alice bids 10, Bob passes, Carol bids 12, Alice passes.
@@ -402,7 +402,7 @@ export function Rulebook() {
                   </p>
                 </div>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mt-4 example-box">
+                <div className="bg-cc-darker rounded-lg p-4 mt-4 example-box">
                   <p className="text-gold-400 font-semibold mb-2">Example (Everyone Passes):</p>
                   <p className="text-gray-300 text-sm mb-2">
                     <strong>Alice</strong> selects a niche card. Bob passes, Carol passes, Dave passes. Since everyone passed without bidding...
@@ -414,7 +414,7 @@ export function Rulebook() {
               </section>
 
               {/* 2.3 Open Draft */}
-              <section id="open-draft" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="open-draft" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">2.3 Open Draft</h3>
                 <p className="text-gray-300 mb-4">
                   A streamlined grid format without bidding. Players simply take turns selecting cards from the grid. Faster than Auction Grid while maintaining open information.
@@ -439,7 +439,7 @@ export function Rulebook() {
                   <li>Turn order matters more since there's no way to outbid.</li>
                 </ul>
 
-                <div className="bg-yugi-darker rounded-lg p-4 example-box">
+                <div className="bg-cc-darker rounded-lg p-4 example-box">
                   <p className="text-gold-400 font-semibold mb-2">When to Choose Open Draft:</p>
                   <ul className="text-gray-300 text-sm space-y-1">
                     <li>You want open information but faster gameplay</li>
@@ -456,7 +456,7 @@ export function Rulebook() {
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">3. Digital Features</h2>
 
               {/* 3.1 Solo Mode */}
-              <section id="solo-mode" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="solo-mode" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">3.1 Solo Mode & AI Bots</h3>
                 <p className="text-gray-300 mb-4">
                   Practice drafting anytime with AI opponents. Solo mode lets you hone your skills and test strategies without needing other players.
@@ -476,7 +476,7 @@ export function Rulebook() {
                   Bots don't just pick the highest-rated card. They use a weighted scoring system that considers synergy with their existing collection:
                 </p>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4">
                   <p className="text-white font-semibold mb-2">Weighted Score Calculation:</p>
                   <ul className="text-gray-300 text-sm space-y-2">
                     <li><strong className="text-gold-400">Base:</strong> Card's power rating (0-100)</li>
@@ -488,7 +488,7 @@ export function Rulebook() {
                   </ul>
                 </div>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4">
                   <p className="text-white font-semibold mb-2">MTG Color Intelligence:</p>
                   <p className="text-gray-300 text-sm mb-2">For Magic: The Gathering cubes, bots also consider mana colors:</p>
                   <ul className="text-gray-300 text-sm space-y-1">
@@ -499,7 +499,7 @@ export function Rulebook() {
                   </ul>
                 </div>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4 example-box">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4 example-box">
                   <p className="text-gold-400 font-semibold mb-2">Example - Archetype Synergy:</p>
                   <p className="text-gray-300 text-sm mb-2">
                     Bot has drafted 3 Lightsworn cards. In the current pack:
@@ -524,13 +524,13 @@ export function Rulebook() {
               </section>
 
               {/* 3.2 Card Ratings */}
-              <section id="card-ratings" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="card-ratings" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">3.2 Card Ratings & Tiers</h3>
                 <p className="text-gray-300 mb-4">
                   Every card in a cube can have a power rating (0-100) that helps evaluate picks. Ratings are displayed as letter tiers.
                 </p>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4">
                   <p className="text-white font-semibold mb-3">Tier System:</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
                     <div className="flex items-center gap-2">
@@ -574,7 +574,7 @@ export function Rulebook() {
               </section>
 
               {/* 3.3 Sessions */}
-              <section id="sessions" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="sessions" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">3.3 Sessions & Reconnection</h3>
                 <p className="text-gray-300 mb-4">
                   CubeCraft handles multiplayer sessions with room codes and supports reconnection if you get disconnected.
@@ -604,7 +604,7 @@ export function Rulebook() {
               </section>
 
               {/* 3.4 Card Synergies */}
-              <section id="synergies" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="synergies" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">3.4 Card Synergies</h3>
                 <p className="text-gray-300 mb-4">
                   Some cubes include synergy data that helps identify powerful card combinations. When you draft a card that synergizes with cards in your pool, the system highlights this and adjusts the displayed score.
@@ -625,7 +625,7 @@ export function Rulebook() {
                   <li>Click/tap a card to see the full breakdown of base score, bonuses, and which cards triggered the synergy.</li>
                 </ul>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4">
                   <p className="text-white font-semibold mb-3">Common Synergy Types:</p>
                   <div className="space-y-3 text-sm">
                     <div>
@@ -647,7 +647,7 @@ export function Rulebook() {
                   </div>
                 </div>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4 example-box">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4 example-box">
                   <p className="text-gold-400 font-semibold mb-2">Example Synergies (The Library Cube):</p>
                   <ul className="text-gray-300 text-sm space-y-2">
                     <li><strong className="text-white">Tour Guide + Level 3 Fiends:</strong> +20 to all Level 3 Fiend monsters</li>
@@ -677,7 +677,7 @@ export function Rulebook() {
             <section id="deck-construction" className="mb-12">
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">4. Deck Construction</h2>
 
-              <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+              <div className="bg-cc-darker rounded-lg p-4 mb-4">
                 <ul className="space-y-3 text-gray-300">
                   <li><strong className="text-white">Main Deck:</strong> Build a deck meeting your game's minimum size from your drafted pool.</li>
                   <li><strong className="text-white">Extra/Special Cards:</strong> Include any extra deck or special zone cards you drafted.</li>
@@ -720,13 +720,13 @@ export function Rulebook() {
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">6. Appendix</h2>
 
               {/* 6.1 Grid Calculations */}
-              <section id="grid-calc" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="grid-calc" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">6.1 Grid Calculations</h3>
                 <p className="text-gray-300 mb-4">
                   For Auction Grid and Open Draft modes, cards are organized into grids.
                 </p>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4">
                   <p className="text-white font-semibold mb-2">Number of Grids:</p>
                   <p className="text-gray-300 mb-1">
                     Grids = Cards per Player ÷ Cards Acquired per Grid
@@ -736,7 +736,7 @@ export function Rulebook() {
                   </p>
                 </div>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4">
                   <p className="text-white font-semibold mb-2">Cards per Grid:</p>
                   <p className="text-gray-300 mb-1">
                     Cards per Grid = (Players × Cards Acquired) + Burned per Grid
@@ -746,7 +746,7 @@ export function Rulebook() {
                   </p>
                 </div>
 
-                <div className="bg-yugi-darker rounded-lg p-4">
+                <div className="bg-cc-darker rounded-lg p-4">
                   <p className="text-white font-semibold mb-2">Total Cards Needed:</p>
                   <p className="text-gray-300 mb-1">
                     Total = Cards per Grid × Number of Grids
@@ -758,13 +758,13 @@ export function Rulebook() {
               </section>
 
               {/* 6.2 Pack Calculations */}
-              <section id="pack-calc" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="pack-calc" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">6.2 Pack Calculations</h3>
                 <p className="text-gray-300 mb-4">
                   For Pack Draft mode, cards are divided into packs.
                 </p>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4">
                   <p className="text-white font-semibold mb-2">Packs per Player:</p>
                   <p className="text-gray-300 mb-1">
                     Packs = Cards per Player ÷ Picks per Pack
@@ -774,7 +774,7 @@ export function Rulebook() {
                   </p>
                 </div>
 
-                <div className="bg-yugi-darker rounded-lg p-4 mb-4">
+                <div className="bg-cc-darker rounded-lg p-4 mb-4">
                   <p className="text-white font-semibold mb-2">Total Packs:</p>
                   <p className="text-gray-300 mb-1">
                     Total Packs = Packs per Player × Number of Players
@@ -784,7 +784,7 @@ export function Rulebook() {
                   </p>
                 </div>
 
-                <div className="bg-yugi-darker rounded-lg p-4">
+                <div className="bg-cc-darker rounded-lg p-4">
                   <p className="text-white font-semibold mb-2">Total Cards Needed:</p>
                   <p className="text-gray-300 mb-1">
                     Total = Total Packs × Cards per Pack
@@ -796,7 +796,7 @@ export function Rulebook() {
               </section>
 
               {/* 6.3 Auction Tips */}
-              <section id="auction-tips" className="mb-8 pl-4 border-l-2 border-yugi-border">
+              <section id="auction-tips" className="mb-8 pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">6.3 Tips for Auction Grid Drafting</h3>
                 <ul className="list-disc list-inside text-gray-300 space-y-2">
                   <li><strong className="text-white">Budget Across All Grids:</strong> Your points must last the entire draft. Don't overspend early!</li>
@@ -809,7 +809,7 @@ export function Rulebook() {
               </section>
 
               {/* 6.4 Timing Etiquette */}
-              <section id="timing" className="pl-4 border-l-2 border-yugi-border">
+              <section id="timing" className="pl-4 border-l-2 border-cc-border">
                 <h3 className="text-lg font-semibold text-gold-400 mb-3">6.4 Timing Etiquette</h3>
                 <ul className="list-disc list-inside text-gray-300 space-y-2">
                   <li><strong className="text-white">Respect Timers:</strong> Make decisions within the allotted time.</li>
