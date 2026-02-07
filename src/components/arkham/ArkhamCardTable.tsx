@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Search, X, Plus, Minus, Filter, ChevronUp, ChevronDown, RotateCw } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
@@ -174,6 +174,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
   const [factionFilter, setFactionFilter] = useState<ArkhamFaction | null>(null);
   const [typeFilter, setTypeFilter] = useState<ArkhamCardType | null>(null);
   const [levelFilter, setLevelFilter] = useState<'0' | '1-2' | '3+' | null>(null);
+  const [traitFilter, setTraitFilter] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -205,8 +206,8 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
     }
   };
 
-  // Get eligible cards for the current investigator
-  const eligibleCards = useMemo(() => {
+  // Get eligible cards for the current investigator (before trait filter)
+  const baseFilteredCards = useMemo(() => {
     if (!state.investigator || !state.isInitialized) return [];
 
     const allCards = arkhamCardService.getPlayerCards();
@@ -287,6 +288,38 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
     });
   }, [state.investigator, state.isInitialized, query, factionFilter, typeFilter, levelFilter, externalFilters, canAddCard]);
 
+  // Extract available traits from base filtered cards (before trait filter)
+  const availableTraits = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const card of baseFilteredCards) {
+      if (!card.traits) continue;
+      for (const t of card.traits.split('.')) {
+        const trait = t.trim();
+        if (trait) counts.set(trait, (counts.get(trait) || 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .filter(([, count]) => count >= 2)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([trait]) => trait);
+  }, [baseFilteredCards]);
+
+  // Auto-clear stale trait filter
+  useEffect(() => {
+    if (traitFilter && !availableTraits.includes(traitFilter)) {
+      setTraitFilter(null);
+    }
+  }, [traitFilter, availableTraits]);
+
+  // Apply trait filter on top of base filtered cards
+  const eligibleCards = useMemo(() => {
+    if (!traitFilter) return baseFilteredCards;
+    return baseFilteredCards.filter(card => {
+      const cardTraits = card.traits?.split('.').map(t => t.trim()) || [];
+      return cardTraits.includes(traitFilter);
+    });
+  }, [baseFilteredCards, traitFilter]);
+
   // Sort cards
   const sortedCards = useMemo(() => {
     return [...eligibleCards].sort((a, b) => {
@@ -364,7 +397,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
   const factions: ArkhamFaction[] = ['guardian', 'seeker', 'rogue', 'mystic', 'survivor', 'neutral'];
   const types: ArkhamCardType[] = ['asset', 'event', 'skill'];
   const levels = ['0', '1-2', '3+'] as const;
-  const hasActiveFilters = factionFilter || typeFilter || levelFilter;
+  const hasActiveFilters = factionFilter || typeFilter || levelFilter || traitFilter;
   const hasExternalFilters = externalFilters && (
     externalFilters.cost !== undefined && externalFilters.cost !== null ||
     externalFilters.faction ||
@@ -517,6 +550,31 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
                 ))}
               </div>
             </div>
+
+            {/* Trait filter */}
+            {availableTraits.length > 0 && (
+              <div className="flex gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                <button
+                  onClick={() => setTraitFilter(null)}
+                  className={`px-2 py-1 rounded text-xs whitespace-nowrap transition-colors ${
+                    !traitFilter ? 'bg-gold-600/20 text-gold-400' : 'bg-cc-darker text-gray-400 hover:text-white'
+                  }`}
+                >
+                  All
+                </button>
+                {availableTraits.map(trait => (
+                  <button
+                    key={trait}
+                    onClick={() => setTraitFilter(traitFilter === trait ? null : trait)}
+                    className={`px-2 py-1 rounded text-xs whitespace-nowrap transition-colors ${
+                      traitFilter === trait ? 'bg-gold-600/20 text-gold-400' : 'bg-cc-darker text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {trait}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -541,7 +599,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
           <span>{sortedCards.length} cards</span>
           {hasActiveFilters && (
             <button
-              onClick={() => { setFactionFilter(null); setTypeFilter(null); setLevelFilter(null); }}
+              onClick={() => { setFactionFilter(null); setTypeFilter(null); setLevelFilter(null); setTraitFilter(null); }}
               className="text-gold-400 hover:text-gold-300"
             >
               Clear

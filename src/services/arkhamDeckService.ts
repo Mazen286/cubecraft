@@ -319,6 +319,43 @@ export const arkhamDeckService = {
   },
 
   /**
+   * Copy a public deck for a new user
+   */
+  async copyDeck(
+    sourceDeckId: string,
+    newCreatorId: string
+  ): Promise<{ id: string; error?: string }> {
+    try {
+      const sourceDeck = await this.loadDeck(sourceDeckId);
+
+      const result = await this.saveDeck({
+        name: sourceDeck.name + ' (Copy)',
+        description: sourceDeck.description,
+        investigatorCode: sourceDeck.investigator_code,
+        investigatorName: sourceDeck.investigator_name,
+        slots: sourceDeck.slots,
+        sideSlots: sourceDeck.sideSlots,
+        ignoreDeckSizeSlots: sourceDeck.ignoreDeckSizeSlots,
+        xpDiscountSlots: sourceDeck.xpDiscountSlots,
+        xpEarned: sourceDeck.xp_earned,
+        xpSpent: sourceDeck.xp_spent,
+        tabooId: sourceDeck.taboo_id,
+        version: 1,
+        creatorId: newCreatorId,
+        isPublic: false,
+        tags: sourceDeck.tags,
+      });
+
+      return result;
+    } catch (error) {
+      return {
+        id: '',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  },
+
+  /**
    * Load a deck by ID
    */
   async loadDeck(deckId: string): Promise<ArkhamDeckData> {

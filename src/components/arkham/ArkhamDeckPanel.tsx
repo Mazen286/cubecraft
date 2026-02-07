@@ -2,6 +2,7 @@ import { useMemo, useState, useRef } from 'react';
 import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Award, FileText } from 'lucide-react';
 import { marked } from 'marked';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
+import RichTextEditor from '../RichTextEditor';
 import { arkhamCardService } from '../../services/arkhamCardService';
 import { isExceptional, isMyriad } from '../../services/arkhamDeckValidation';
 import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon, getSkillIconsArray } from './ArkhamCardTable';
@@ -138,8 +139,10 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
   const [showEditXP, setShowEditXP] = useState(false);
   const [editXpEarned, setEditXpEarned] = useState(0);
   const [showNotes, setShowNotes] = useState(false);
-  const [notesText, setNotesText] = useState('');
-  const [notesPreview, setNotesPreview] = useState(false);
+  const [notesTab, setNotesTab] = useState<'guide' | 'strategy' | 'campaign'>('guide');
+  const [notesGuide, setNotesGuide] = useState('');
+  const [notesStrategy, setNotesStrategy] = useState('');
+  const [notesCampaign, setNotesCampaign] = useState('');
 
   // Drag image ref for side deck cards
   const sideDragImageRef = useRef<HTMLImageElement>(null);
@@ -181,15 +184,38 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     setShowAddXP(false);
   };
 
-  // Handle deck notes
+  // Handle deck notes — stored as JSON: {"guide":"...","strategy":"...","campaign":"..."}
+  // Backward compatible: plain HTML string is treated as the guide tab
   const openNotes = () => {
-    setNotesText(state.deckDescription);
-    setNotesPreview(false);
+    const raw = state.deckDescription;
+    let parsed: { guide?: string; strategy?: string; campaign?: string } = {};
+    if (raw) {
+      try {
+        const obj = JSON.parse(raw);
+        if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+          parsed = obj;
+        } else {
+          parsed = { guide: raw };
+        }
+      } catch {
+        // Not JSON — treat as guide content (backward compat)
+        parsed = { guide: raw };
+      }
+    }
+    setNotesGuide(parsed.guide || '');
+    setNotesStrategy(parsed.strategy || '');
+    setNotesCampaign(parsed.campaign || '');
+    setNotesTab('guide');
     setShowNotes(true);
   };
 
   const saveNotes = () => {
-    setMetadata({ description: notesText });
+    const description = JSON.stringify({
+      guide: notesGuide,
+      strategy: notesStrategy,
+      campaign: notesCampaign,
+    });
+    setMetadata({ description });
     setShowNotes(false);
   };
 
@@ -669,7 +695,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
             <FileText className="w-4 h-4" />
             <span className="hidden sm:inline">Deck Notes</span>
             <span className="sm:hidden">Notes</span>
-            {state.deckDescription && <span className="w-2 h-2 rounded-full bg-amber-400" />}
+            {state.deckDescription && state.deckDescription !== '{"guide":"","strategy":"","campaign":""}' && <span className="w-2 h-2 rounded-full bg-amber-400" />}
           </button>
         </div>
       </div>
@@ -1050,95 +1076,59 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
           </div>
         }
       >
-        <div className="px-4 pt-2 pb-4">
-          {/* Edit/Preview tabs */}
-          <div className="flex gap-1 mb-3">
-            <button
-              onClick={() => setNotesPreview(false)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                !notesPreview
-                  ? 'bg-gold-600 text-black'
-                  : 'bg-cc-border text-gray-400 hover:text-white'
-              }`}
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setNotesPreview(true)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                notesPreview
-                  ? 'bg-gold-600 text-black'
-                  : 'bg-cc-border text-gray-400 hover:text-white'
-              }`}
-            >
-              Preview
-            </button>
-            <span className="ml-auto text-xs text-gray-500 self-center">
-              {notesText.length.toLocaleString()} chars • Markdown + HTML
-            </span>
+        <div className="flex flex-col" style={{ height: 'calc(95vh - 140px)' }}>
+          {/* Tabs */}
+          <div className="flex-shrink-0 flex border-b border-gray-700 px-4 pt-2">
+            {([
+              { key: 'guide' as const, label: 'Deck Guide', icon: '📖' },
+              { key: 'strategy' as const, label: 'Strategy Notes', icon: '⚔️' },
+              { key: 'campaign' as const, label: 'Campaign Log', icon: '📜' },
+            ]).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setNotesTab(tab.key)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  notesTab === tab.key
+                    ? 'border-amber-400 text-amber-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                <span className="mr-1.5">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {notesPreview ? (
-            /* Preview mode - render Markdown as HTML */
-            <div
-              className="overflow-auto bg-cc-dark border border-cc-border rounded-lg"
-              style={{ height: 'calc(95vh - 180px)' }}
-            >
-              <style dangerouslySetInnerHTML={{ __html: ARKHAMDB_ICON_STYLES }} />
-              <div
-                className="p-5 prose prose-invert max-w-none
-                  prose-headings:text-gold-400 prose-headings:font-semibold prose-headings:border-b prose-headings:border-cc-border prose-headings:pb-2
-                  prose-h1:text-2xl prose-h1:mt-6 prose-h1:mb-4
-                  prose-h2:text-xl prose-h2:mt-5 prose-h2:mb-3
-                  prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2 prose-h3:border-none
-                  prose-h4:text-base prose-h4:mt-3 prose-h4:mb-2 prose-h4:border-none
-                  prose-p:text-gray-300 prose-p:my-3 prose-p:leading-relaxed
-                  prose-a:text-blue-400 prose-a:font-medium hover:prose-a:text-blue-300 prose-a:no-underline hover:prose-a:underline
-                  prose-strong:text-white prose-strong:font-semibold
-                  prose-em:text-gray-200
-                  prose-ul:text-gray-300 prose-ul:my-3 prose-ul:pl-6
-                  prose-ol:text-gray-300 prose-ol:my-3 prose-ol:pl-6
-                  prose-li:my-1.5 prose-li:leading-relaxed
-                  prose-blockquote:border-l-4 prose-blockquote:border-gold-500 prose-blockquote:bg-cc-darker prose-blockquote:text-gray-400 prose-blockquote:not-italic prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:my-4 prose-blockquote:rounded-r
-                  prose-code:text-amber-400 prose-code:bg-cc-darker prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
-                  prose-pre:bg-cc-darker prose-pre:border prose-pre:border-cc-border prose-pre:rounded-lg prose-pre:my-4
-                  prose-hr:border-cc-border prose-hr:my-8
-                  prose-table:w-full prose-table:my-4 prose-table:border-collapse
-                  prose-thead:bg-cc-darker
-                  prose-th:text-gold-400 prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:border prose-th:border-cc-border
-                  prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-cc-border prose-td:text-gray-300
-                  prose-tr:even:bg-cc-darker/50
-                  prose-img:rounded-lg prose-img:my-4 prose-img:max-w-full
-                  [&_center]:text-center [&_center]:my-4
-                  [&_.icon-guardian]:text-blue-500 [&_.icon-seeker]:text-orange-500 [&_.icon-rogue]:text-green-500 [&_.icon-mystic]:text-purple-500 [&_.icon-survivor]:text-red-500"
-                dangerouslySetInnerHTML={{ __html: notesText ? parseNotesMarkdown(notesText) : '<p class="text-gray-500 text-center py-8">No notes to preview</p>' }}
+          {/* Tab content */}
+          <div className="flex-1 min-h-0 px-4 pt-2 pb-4">
+            {notesTab === 'guide' && (
+              <RichTextEditor
+                key="guide"
+                value={notesGuide}
+                onChange={setNotesGuide}
+                placeholder="Write your deck guide here... Use the Templates dropdown above for a starter template."
+                enableArkhamCardTooltips
               />
-            </div>
-          ) : (
-            /* Edit mode - large textarea */
-            <textarea
-              value={notesText}
-              onChange={(e) => setNotesText(e.target.value)}
-              placeholder={`Paste your deck guide from ArkhamDB here...
-
-Supports full Markdown formatting:
-# Headers
-**Bold** and _italic_ text
-[Card links](/card/01001) → converted to ArkhamDB URLs
-* Bullet lists
-1. Numbered lists
-
-| Tables | Work |
-|--------|------|
-| Too    | !    |
-
----
-
-Plus any HTML tags for advanced formatting.`}
-              style={{ height: 'calc(95vh - 180px)' }}
-              className="w-full p-4 bg-cc-dark border border-cc-border rounded-lg text-white text-sm font-mono placeholder:text-gray-600 resize-none focus:outline-none focus:border-gold-500/50 leading-relaxed"
-            />
-          )}
+            )}
+            {notesTab === 'strategy' && (
+              <RichTextEditor
+                key="strategy"
+                value={notesStrategy}
+                onChange={setNotesStrategy}
+                placeholder="Write strategy notes here... Tips for piloting the deck, scenario-specific advice, weakness counters."
+                enableArkhamCardTooltips
+              />
+            )}
+            {notesTab === 'campaign' && (
+              <RichTextEditor
+                key="campaign"
+                value={notesCampaign}
+                onChange={setNotesCampaign}
+                placeholder="Track your campaign progress here... Scenario results, XP earned, trauma, upgrades purchased."
+                enableArkhamCardTooltips
+              />
+            )}
+          </div>
         </div>
       </BottomSheet>
     </div>

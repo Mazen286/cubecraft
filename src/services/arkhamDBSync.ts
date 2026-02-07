@@ -124,7 +124,21 @@ export async function saveDeck(
     const formData = new URLSearchParams();
     formData.append('name', deck.name);
     if (deck.description) {
-      formData.append('description', deck.description);
+      // Convert tabbed JSON notes to flat HTML for ArkhamDB
+      let flatDescription = deck.description;
+      try {
+        const obj = JSON.parse(deck.description);
+        if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+          const parts: string[] = [];
+          if (obj.guide) parts.push(obj.guide);
+          if (obj.strategy) parts.push('<hr>' + obj.strategy);
+          if (obj.campaign) parts.push('<hr>' + obj.campaign);
+          flatDescription = parts.join('\n');
+        }
+      } catch {
+        // Not JSON, use as-is
+      }
+      formData.append('description', flatDescription);
     }
     formData.append('slots', JSON.stringify(deck.slots));
     if (deck.ignoreDeckLimitSlots && Object.keys(deck.ignoreDeckLimitSlots).length > 0) {

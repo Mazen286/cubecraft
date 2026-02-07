@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, Edit, Layers, Library, Calendar, MoreVertical, Loader2, Award, GitBranch, Upload } from 'lucide-react';
+import { Plus, Trash2, Edit, Layers, Library, Calendar, MoreVertical, Loader2, Award, GitBranch, Upload, Share2, Copy } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { deckService, type DeckInfo } from '../services/deckService';
@@ -8,6 +8,7 @@ import { arkhamDeckService } from '../services/arkhamDeckService';
 import { arkhamCardService } from '../services/arkhamCardService';
 import { getAllGameConfigs } from '../config/games';
 import { FACTION_COLORS, FACTION_NAMES } from '../config/games/arkham';
+import { ShareDeckModal } from '../components/arkham/ShareDeckModal';
 import type { ArkhamDeckInfo, ArkhamFaction } from '../types/arkham';
 
 type DeckType = DeckInfo | ArkhamDeckInfo;
@@ -25,6 +26,8 @@ export function MyDecks() {
   const [totalCount, setTotalCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [shareDeck, setShareDeck] = useState<{ id: string; name: string; isPublic: boolean } | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   // Get game filter from URL params
   const gameFilter = searchParams.get('game');
@@ -157,10 +160,27 @@ export function MyDecks() {
     }
   };
 
+  const handleShareArkhamDeck = (deck: ArkhamDeckInfo) => {
+    setMenuOpen(null);
+    setShareDeck({ id: deck.id, name: deck.name, isPublic: deck.is_public });
+  };
+
+  const handleDuplicateArkhamDeck = async (deckId: string) => {
+    if (!user) return;
+    setDuplicatingId(deckId);
+    setMenuOpen(null);
+    const result = await arkhamDeckService.copyDeck(deckId, user.id);
+    setDuplicatingId(null);
+    if (result.id) {
+      navigate(`/arkham/deck-builder/${result.id}`);
+    }
+  };
+
   // Show loading state for Arkham initialization
   const showInitLoading = isArkhamSelected && !arkhamInitialized;
 
   return (
+    <>
     <Layout>
       <div className="max-w-4xl mx-auto py-6 px-4">
         {/* Header */}
@@ -308,15 +328,15 @@ export function MyDecks() {
                     }`}
                   >
                     <div className="flex items-center p-4">
-                      {/* Investigator portrait */}
+                      {/* Investigator portrait (landscape card) */}
                       <div
-                        className="w-12 h-14 rounded-lg overflow-hidden flex-shrink-0 mr-4 border-2"
+                        className="w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 mr-4 border-2"
                         style={{ borderColor: factionColor }}
                       >
                         <img
                           src={arkhamCardService.getArkhamCardImageUrl(deck.investigator_code)}
                           alt={deck.investigator_name}
-                          className="w-full h-full object-cover object-top"
+                          className="w-full h-full object-cover"
                         />
                       </div>
 
@@ -384,7 +404,26 @@ export function MyDecks() {
                           </button>
 
                           {menuOpen === deck.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-cc-darker border border-cc-border rounded-lg shadow-lg z-10 min-w-[120px]">
+                            <div className="absolute right-0 top-full mt-1 bg-cc-darker border border-cc-border rounded-lg shadow-lg z-10 min-w-[160px]">
+                              <button
+                                onClick={() => handleShareArkhamDeck(deck)}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-cc-border transition-colors"
+                              >
+                                <Share2 className="w-4 h-4" />
+                                Share Deck
+                              </button>
+                              <button
+                                onClick={() => handleDuplicateArkhamDeck(deck.id)}
+                                disabled={duplicatingId === deck.id}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-cc-border transition-colors disabled:opacity-50"
+                              >
+                                {duplicatingId === deck.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Copy className="w-4 h-4" />
+                                )}
+                                Duplicate
+                              </button>
                               <button
                                 onClick={() => handleDeleteDeck(deck.id, true)}
                                 disabled={isDeleting}
@@ -403,11 +442,6 @@ export function MyDecks() {
                       </div>
                     </div>
 
-                    {deck.description && (
-                      <div className="px-4 pb-4 pt-0">
-                        <p className="text-sm text-gray-500 line-clamp-2">{deck.description}</p>
-                      </div>
-                    )}
                   </div>
                 );
               } else {
@@ -516,5 +550,18 @@ export function MyDecks() {
         )}
       </div>
     </Layout>
+
+    {/* Share Deck Modal */}
+    {shareDeck && (
+      <ShareDeckModal
+        isOpen={true}
+        onClose={() => setShareDeck(null)}
+        deckId={shareDeck.id}
+        deckName={shareDeck.name}
+        isPublic={shareDeck.isPublic}
+        onTogglePublic={(isPublic) => setShareDeck(prev => prev ? { ...prev, isPublic } : null)}
+      />
+    )}
+    </>
   );
 }

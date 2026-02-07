@@ -4,7 +4,7 @@
  * Cards added from here are auto-marked as "doesn't count towards deck size"
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Search, X, Plus, Minus, ChevronUp, ChevronDown, Info } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
@@ -34,6 +34,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
   const [query, setQuery] = useState('');
   const [factionFilter, setFactionFilter] = useState<ArkhamFaction | null>(null);
   const [typeFilter, setTypeFilter] = useState<ArkhamCardType | null>(null);
+  const [traitFilter, setTraitFilter] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -46,8 +47,8 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
     return arkhamCardService.getAllDeckableCards();
   }, [state.isInitialized]);
 
-  // Filter cards
-  const filteredCards = useMemo(() => {
+  // Filter cards (before trait filter)
+  const baseFilteredCards = useMemo(() => {
     let cards = allCards;
 
     if (query) {
@@ -72,6 +73,38 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
 
     return cards;
   }, [allCards, query, factionFilter, typeFilter]);
+
+  // Extract available traits from base filtered cards
+  const availableTraits = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const card of baseFilteredCards) {
+      if (!card.traits) continue;
+      for (const t of card.traits.split('.')) {
+        const trait = t.trim();
+        if (trait) counts.set(trait, (counts.get(trait) || 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .filter(([, count]) => count >= 2)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([trait]) => trait);
+  }, [baseFilteredCards]);
+
+  // Auto-clear stale trait filter
+  useEffect(() => {
+    if (traitFilter && !availableTraits.includes(traitFilter)) {
+      setTraitFilter(null);
+    }
+  }, [traitFilter, availableTraits]);
+
+  // Apply trait filter
+  const filteredCards = useMemo(() => {
+    if (!traitFilter) return baseFilteredCards;
+    return baseFilteredCards.filter(card => {
+      const cardTraits = card.traits?.split('.').map(t => t.trim()) || [];
+      return cardTraits.includes(traitFilter);
+    });
+  }, [baseFilteredCards, traitFilter]);
 
   // Sort cards
   const sortedCards = useMemo(() => {
@@ -160,7 +193,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
 
   const factions: ArkhamFaction[] = ['guardian', 'seeker', 'rogue', 'mystic', 'survivor', 'neutral'];
   const types: ArkhamCardType[] = ['asset', 'event', 'skill'];
-  const hasActiveFilters = factionFilter || typeFilter;
+  const hasActiveFilters = factionFilter || typeFilter || traitFilter;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -248,6 +281,31 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
               </button>
             ))}
           </div>
+
+          {/* Trait filter */}
+          {availableTraits.length > 0 && (
+            <div className="flex gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              <button
+                onClick={() => setTraitFilter(null)}
+                className={`px-2 py-1 rounded text-xs whitespace-nowrap transition-colors ${
+                  !traitFilter ? 'bg-orange-600/20 text-orange-400' : 'bg-cc-darker text-gray-400 hover:text-white'
+                }`}
+              >
+                All
+              </button>
+              {availableTraits.map(trait => (
+                <button
+                  key={trait}
+                  onClick={() => setTraitFilter(traitFilter === trait ? null : trait)}
+                  className={`px-2 py-1 rounded text-xs whitespace-nowrap transition-colors ${
+                    traitFilter === trait ? 'bg-orange-600/20 text-orange-400' : 'bg-cc-darker text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {trait}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Status */}
@@ -255,7 +313,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
           <span>{sortedCards.length} cards</span>
           {hasActiveFilters && (
             <button
-              onClick={() => { setFactionFilter(null); setTypeFilter(null); }}
+              onClick={() => { setFactionFilter(null); setTypeFilter(null); setTraitFilter(null); }}
               className="text-orange-400 hover:text-orange-300"
             >
               Clear filters

@@ -14,6 +14,7 @@ import {
   Trash2,
   Cloud,
   HelpCircle,
+  Share2,
 } from 'lucide-react';
 import {
   ArkhamDeckBuilderProvider,
@@ -28,6 +29,7 @@ import { ImportDeckModal } from '../components/arkham/ImportDeckModal';
 import { ArkhamDBConnectionStatus } from '../components/arkham/ArkhamDBConnectionStatus';
 import { SyncDeckModal } from '../components/arkham/SyncDeckModal';
 import { ExportDeckModal } from '../components/arkham/ExportDeckModal';
+import { ShareDeckModal } from '../components/arkham/ShareDeckModal';
 import { KeywordReferenceModal } from '../components/arkham/KeywordReferenceModal';
 import { FACTION_COLORS, FACTION_NAMES } from '../config/games/arkham';
 import { isOAuthConfigured } from '../services/arkhamDBAuth';
@@ -90,6 +92,8 @@ function ArkhamDeckBuilderContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
   const [showKeywordReference, setShowKeywordReference] = useState(false);
   const [isArkhamDBConnected, setIsArkhamDBConnected] = useState(false);
 
@@ -101,6 +105,16 @@ function ArkhamDeckBuilderContent() {
       setSearchParams(newParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
+
+  // Load isPublic status when deck is loaded
+  useEffect(() => {
+    if (state.deckId) {
+      arkhamDeckService.loadDeck(state.deckId).then(deck => {
+        setIsPublic(deck.is_public);
+      }).catch(() => {});
+    }
+  }, [state.deckId]);
+
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
 
@@ -450,6 +464,18 @@ function ArkhamDeckBuilderContent() {
                         Export for ArkhamDB
                       </button>
                     )}
+                    {state.deckId && (
+                      <button
+                        onClick={() => {
+                          setShowShareModal(true);
+                          setShowMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-cc-border transition-colors"
+                      >
+                        <Share2 className="w-4 h-4" />
+                        Share Deck
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setShowUpgradeDialog(true);
@@ -669,6 +695,18 @@ function ArkhamDeckBuilderContent() {
         isOpen={showKeywordReference}
         onClose={() => setShowKeywordReference(false)}
       />
+
+      {/* Share Deck Modal */}
+      {showShareModal && state.deckId && (
+        <ShareDeckModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          deckId={state.deckId}
+          deckName={state.deckName}
+          isPublic={isPublic}
+          onTogglePublic={setIsPublic}
+        />
+      )}
     </div>
   );
 }
