@@ -126,6 +126,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
     addXP,
     setXP,
     setMetadata,
+    setTaboo,
   } = useArkhamDeckBuilder();
 
   const [selectedCard, setSelectedCard] = useState<ArkhamCard | null>(null);
@@ -639,6 +640,23 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
           )}
         </div>
 
+        {/* Taboo list selector */}
+        <div className="flex items-center justify-between text-sm mb-2">
+          <span className="text-gray-300">Taboo List</span>
+          <select
+            value={state.tabooId || ''}
+            onChange={(e) => setTaboo(e.target.value ? Number(e.target.value) : null)}
+            className="bg-cc-darker border border-cc-border rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-gold-500/50"
+          >
+            <option value="">None</option>
+            {arkhamCardService.getTabooLists().map(taboo => (
+              <option key={taboo.id} value={taboo.id}>
+                {taboo.name} ({taboo.date_start})
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Validation summary */}
         {validation && (
           <div className="flex items-center gap-2 text-sm">
@@ -798,6 +816,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                       onMoveToSide={moveToSide}
                       getXpDiscount={getXpDiscount}
                       getIgnoreDeckSizeCount={getIgnoreDeckSizeCount}
+                      tabooId={state.tabooId}
+                      customizations={state.customizations}
                       isSubsection
                     />
                   ))}
@@ -818,6 +838,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onMoveToSide={moveToSide}
                 getXpDiscount={getXpDiscount}
                 getIgnoreDeckSizeCount={getIgnoreDeckSizeCount}
+                tabooId={state.tabooId}
+                customizations={state.customizations}
               />
             )}
 
@@ -834,6 +856,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onMoveToSide={moveToSide}
                 getXpDiscount={getXpDiscount}
                 getIgnoreDeckSizeCount={getIgnoreDeckSizeCount}
+                tabooId={state.tabooId}
+                customizations={state.customizations}
               />
             )}
 
@@ -850,6 +874,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onMoveToSide={moveToSide}
                 getXpDiscount={getXpDiscount}
                 getIgnoreDeckSizeCount={getIgnoreDeckSizeCount}
+                tabooId={state.tabooId}
+                customizations={state.customizations}
                 isPermanent
               />
             )}
@@ -864,6 +890,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onAdd={addCard}
                 onRemove={removeCard}
                 onCardClick={setSelectedCard}
+                tabooId={state.tabooId}
+                customizations={state.customizations}
                 isWeakness
               />
             )}
@@ -878,6 +906,8 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
                 onAdd={addCard}
                 onRemove={removeCard}
                 onCardClick={setSelectedCard}
+                tabooId={state.tabooId}
+                customizations={state.customizations}
                 isWeakness
               />
             )}
@@ -1238,6 +1268,8 @@ function CardTypeSection({
   onMoveToSide,
   getXpDiscount,
   getIgnoreDeckSizeCount,
+  tabooId,
+  customizations,
   isWeakness = false,
   isPermanent = false,
   isSubsection = false,
@@ -1252,6 +1284,8 @@ function CardTypeSection({
   onMoveToSide?: (code: string) => void;
   getXpDiscount?: (code: string) => number;
   getIgnoreDeckSizeCount?: (code: string) => number;
+  tabooId?: number | null;
+  customizations?: Record<string, number[]>;
   isWeakness?: boolean;
   isPermanent?: boolean;
   isSubsection?: boolean;
@@ -1298,7 +1332,10 @@ function CardTypeSection({
           const exceptionalMultiplier = isExceptional(card) ? 2 : 1;
           const copies = isMyriad(card) ? 1 : quantity;
           const maxXp = xp * copies * exceptionalMultiplier;
-          const effectiveXp = Math.max(0, maxXp - xpDiscount);
+          // Taboo XP adjustment
+          const tabooEntry = tabooId ? arkhamCardService.getTabooCardEntry(tabooId, card.code) : null;
+          const tabooXp = tabooEntry?.xp ? tabooEntry.xp * copies : 0;
+          const effectiveXp = Math.max(0, maxXp + tabooXp - xpDiscount);
           const cardIsExceptional = isExceptional(card);
           const cardIsMyriad = isMyriad(card);
           const excludedCount = getIgnoreDeckSizeCount?.(card.code) || 0;
@@ -1348,13 +1385,15 @@ function CardTypeSection({
                   <span className="text-yellow-400 text-[10px] flex-shrink-0">★</span>
                 )}
                 {/* XP badge - only on mobile */}
-                {xp > 0 && (
+                {(xp > 0 || tabooXp > 0) && (
                   <span className={`md:hidden text-[10px] px-1 rounded flex-shrink-0 ${
-                    xpDiscount > 0
+                    tabooXp > 0
+                      ? 'bg-pink-500/30 text-pink-300'
+                      : xpDiscount > 0
                       ? 'bg-green-500/30 text-green-400'
                       : 'bg-yellow-500/30 text-yellow-400'
                   }`}>
-                    {xpDiscount > 0 ? `${effectiveXp}xp` : `${maxXp}xp`}
+                    {effectiveXp}xp
                   </span>
                 )}
                 {isSignature && (
@@ -1382,15 +1421,25 @@ function CardTypeSection({
                     M
                   </span>
                 )}
+                {tabooEntry && (
+                  <span className="text-[9px] px-1 bg-pink-500/30 text-pink-300 rounded flex-shrink-0" title={`Taboo: ${tabooEntry.xp ? (tabooEntry.xp > 0 ? '+' : '') + tabooEntry.xp + ' XP' : ''}${tabooEntry.deck_limit !== undefined ? (tabooEntry.xp ? ', ' : '') + 'limit ' + tabooEntry.deck_limit : ''}`}>
+                    T{tabooEntry.xp ? (tabooEntry.xp > 0 ? '+' : '') + tabooEntry.xp : ''}
+                  </span>
+                )}
+                {customizations?.[card.code] && customizations[card.code].length > 0 && (
+                  <span className="text-[9px] px-1 bg-amber-500/30 text-amber-300 rounded flex-shrink-0" title="Has customizations">
+                    C
+                  </span>
+                )}
               </div>
 
               {/* XP column - desktop only */}
               <div className="hidden md:flex items-center justify-center">
-                {xp > 0 ? (
+                {(xp > 0 || tabooXp > 0) ? (
                   <span className={`text-sm font-bold ${
-                    xpDiscount > 0 ? 'text-green-400' : 'text-yellow-400'
+                    tabooXp > 0 ? 'text-pink-400' : xpDiscount > 0 ? 'text-green-400' : 'text-yellow-400'
                   }`}>
-                    {xpDiscount > 0 ? effectiveXp : maxXp}
+                    {effectiveXp}
                   </span>
                 ) : (
                   <span className="text-gray-500 text-sm">—</span>

@@ -297,6 +297,8 @@ export interface ArkhamDeckData {
   ignoreDeckSizeSlots?: Record<string, number>;
   /** XP discounts per card (from Arcane Research, etc.): code -> discounted count */
   xpDiscountSlots?: Record<string, number>;
+  /** Customizations for customizable cards: code -> selected option position indices */
+  customizations?: Record<string, number[]>;
 
   /** Taboo list ID */
   taboo_id?: number;
@@ -391,4 +393,26 @@ export interface ArkhamCycle {
   name: string;
   position: number;
   size?: number;
+}
+
+/**
+ * Taboo card entry - modifications applied to a card by a taboo list
+ */
+export interface TabooCardEntry {
+  code: string;
+  xp?: number;           // XP adjustment (+2 = costs 2 more)
+  text?: string;         // Mutated text
+  deck_limit?: number;   // 0 = forbidden
+  exceptional?: boolean;
+}
+
+/**
+ * Taboo list from ArkhamDB
+ */
+export interface TabooList {
+  id: number;
+  name: string;
+  date_start: string;
+  active: boolean;
+  cards: TabooCardEntry[];
 }

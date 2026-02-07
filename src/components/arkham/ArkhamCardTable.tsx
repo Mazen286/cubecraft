@@ -3,6 +3,7 @@ import { Search, X, Plus, Minus, Filter, ChevronUp, ChevronDown, ChevronRight, R
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
+import { collectionService } from '../../services/collectionService';
 import { isExceptional, isMyriad } from '../../services/arkhamDeckValidation';
 import { BottomSheet } from '../ui/BottomSheet';
 import type { ArkhamCard, ArkhamFaction, ArkhamCardType, ArkhamPack, Investigator } from '../../types/arkham';
@@ -177,12 +178,19 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
   const [traitFilter, setTraitFilter] = useState<string | null>(null);
   const [packFilter, setPackFilter] = useState<Set<string>>(new Set());
   const [showPackFilter, setShowPackFilter] = useState(false);
+  const [ownedOnly, setOwnedOnly] = useState(false);
+  const [ownedPacks, setOwnedPacks] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [isDragOver, setIsDragOver] = useState(false);
 
   const tableRef = useRef<HTMLDivElement>(null);
   const dragImageRef = useRef<HTMLImageElement>(null);
+
+  // Load owned packs on mount
+  useEffect(() => {
+    setOwnedPacks(collectionService.getOwnedPacks());
+  }, []);
 
   // Handle drag and drop for removing cards
   const handleDragOver = (e: React.DragEvent) => {
@@ -229,6 +237,10 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
       }
 
       if (packFilter.size > 0 && !packFilter.has(card.pack_code)) {
+        return false;
+      }
+
+      if (ownedOnly && ownedPacks.size > 0 && !ownedPacks.has(card.pack_code)) {
         return false;
       }
 
@@ -292,7 +304,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
 
       return true;
     });
-  }, [state.investigator, state.isInitialized, query, factionFilter, typeFilter, levelFilter, packFilter, externalFilters, canAddCard]);
+  }, [state.investigator, state.isInitialized, query, factionFilter, typeFilter, levelFilter, packFilter, ownedOnly, ownedPacks, externalFilters, canAddCard]);
 
   // Extract available traits from base filtered cards (before trait filter)
   const availableTraits = useMemo(() => {
@@ -419,7 +431,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
   const factions: ArkhamFaction[] = ['guardian', 'seeker', 'rogue', 'mystic', 'survivor', 'neutral'];
   const types: ArkhamCardType[] = ['asset', 'event', 'skill'];
   const levels = ['0', '1-2', '3+'] as const;
-  const hasActiveFilters = factionFilter || typeFilter || levelFilter || traitFilter || packFilter.size > 0;
+  const hasActiveFilters = factionFilter || typeFilter || levelFilter || traitFilter || packFilter.size > 0 || ownedOnly;
   const hasExternalFilters = externalFilters && (
     externalFilters.cost !== undefined && externalFilters.cost !== null ||
     externalFilters.faction ||
@@ -598,8 +610,21 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
               </div>
             )}
 
-            {/* Expansion / Pack filter */}
-            <div>
+            {/* Owned filter + Expansion / Pack filter */}
+            <div className="flex items-center gap-2">
+              {ownedPacks.size > 0 && (
+                <button
+                  onClick={() => setOwnedOnly(!ownedOnly)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+                    ownedOnly
+                      ? 'bg-gold-600/20 text-gold-400'
+                      : 'bg-cc-darker text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <Package className="w-3 h-3" />
+                  Owned
+                </button>
+              )}
               <button
                 onClick={() => setShowPackFilter(!showPackFilter)}
                 className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
@@ -705,7 +730,7 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
           <span>{sortedCards.length} cards</span>
           {hasActiveFilters && (
             <button
-              onClick={() => { setFactionFilter(null); setTypeFilter(null); setLevelFilter(null); setTraitFilter(null); setPackFilter(new Set()); }}
+              onClick={() => { setFactionFilter(null); setTypeFilter(null); setLevelFilter(null); setTraitFilter(null); setPackFilter(new Set()); setOwnedOnly(false); }}
               className="text-gold-400 hover:text-gold-300"
             >
               Clear
@@ -783,6 +808,15 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
                     {card.subname && <span className="text-gray-500 text-xs ml-1">({card.subname})</span>}
                   </span>
                   {card.is_unique && <span className="text-yellow-500 text-xs">★</span>}
+                  {(() => {
+                    const te = state.tabooId ? arkhamCardService.getTabooCardEntry(state.tabooId, card.code) : null;
+                    if (!te) return null;
+                    return (
+                      <span className="text-[9px] px-1 bg-pink-500/30 text-pink-300 rounded flex-shrink-0" title={`Taboo${te.xp ? ': ' + (te.xp > 0 ? '+' : '') + te.xp + ' XP' : ''}${te.deck_limit !== undefined ? ': limit ' + te.deck_limit : ''}`}>
+                        T{te.xp ? (te.xp > 0 ? '+' : '') + te.xp : ''}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {/* Type */}
@@ -793,10 +827,19 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
                   {card.cost === null ? '—' : card.cost === -2 ? 'X' : card.cost}
                 </span>
 
-                {/* XP - doubled for Exceptional cards */}
-                <span className={card.xp ? (isExceptional(card) ? 'text-red-400 font-medium' : 'text-yellow-400 font-medium') : 'text-gray-500'}>
-                  {card.xp ? (isExceptional(card) ? card.xp * 2 : card.xp) : '—'}
-                </span>
+                {/* XP - adjusted for Exceptional and Taboo */}
+                {(() => {
+                  const baseXp = card.xp || 0;
+                  const te = state.tabooId ? arkhamCardService.getTabooCardEntry(state.tabooId, card.code) : null;
+                  const tabooXp = te?.xp || 0;
+                  const displayXp = baseXp * (isExceptional(card) ? 2 : 1) + tabooXp;
+                  if (baseXp === 0 && tabooXp === 0) return <span className="text-gray-500">—</span>;
+                  return (
+                    <span className={`font-medium ${tabooXp > 0 ? 'text-pink-400' : isExceptional(card) ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {displayXp}
+                    </span>
+                  );
+                })()}
 
                 {/* Skill icons - flat list, one icon at a time */}
                 <div className="flex gap-1">
@@ -846,12 +889,14 @@ export function ArkhamCardTable({ onCardSelect, selectedCard, externalFilters, o
 // Card preview panel component using BottomSheet
 export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; onClose: () => void }) {
   const {
+    state,
     getCardQuantity,
     getSideCardQuantity,
     getIgnoreDeckSizeCount,
     setIgnoreDeckSizeCount,
     getXpDiscount,
     setXpDiscount,
+    setCustomizations,
     removeCard,
     moveToSide,
     moveToMain,
@@ -974,6 +1019,54 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
         </div>
       )}
 
+      {/* Customization options - for customizable cards in main deck */}
+      {isInMainDeck && card.customization_options && card.customization_options.length > 0 && (
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-sm text-gray-300 font-medium">Customizations</span>
+          <div className="w-full max-w-md space-y-1">
+            {card.customization_options
+              .sort((a, b) => a.position - b.position)
+              .map((opt) => {
+                const selectedPositions = state.customizations[card.code] || [];
+                const isSelected = selectedPositions.includes(opt.position);
+                return (
+                  <button
+                    key={opt.position}
+                    onClick={() => {
+                      const newPositions = isSelected
+                        ? selectedPositions.filter(p => p !== opt.position)
+                        : [...selectedPositions, opt.position];
+                      setCustomizations(card.code, newPositions);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded text-left text-xs transition-colors ${
+                      isSelected
+                        ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300'
+                        : 'bg-cc-darker border border-cc-border text-gray-400 hover:text-white hover:border-gray-500'
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                      isSelected ? 'bg-amber-500 border-amber-500 text-black' : 'border-gray-500'
+                    }`}>
+                      {isSelected && <span className="text-[10px] font-bold">✓</span>}
+                    </span>
+                    <span className="flex-1 min-w-0">{opt.text || `Option ${opt.position + 1}`}</span>
+                    <span className={`flex-shrink-0 font-medium ${isSelected ? 'text-amber-400' : 'text-yellow-400/60'}`}>
+                      {opt.xp} XP
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+          {(state.customizations[card.code]?.length || 0) > 0 && (
+            <div className="text-xs text-amber-400">
+              Customization XP: {card.customization_options
+                .filter(opt => (state.customizations[card.code] || []).includes(opt.position))
+                .reduce((sum, opt) => sum + opt.xp, 0)} XP
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Deck size exclusion control - per-copy, only for main deck cards */}
       {isInMainDeck && (
         <div className="flex items-center justify-center gap-3">
@@ -1026,7 +1119,7 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
             />
 
             {/* Card info below */}
-            <CardInfoSection card={card} factionColor={factionColor} />
+            <CardInfoSection card={card} factionColor={factionColor} tabooId={state.tabooId} />
           </div>
 
           {/* Desktop: Side by side with large image */}
@@ -1046,7 +1139,7 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
 
             {/* Card info */}
             <div className="flex-1 min-w-0">
-              <CardInfoSection card={card} factionColor={factionColor} />
+              <CardInfoSection card={card} factionColor={factionColor} tabooId={state.tabooId} />
             </div>
           </div>
         </div>
@@ -1056,7 +1149,9 @@ export function CardPreviewPanel({ card, onClose }: { card: ArkhamCard | null; o
 }
 
 // Card info section component
-function CardInfoSection({ card, factionColor }: { card: ArkhamCard; factionColor: string }) {
+function CardInfoSection({ card, factionColor, tabooId }: { card: ArkhamCard; factionColor: string; tabooId?: number | null }) {
+  const tabooEntry = tabooId ? arkhamCardService.getTabooCardEntry(tabooId, card.code) : null;
+
   return (
     <div className="w-full">
       {card.subname && (
@@ -1079,7 +1174,45 @@ function CardInfoSection({ card, factionColor }: { card: ArkhamCard; factionColo
             {card.slot}
           </span>
         )}
+        <a
+          href={`https://arkhamdb.com/card/${card.code}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-1 bg-cc-card rounded text-sm text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          ArkhamDB ↗
+        </a>
       </div>
+
+      {/* Taboo info */}
+      {tabooEntry && (
+        <div className="mb-3 p-2 bg-pink-500/10 border border-pink-500/30 rounded-lg text-sm space-y-1">
+          <div className="flex flex-wrap gap-2">
+            <span className="text-pink-300 font-medium">Taboo</span>
+            {tabooEntry.xp !== undefined && tabooEntry.xp !== 0 && (
+              <span className="text-pink-400">{tabooEntry.xp > 0 ? '+' : ''}{tabooEntry.xp} XP</span>
+            )}
+            {tabooEntry.deck_limit === 0 && (
+              <span className="text-red-400 font-medium">Forbidden</span>
+            )}
+            {tabooEntry.deck_limit !== undefined && tabooEntry.deck_limit > 0 && (
+              <span className="text-pink-400">Limit {tabooEntry.deck_limit} per deck</span>
+            )}
+            {tabooEntry.exceptional && (
+              <span className="text-pink-400">Exceptional</span>
+            )}
+            {!tabooEntry.xp && tabooEntry.deck_limit === undefined && !tabooEntry.exceptional && (
+              <span className="text-pink-400">Mutated</span>
+            )}
+          </div>
+          {tabooEntry.text && (
+            <div
+              className="text-xs text-pink-300/80 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: formatCardText(tabooEntry.text) }}
+            />
+          )}
+        </div>
+      )}
 
       {/* Stats row */}
       <div className="flex flex-wrap gap-4 mb-3 text-base">

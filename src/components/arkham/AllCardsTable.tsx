@@ -9,6 +9,7 @@ import { Search, X, Plus, Minus, ChevronUp, ChevronDown, ChevronRight, Info, Pac
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
+import { collectionService } from '../../services/collectionService';
 import { isExceptional } from '../../services/arkhamDeckValidation';
 import type { ArkhamCard, ArkhamFaction, ArkhamCardType, ArkhamPack } from '../../types/arkham';
 import { FACTION_COLORS, FACTION_NAMES } from '../../config/games/arkham';
@@ -37,11 +38,18 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
   const [traitFilter, setTraitFilter] = useState<string | null>(null);
   const [packFilter, setPackFilter] = useState<Set<string>>(new Set());
   const [showPackFilter, setShowPackFilter] = useState(false);
+  const [ownedOnly, setOwnedOnly] = useState(false);
+  const [ownedPacks, setOwnedPacks] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const tableRef = useRef<HTMLDivElement>(null);
   const dragImageRef = useRef<HTMLImageElement>(null);
+
+  // Load owned packs on mount
+  useEffect(() => {
+    setOwnedPacks(collectionService.getOwnedPacks());
+  }, []);
 
   // Get ALL deckable cards without eligibility filtering (includes story assets, weaknesses, etc.)
   const allCards = useMemo(() => {
@@ -67,6 +75,10 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
       cards = cards.filter(card => packFilter.has(card.pack_code));
     }
 
+    if (ownedOnly && ownedPacks.size > 0) {
+      cards = cards.filter(card => ownedPacks.has(card.pack_code));
+    }
+
     if (factionFilter) {
       cards = cards.filter(card =>
         card.faction_code === factionFilter || card.faction2_code === factionFilter
@@ -78,7 +90,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
     }
 
     return cards;
-  }, [allCards, query, factionFilter, typeFilter, packFilter]);
+  }, [allCards, query, factionFilter, typeFilter, packFilter, ownedOnly, ownedPacks]);
 
   // Extract available traits from base filtered cards
   const availableTraits = useMemo(() => {
@@ -215,7 +227,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
 
   const factions: ArkhamFaction[] = ['guardian', 'seeker', 'rogue', 'mystic', 'survivor', 'neutral'];
   const types: ArkhamCardType[] = ['asset', 'event', 'skill'];
-  const hasActiveFilters = factionFilter || typeFilter || traitFilter || packFilter.size > 0;
+  const hasActiveFilters = factionFilter || typeFilter || traitFilter || packFilter.size > 0 || ownedOnly;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -329,8 +341,21 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
             </div>
           )}
 
-          {/* Expansion / Pack filter */}
-          <div>
+          {/* Owned filter + Expansion / Pack filter */}
+          <div className="flex items-center gap-2">
+            {ownedPacks.size > 0 && (
+              <button
+                onClick={() => setOwnedOnly(!ownedOnly)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+                  ownedOnly
+                    ? 'bg-orange-600/20 text-orange-400'
+                    : 'bg-cc-darker text-gray-400 hover:text-white'
+                }`}
+              >
+                <Package className="w-3 h-3" />
+                Owned
+              </button>
+            )}
             <button
               onClick={() => setShowPackFilter(!showPackFilter)}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
@@ -419,7 +444,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
           <span>{sortedCards.length} cards</span>
           {hasActiveFilters && (
             <button
-              onClick={() => { setFactionFilter(null); setTypeFilter(null); setTraitFilter(null); setPackFilter(new Set()); }}
+              onClick={() => { setFactionFilter(null); setTypeFilter(null); setTraitFilter(null); setPackFilter(new Set()); setOwnedOnly(false); }}
               className="text-orange-400 hover:text-orange-300"
             >
               Clear filters

@@ -15,6 +15,7 @@ import {
   Cloud,
   HelpCircle,
   Share2,
+  Package,
 } from 'lucide-react';
 import {
   ArkhamDeckBuilderProvider,
@@ -31,6 +32,7 @@ import { SyncDeckModal } from '../components/arkham/SyncDeckModal';
 import { ExportDeckModal } from '../components/arkham/ExportDeckModal';
 import { ShareDeckModal } from '../components/arkham/ShareDeckModal';
 import { KeywordReferenceModal } from '../components/arkham/KeywordReferenceModal';
+import { CollectionManager } from '../components/arkham/CollectionManager';
 import { FACTION_COLORS, FACTION_NAMES } from '../config/games/arkham';
 import { isOAuthConfigured } from '../services/arkhamDBAuth';
 import { arkhamCardService } from '../services/arkhamCardService';
@@ -95,6 +97,7 @@ function ArkhamDeckBuilderContent() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [showKeywordReference, setShowKeywordReference] = useState(false);
+  const [showCollectionManager, setShowCollectionManager] = useState(false);
   const [isArkhamDBConnected, setIsArkhamDBConnected] = useState(false);
 
   // Clear import param from URL after reading it
@@ -416,6 +419,16 @@ function ArkhamDeckBuilderContent() {
                   <div className="absolute right-0 top-full mt-1 bg-cc-darker border border-cc-border rounded-lg shadow-lg z-50 min-w-[160px]">
                     <button
                       onClick={() => {
+                        setShowCollectionManager(true);
+                        setShowMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-cc-border transition-colors"
+                    >
+                      <Package className="w-4 h-4" />
+                      My Collection
+                    </button>
+                    <button
+                      onClick={() => {
                         setShowImportModal(true);
                         setShowMenu(false);
                       }}
@@ -669,7 +682,7 @@ function ArkhamDeckBuilderContent() {
             sideSlots: state.sideSlots,
             ignoreDeckSizeSlots: state.ignoreDeckSizeSlots,
             xpDiscountSlots: state.xpDiscountSlots,
-            taboo_id: undefined,
+            taboo_id: state.tabooId || undefined,
             arkhamdb_id: state.arkhamdbId || undefined,
             arkhamdb_decklist_id: state.arkhamdbDecklistId || undefined,
             arkhamdb_url: state.arkhamdbUrl || undefined,
@@ -694,6 +707,12 @@ function ArkhamDeckBuilderContent() {
       <KeywordReferenceModal
         isOpen={showKeywordReference}
         onClose={() => setShowKeywordReference(false)}
+      />
+
+      {/* Collection Manager Modal */}
+      <CollectionManager
+        isOpen={showCollectionManager}
+        onClose={() => setShowCollectionManager(false)}
       />
 
       {/* Share Deck Modal */}

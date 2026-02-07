@@ -9,12 +9,14 @@ import type {
   ArkhamPack,
   ArkhamFaction,
   ArkhamCardType,
+  TabooList,
+  TabooCardEntry,
 } from '../types/arkham';
 import type { Card } from '../types/card';
 
 const API_BASE = 'https://arkhamdb.com/api/public';
 const CACHE_KEY = 'arkham_cards_cache';
-const CACHE_VERSION = 'v4'; // Bumped to include exceptional/myriad boolean fields
+const CACHE_VERSION = 'v5'; // Bumped to include taboo lists
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CacheData {
@@ -22,12 +24,14 @@ interface CacheData {
   timestamp: number;
   cards: ArkhamCard[];
   packs: ArkhamPack[];
+  tabooLists?: TabooList[];
 }
 
 // In-memory cache
 let cardsCache: ArkhamCard[] | null = null;
 let packsCache: ArkhamPack[] | null = null;
 let investigatorsCache: Investigator[] | null = null;
+let tabooListsCache: TabooList[] | null = null;
 
 /**
  * Get image URL for an Arkham card
@@ -115,13 +119,14 @@ function loadFromCache(): CacheData | null {
 /**
  * Save cards to localStorage cache
  */
-function saveToCache(cards: ArkhamCard[], packs: ArkhamPack[]): void {
+function saveToCache(cards: ArkhamCard[], packs: ArkhamPack[], tabooLists?: TabooList[]): void {
   try {
     const data: CacheData = {
       version: CACHE_VERSION,
       timestamp: Date.now(),
       cards,
       packs,
+      tabooLists,
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
   } catch (e) {
@@ -153,6 +158,28 @@ async function fetchAllPacks(): Promise<ArkhamPack[]> {
 }
 
 /**
+ * Fetch taboo lists from ArkhamDB API
+ */
+async function fetchTabooLists(): Promise<TabooList[]> {
+  try {
+    const response = await fetch(`${API_BASE}/taboos/`);
+    if (!response.ok) {
+      console.warn('Failed to fetch taboo lists:', response.statusText);
+      return [];
+    }
+    const data = await response.json();
+    // Parse the cards field which comes as a JSON string from ArkhamDB
+    return data.map((taboo: { id: number; name: string; date_start: string; active: boolean; cards: string }) => ({
+      ...taboo,
+      cards: typeof taboo.cards === 'string' ? JSON.parse(taboo.cards) : (taboo.cards || []),
+    }));
+  } catch (e) {
+    console.warn('Failed to fetch taboo lists:', e);
+    return [];
+  }
+}
+
+/**
  * Initialize the card service - loads from cache or fetches from API
  */
 async function initialize(): Promise<void> {
@@ -164,19 +191,25 @@ async function initialize(): Promise<void> {
   if (cached) {
     cardsCache = cached.cards;
     packsCache = cached.packs;
+    tabooListsCache = cached.tabooLists || null;
     investigatorsCache = null; // Will be derived from cards
     return;
   }
 
   // Fetch from API
-  const [cards, packs] = await Promise.all([fetchAllCards(), fetchAllPacks()]);
+  const [cards, packs, tabooLists] = await Promise.all([
+    fetchAllCards(),
+    fetchAllPacks(),
+    fetchTabooLists(),
+  ]);
 
   cardsCache = cards;
   packsCache = packs;
+  tabooListsCache = tabooLists;
   investigatorsCache = null;
 
   // Cache for later
-  saveToCache(cards, packs);
+  saveToCache(cards, packs, tabooLists);
 }
 
 /**
@@ -485,6 +518,7 @@ async function refreshCache(): Promise<void> {
   cardsCache = null;
   packsCache = null;
   investigatorsCache = null;
+  tabooListsCache = null;
   localStorage.removeItem(CACHE_KEY);
   await initialize();
 }
@@ -494,6 +528,30 @@ async function refreshCache(): Promise<void> {
  */
 function isInitialized(): boolean {
   return cardsCache !== null;
+}
+
+/**
+ * Get all taboo lists
+ */
+function getTabooLists(): TabooList[] {
+  return tabooListsCache || [];
+}
+
+/**
+ * Get a specific taboo list by ID
+ */
+function getTabooList(id: number): TabooList | null {
+  if (!tabooListsCache) return null;
+  return tabooListsCache.find(t => t.id === id) || null;
+}
+
+/**
+ * Get a taboo card entry for a specific card in a specific taboo list
+ */
+function getTabooCardEntry(tabooId: number, cardCode: string): TabooCardEntry | null {
+  const taboo = getTabooList(tabooId);
+  if (!taboo) return null;
+  return taboo.cards.find(c => c.code === cardCode) || null;
 }
 
 /**
@@ -590,6 +648,9 @@ export const arkhamCardService = {
   getSignatureCards,
   getBasicWeaknesses,
   getPacks,
+  getTabooLists,
+  getTabooList,
+  getTabooCardEntry,
   refreshCache,
   toCard,
   getArkhamCardImageUrl,

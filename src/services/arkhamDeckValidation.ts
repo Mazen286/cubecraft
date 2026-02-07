@@ -131,17 +131,33 @@ export function isMyriad(card: { myriad?: boolean }): boolean {
  * Calculate total XP cost of cards in deck
  * - Exceptional cards cost double their printed XP
  * - Myriad cards only cost XP once regardless of copies
+ * - Taboo XP adjustments are added per copy
  */
-export function calculateXpCost(slots: Record<string, number>): number {
+export function calculateXpCost(slots: Record<string, number>, tabooId?: number): number {
   let totalXp = 0;
 
   for (const [code, quantity] of Object.entries(slots)) {
     const card = arkhamCardService.getCard(code);
-    if (card && card.xp) {
-      const exceptionalMultiplier = isExceptional(card) ? 2 : 1;
-      // Myriad cards only cost XP once, otherwise multiply by quantity
-      const copies = isMyriad(card) ? 1 : quantity;
-      totalXp += card.xp * copies * exceptionalMultiplier;
+    if (!card) continue;
+
+    const baseXp = card.xp || 0;
+    if (baseXp === 0 && !tabooId) continue;
+
+    const exceptionalMultiplier = isExceptional(card) ? 2 : 1;
+    // Myriad cards only cost XP once, otherwise multiply by quantity
+    const copies = isMyriad(card) ? 1 : quantity;
+
+    // Base card XP
+    if (baseXp > 0) {
+      totalXp += baseXp * copies * exceptionalMultiplier;
+    }
+
+    // Taboo XP adjustment (applied per copy, not affected by exceptional)
+    if (tabooId) {
+      const tabooEntry = arkhamCardService.getTabooCardEntry(tabooId, code);
+      if (tabooEntry?.xp) {
+        totalXp += tabooEntry.xp * copies;
+      }
     }
   }
 
@@ -163,7 +179,8 @@ export function validateArkhamDeck(
   investigator: Investigator,
   slots: Record<string, number>,
   xpBudget: number = 0,
-  ignoreDeckSizeSlots: Record<string, number> = {}
+  ignoreDeckSizeSlots: Record<string, number> = {},
+  tabooId?: number
 ): ArkhamValidationResult {
   const errors: ArkhamValidationError[] = [];
   const warnings: ArkhamValidationError[] = [];
@@ -220,7 +237,7 @@ export function validateArkhamDeck(
   }
 
   // Calculate XP spent
-  const totalXp = calculateXpCost(slots);
+  const totalXp = calculateXpCost(slots, tabooId);
 
   // Track cards by deck option for limit checking
   const optionCounts = new Map<string, number>();
@@ -248,6 +265,30 @@ export function validateArkhamDeck(
         cardCode: code,
       });
       continue;
+    }
+
+    // Check taboo restrictions
+    if (tabooId) {
+      const tabooEntry = arkhamCardService.getTabooCardEntry(tabooId, code);
+      if (tabooEntry) {
+        if (tabooEntry.deck_limit === 0) {
+          errors.push({
+            code: 'TABOO_FORBIDDEN',
+            severity: 'error',
+            message: `${card.name}: forbidden by taboo list`,
+            cardCode: code,
+          });
+          continue;
+        }
+        if (tabooEntry.deck_limit !== undefined && quantity > tabooEntry.deck_limit) {
+          errors.push({
+            code: 'TABOO_LIMIT',
+            severity: 'error',
+            message: `${card.name}: exceeds taboo copy limit (${quantity}/${tabooEntry.deck_limit})`,
+            cardCode: code,
+          });
+        }
+      }
     }
 
     // Check copy limit

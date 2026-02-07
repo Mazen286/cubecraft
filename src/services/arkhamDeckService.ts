@@ -11,6 +11,7 @@ import type { ArkhamDeckData, ArkhamDeckInfo } from '../types/arkham';
 interface ArkhamDeckMeta {
   ignoreDeckSizeSlots?: Record<string, number>;
   xpDiscountSlots?: Record<string, number>;
+  customizations?: Record<string, number[]>;
 }
 
 interface ArkhamDeckRow {
@@ -84,6 +85,7 @@ export const arkhamDeckService = {
     sideSlots?: Record<string, number>;
     ignoreDeckSizeSlots?: Record<string, number>;
     xpDiscountSlots?: Record<string, number>;
+    customizations?: Record<string, number[]>;
     xpEarned?: number;
     xpSpent?: number;
     campaignId?: string;
@@ -105,14 +107,17 @@ export const arkhamDeckService = {
       }
 
       // Build meta object only if there's data to store
-      const meta: ArkhamDeckMeta | null =
+      const hasMeta =
         (data.ignoreDeckSizeSlots && Object.keys(data.ignoreDeckSizeSlots).length > 0) ||
-        (data.xpDiscountSlots && Object.keys(data.xpDiscountSlots).length > 0)
-          ? {
-              ignoreDeckSizeSlots: data.ignoreDeckSizeSlots,
-              xpDiscountSlots: data.xpDiscountSlots,
-            }
-          : null;
+        (data.xpDiscountSlots && Object.keys(data.xpDiscountSlots).length > 0) ||
+        (data.customizations && Object.keys(data.customizations).length > 0);
+      const meta: ArkhamDeckMeta | null = hasMeta
+        ? {
+            ignoreDeckSizeSlots: data.ignoreDeckSizeSlots,
+            xpDiscountSlots: data.xpDiscountSlots,
+            customizations: data.customizations,
+          }
+        : null;
 
       const insertData: ArkhamDeckInsert = {
         id: deckId,
@@ -165,6 +170,7 @@ export const arkhamDeckService = {
       sideSlots?: Record<string, number>;
       ignoreDeckSizeSlots?: Record<string, number>;
       xpDiscountSlots?: Record<string, number>;
+      customizations?: Record<string, number[]>;
       xpEarned?: number;
       xpSpent?: number;
       tabooId?: number;
@@ -241,15 +247,18 @@ export const arkhamDeckService = {
       }
 
       // Update meta if any meta fields are provided
-      if (updates.ignoreDeckSizeSlots !== undefined || updates.xpDiscountSlots !== undefined) {
-        const meta: ArkhamDeckMeta | null =
+      if (updates.ignoreDeckSizeSlots !== undefined || updates.xpDiscountSlots !== undefined || updates.customizations !== undefined) {
+        const hasMeta =
           (updates.ignoreDeckSizeSlots && Object.keys(updates.ignoreDeckSizeSlots).length > 0) ||
-          (updates.xpDiscountSlots && Object.keys(updates.xpDiscountSlots).length > 0)
-            ? {
-                ignoreDeckSizeSlots: updates.ignoreDeckSizeSlots,
-                xpDiscountSlots: updates.xpDiscountSlots,
-              }
-            : null;
+          (updates.xpDiscountSlots && Object.keys(updates.xpDiscountSlots).length > 0) ||
+          (updates.customizations && Object.keys(updates.customizations).length > 0);
+        const meta: ArkhamDeckMeta | null = hasMeta
+          ? {
+              ignoreDeckSizeSlots: updates.ignoreDeckSizeSlots,
+              xpDiscountSlots: updates.xpDiscountSlots,
+              customizations: updates.customizations,
+            }
+          : null;
         updateData.meta = meta;
       }
 
@@ -337,6 +346,7 @@ export const arkhamDeckService = {
         sideSlots: sourceDeck.sideSlots,
         ignoreDeckSizeSlots: sourceDeck.ignoreDeckSizeSlots,
         xpDiscountSlots: sourceDeck.xpDiscountSlots,
+        customizations: sourceDeck.customizations,
         xpEarned: sourceDeck.xp_earned,
         xpSpent: sourceDeck.xp_spent,
         tabooId: sourceDeck.taboo_id,
@@ -394,6 +404,7 @@ export const arkhamDeckService = {
         sideSlots: row.side_slots || undefined,
         ignoreDeckSizeSlots: row.meta?.ignoreDeckSizeSlots || undefined,
         xpDiscountSlots: row.meta?.xpDiscountSlots || undefined,
+        customizations: row.meta?.customizations || undefined,
         taboo_id: row.taboo_id || undefined,
         arkhamdb_id: row.arkhamdb_id || undefined,
         arkhamdb_decklist_id: row.arkhamdb_decklist_id || undefined,

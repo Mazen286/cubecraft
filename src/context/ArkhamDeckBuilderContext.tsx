@@ -43,6 +43,12 @@ export interface ArkhamDeckBuilderState {
   // code -> total XP discount applied to this card (can be any amount)
   xpDiscountSlots: Record<string, number>;
 
+  // Customizations for customizable cards: code -> selected option position indices
+  customizations: Record<string, number[]>;
+
+  // Taboo list
+  tabooId: number | null;
+
   // XP tracking
   xpEarned: number;
   xpSpent: number;
@@ -110,6 +116,10 @@ type ArkhamDeckBuilderAction =
   | { type: 'MOVE_TO_MAIN'; payload: { code: string } }
   // XP discount tracking
   | { type: 'SET_XP_DISCOUNT'; payload: { code: string; discount: number } }
+  // Taboo list
+  | { type: 'SET_TABOO'; payload: number | null }
+  // Customizations
+  | { type: 'SET_CUSTOMIZATIONS'; payload: { code: string; positions: number[] } }
   // ArkhamDB sync
   | { type: 'SET_ARKHAMDB_IDS'; payload: { arkhamdbId?: number; decklistId?: number; url?: string } };
 
@@ -136,24 +146,53 @@ function isMyriad(card: { text?: string }): boolean {
  */
 function calculateXpCostWithDiscounts(
   slots: Record<string, number>,
-  xpDiscountSlots: Record<string, number>
+  xpDiscountSlots: Record<string, number>,
+  tabooId?: number | null,
+  customizations?: Record<string, number[]>
 ): number {
   let totalXp = 0;
 
   for (const [code, quantity] of Object.entries(slots)) {
     const card = arkhamCardService.getCard(code);
-    if (card && card.xp) {
+    if (!card) continue;
+
+    const baseCardXp = card.xp || 0;
+
+    if (baseCardXp > 0) {
       // Exceptional cards cost double XP
       const exceptionalMultiplier = isExceptional(card) ? 2 : 1;
       // Myriad cards only cost XP once, otherwise multiply by quantity
       const copies = isMyriad(card) ? 1 : quantity;
       // Base XP for all copies
-      const baseXp = card.xp * copies * exceptionalMultiplier;
+      const baseXp = baseCardXp * copies * exceptionalMultiplier;
       totalXp += baseXp;
 
       // Subtract discount (capped at base XP - can't go negative per card)
       const discount = xpDiscountSlots[code] || 0;
       totalXp -= Math.min(discount, baseXp);
+    }
+
+    // Add taboo XP adjustment
+    if (tabooId) {
+      const tabooEntry = arkhamCardService.getTabooCardEntry(tabooId, code);
+      if (tabooEntry?.xp) {
+        const copies = isMyriad(card) ? 1 : quantity;
+        totalXp += tabooEntry.xp * copies;
+      }
+    }
+
+    // Add customization XP
+    if (customizations?.[code]) {
+      const selectedPositions = customizations[code];
+      const options = card.customization_options;
+      if (options) {
+        for (const pos of selectedPositions) {
+          const opt = options.find(o => o.position === pos);
+          if (opt) {
+            totalXp += opt.xp;
+          }
+        }
+      }
     }
   }
 
@@ -188,7 +227,7 @@ function runValidation(state: ArkhamDeckBuilderState): ArkhamValidationResult | 
   if (!state.investigator) return null;
 
   const xpBudget = state.xpEarned > 0 ? state.xpEarned : 0;
-  return validateArkhamDeck(state.investigator, state.slots, xpBudget, state.ignoreDeckSizeSlots);
+  return validateArkhamDeck(state.investigator, state.slots, xpBudget, state.ignoreDeckSizeSlots, state.tabooId || undefined);
 }
 
 /**
@@ -257,7 +296,7 @@ function arkhamDeckBuilderReducer(
       newSlots[code] = currentQty + quantity;
 
       // Recalculate XP spent with discounts
-      const newXpSpent = calculateXpCostWithDiscounts(newSlots, state.xpDiscountSlots);
+      const newXpSpent = calculateXpCostWithDiscounts(newSlots, state.xpDiscountSlots, state.tabooId, state.customizations);
 
       const newState = {
         ...stateWithHistory,
@@ -280,13 +319,15 @@ function arkhamDeckBuilderReducer(
       const currentQty = newSlots[code] || 0;
       const newQty = Math.max(0, currentQty - quantity);
 
-      // Clean up XP discounts and ignore slots if card quantity changed
+      // Clean up XP discounts, ignore slots, and customizations if card quantity changed
       const newXpDiscountSlots = { ...state.xpDiscountSlots };
       const newIgnoreDeckSizeSlots = { ...state.ignoreDeckSizeSlots };
+      const newCustomizations = { ...state.customizations };
       if (newQty === 0) {
         delete newSlots[code];
         delete newXpDiscountSlots[code];
         delete newIgnoreDeckSizeSlots[code];
+        delete newCustomizations[code];
       } else {
         newSlots[code] = newQty;
         // Cap discount at new max XP (card.xp * newQty)
@@ -304,13 +345,14 @@ function arkhamDeckBuilderReducer(
       }
 
       // Recalculate XP spent with discounts
-      const newXpSpent = calculateXpCostWithDiscounts(newSlots, newXpDiscountSlots);
+      const newXpSpent = calculateXpCostWithDiscounts(newSlots, newXpDiscountSlots, state.tabooId, newCustomizations);
 
       const newState = {
         ...stateWithHistory,
         slots: newSlots,
         xpDiscountSlots: newXpDiscountSlots,
         ignoreDeckSizeSlots: newIgnoreDeckSizeSlots,
+        customizations: newCustomizations,
         xpSpent: newXpSpent,
         isDirty: true,
       };
@@ -328,11 +370,13 @@ function arkhamDeckBuilderReducer(
       const newSlots = { ...stateWithHistory.slots };
       const newXpDiscountSlots = { ...state.xpDiscountSlots };
       const newIgnoreDeckSizeSlots = { ...state.ignoreDeckSizeSlots };
+      const newCustomizations2 = { ...state.customizations };
 
       if (quantity <= 0) {
         delete newSlots[code];
         delete newXpDiscountSlots[code];
         delete newIgnoreDeckSizeSlots[code];
+        delete newCustomizations2[code];
       } else {
         newSlots[code] = quantity;
         // Cap discount at new max XP (card.xp * quantity)
@@ -350,13 +394,14 @@ function arkhamDeckBuilderReducer(
       }
 
       // Recalculate XP spent with discounts
-      const newXpSpent = calculateXpCostWithDiscounts(newSlots, newXpDiscountSlots);
+      const newXpSpent = calculateXpCostWithDiscounts(newSlots, newXpDiscountSlots, state.tabooId, newCustomizations2);
 
       const newState = {
         ...stateWithHistory,
         slots: newSlots,
         xpDiscountSlots: newXpDiscountSlots,
         ignoreDeckSizeSlots: newIgnoreDeckSizeSlots,
+        customizations: newCustomizations2,
         xpSpent: newXpSpent,
         isDirty: true,
       };
@@ -373,6 +418,7 @@ function arkhamDeckBuilderReducer(
 
       const newSlots = { ...stateWithHistory.slots };
       const newXpDiscountSlots = { ...state.xpDiscountSlots };
+      const upgradeCustomizations = { ...state.customizations };
 
       // Remove old card
       const oldQty = newSlots[oldCode] || 0;
@@ -385,18 +431,20 @@ function arkhamDeckBuilderReducer(
       } else {
         delete newSlots[oldCode];
         delete newXpDiscountSlots[oldCode];
+        delete upgradeCustomizations[oldCode];
       }
 
       // Add new card
       newSlots[newCode] = (newSlots[newCode] || 0) + 1;
 
       // Recalculate XP spent with discounts
-      const newXpSpent = calculateXpCostWithDiscounts(newSlots, newXpDiscountSlots);
+      const newXpSpent = calculateXpCostWithDiscounts(newSlots, newXpDiscountSlots, state.tabooId, upgradeCustomizations);
 
       const newState = {
         ...stateWithHistory,
         slots: newSlots,
         xpDiscountSlots: newXpDiscountSlots,
+        customizations: upgradeCustomizations,
         xpSpent: newXpSpent,
         isDirty: true,
       };
@@ -443,6 +491,8 @@ function arkhamDeckBuilderReducer(
         sideSlots: deckData.sideSlots || {},
         ignoreDeckSizeSlots: deckData.ignoreDeckSizeSlots || {},
         xpDiscountSlots: deckData.xpDiscountSlots || {},
+        customizations: deckData.customizations || {},
+        tabooId: deckData.taboo_id || null,
         xpEarned: deckData.xp_earned,
         xpSpent: deckData.xp_spent,
         campaignId: deckData.campaign_id || null,
@@ -521,8 +571,8 @@ function arkhamDeckBuilderReducer(
         slots[code] = qty;
       }
 
-      // Calculate XP spent (no discounts for fresh import)
-      const xpSpent = calculateXpCostWithDiscounts(slots, {});
+      // Calculate XP spent (no discounts/taboo/customizations for fresh import)
+      const xpSpent = calculateXpCostWithDiscounts(slots, {}, null, {});
 
       const newState: ArkhamDeckBuilderState = {
         ...createInitialState(),
@@ -757,11 +807,48 @@ function arkhamDeckBuilderReducer(
       }
 
       // Recalculate XP spent with discounts
-      const newXpSpent = calculateXpCostWithDiscounts(state.slots, newXpDiscountSlots);
+      const newXpSpent = calculateXpCostWithDiscounts(state.slots, newXpDiscountSlots, state.tabooId, state.customizations);
 
       return {
         ...state,
         xpDiscountSlots: newXpDiscountSlots,
+        xpSpent: newXpSpent,
+        isDirty: true,
+      };
+    }
+
+    case 'SET_TABOO': {
+      const tabooId = action.payload;
+      const newXpSpent = calculateXpCostWithDiscounts(state.slots, state.xpDiscountSlots, tabooId, state.customizations);
+
+      const newState = {
+        ...state,
+        tabooId,
+        xpSpent: newXpSpent,
+        isDirty: true,
+      };
+
+      return {
+        ...newState,
+        validationResult: runValidation(newState),
+      };
+    }
+
+    case 'SET_CUSTOMIZATIONS': {
+      const { code, positions } = action.payload;
+      const newCustomizations = { ...state.customizations };
+
+      if (positions.length === 0) {
+        delete newCustomizations[code];
+      } else {
+        newCustomizations[code] = positions;
+      }
+
+      const newXpSpent = calculateXpCostWithDiscounts(state.slots, state.xpDiscountSlots, state.tabooId, newCustomizations);
+
+      return {
+        ...state,
+        customizations: newCustomizations,
         xpSpent: newXpSpent,
         isDirty: true,
       };
@@ -797,6 +884,8 @@ function createInitialState(): ArkhamDeckBuilderState {
     sideSlots: {},
     ignoreDeckSizeSlots: {},
     xpDiscountSlots: {},
+    customizations: {},
+    tabooId: null,
     xpEarned: 0,
     xpSpent: 0,
     campaignId: null,
@@ -876,6 +965,12 @@ interface ArkhamDeckBuilderContextValue {
   // XP discount tracking (for Arcane Research, Down the Rabbit Hole, etc.)
   getXpDiscount: (code: string) => number;
   setXpDiscount: (code: string, discount: number) => void;
+
+  // Taboo list
+  setTaboo: (tabooId: number | null) => void;
+
+  // Customizations
+  setCustomizations: (code: string, positions: number[]) => void;
 
   // ArkhamDB sync
   setArkhamdbIds: (ids: { arkhamdbId?: number; decklistId?: number; url?: string }) => void;
@@ -1174,6 +1269,8 @@ export function ArkhamDeckBuilderProvider({
           sideSlots: state.sideSlots,
           ignoreDeckSizeSlots: state.ignoreDeckSizeSlots,
           xpDiscountSlots: state.xpDiscountSlots,
+          customizations: Object.keys(state.customizations).length > 0 ? state.customizations : undefined,
+          tabooId: state.tabooId || undefined,
           xpEarned: state.xpEarned,
           xpSpent: state.xpSpent,
           arkhamdbId: state.arkhamdbId || undefined,
@@ -1200,6 +1297,8 @@ export function ArkhamDeckBuilderProvider({
           sideSlots: state.sideSlots,
           ignoreDeckSizeSlots: state.ignoreDeckSizeSlots,
           xpDiscountSlots: state.xpDiscountSlots,
+          customizations: Object.keys(state.customizations).length > 0 ? state.customizations : undefined,
+          tabooId: state.tabooId || undefined,
           xpEarned: state.xpEarned,
           xpSpent: state.xpSpent,
           campaignId: state.campaignId || undefined,
@@ -1285,6 +1384,14 @@ export function ArkhamDeckBuilderProvider({
     dispatch({ type: 'SET_ARKHAMDB_IDS', payload: ids });
   }, []);
 
+  const setTaboo = useCallback((tabooId: number | null) => {
+    dispatch({ type: 'SET_TABOO', payload: tabooId });
+  }, []);
+
+  const setCustomizations = useCallback((code: string, positions: number[]) => {
+    dispatch({ type: 'SET_CUSTOMIZATIONS', payload: { code, positions } });
+  }, []);
+
   const investigators = state.isInitialized ? arkhamCardService.getInvestigators() : [];
 
   const value: ArkhamDeckBuilderContextValue = {
@@ -1324,6 +1431,8 @@ export function ArkhamDeckBuilderProvider({
     getXpDiscount,
     setXpDiscount,
     setArkhamdbIds,
+    setTaboo,
+    setCustomizations,
   };
 
   return (
