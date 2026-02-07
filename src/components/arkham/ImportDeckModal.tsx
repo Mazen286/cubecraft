@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { X, Upload, FileText, AlertTriangle, CheckCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { X, Upload, FileText, AlertTriangle, CheckCircle, RefreshCw, Loader2, Link } from 'lucide-react';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { parseArkhamDeckFile } from '../../services/arkhamDeckImport';
 import { arkhamCardService } from '../../services/arkhamCardService';
@@ -21,6 +21,8 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+  const [isUrlLoading, setIsUrlLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -47,6 +49,102 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
       });
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleImportUrl = async () => {
+    const trimmed = urlInput.trim();
+    if (!trimmed) {
+      setResult({ success: false, warnings: [], errors: ['Please enter a URL'], type: 'import' });
+      return;
+    }
+
+    // Parse ArkhamDB URL to extract ID and type (decklist vs deck)
+    let deckId: string | null = null;
+    let isDeckList = true;
+
+    const patterns = [
+      // Published decklist: /decklist/view/{id}
+      /arkhamdb\.com\/decklist\/(?:view|edit)\/(\d+)/,
+      // Private deck: /deck/view/{id}
+      /arkhamdb\.com\/deck\/(?:view|edit)\/(\d+)/,
+    ];
+
+    // Check if input is just a numeric ID
+    if (/^\d+$/.test(trimmed)) {
+      deckId = trimmed;
+      isDeckList = true; // Default to published decklist
+    } else {
+      for (const pattern of patterns) {
+        const match = trimmed.match(pattern);
+        if (match) {
+          deckId = match[1];
+          isDeckList = pattern.source.includes('decklist');
+          break;
+        }
+      }
+    }
+
+    if (!deckId) {
+      setResult({
+        success: false,
+        warnings: [],
+        errors: ['Could not parse ArkhamDB URL. Enter a full URL or just the numeric deck ID.'],
+        type: 'import',
+      });
+      return;
+    }
+
+    setIsUrlLoading(true);
+    setResult(null);
+
+    try {
+      const endpoint = isDeckList
+        ? `https://arkhamdb.com/api/public/decklist/${deckId}`
+        : `https://arkhamdb.com/api/public/deck/${deckId}`;
+
+      const response = await fetch(endpoint);
+      if (!response.ok) {
+        throw new Error(`ArkhamDB returned ${response.status}. The deck may be private or not found.`);
+      }
+
+      const data = await response.json();
+      if (!data.investigator_code || !data.slots) {
+        throw new Error('Invalid deck data received from ArkhamDB');
+      }
+
+      // Convert to import text format: investigator + slot entries
+      const lines: string[] = [`1x ${data.investigator_code}`];
+      for (const [code, qty] of Object.entries(data.slots as Record<string, number>)) {
+        lines.push(`${qty}x ${code}`);
+      }
+      const importText = lines.join('\n');
+
+      const importResult = importDeck(importText);
+      setResult({
+        success: importResult.success,
+        warnings: importResult.warnings,
+        errors: importResult.errors,
+        type: 'import',
+      });
+
+      if (importResult.success) {
+        setTimeout(() => {
+          onClose(true);
+          setUrlInput('');
+          setTextContent('');
+          setResult(null);
+        }, 1500);
+      }
+    } catch (error) {
+      setResult({
+        success: false,
+        warnings: [],
+        errors: [error instanceof Error ? error.message : 'Failed to fetch deck from ArkhamDB'],
+        type: 'import',
+      });
+    } finally {
+      setIsUrlLoading(false);
     }
   };
 
@@ -200,6 +298,33 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
             <p className="text-xs text-gray-500">
               Supports ArkhamDB text export (.txt) and OCTGN format (.o8d)
             </p>
+          </div>
+
+          {/* URL import */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Link className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-400">Import from ArkhamDB URL</span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleImportUrl(); }}
+                placeholder="https://arkhamdb.com/decklist/view/12345 or just 12345"
+                className="flex-1 px-3 py-2 bg-cc-darker border border-cc-border rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-gold-500/50"
+              />
+              <button
+                onClick={handleImportUrl}
+                disabled={!urlInput.trim() || isUrlLoading}
+                className="px-4 py-2 bg-gold-600 hover:bg-gold-500 text-black font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isUrlLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {isUrlLoading ? 'Loading...' : 'Import'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Paste an ArkhamDB URL or just the deck ID number</p>
           </div>
 
           {/* Refresh database option */}

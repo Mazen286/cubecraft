@@ -5,12 +5,12 @@
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Search, X, Plus, Minus, ChevronUp, ChevronDown, Info } from 'lucide-react';
+import { Search, X, Plus, Minus, ChevronUp, ChevronDown, ChevronRight, Info, Package } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import { arkhamCardService } from '../../services/arkhamCardService';
 import { isExceptional } from '../../services/arkhamDeckValidation';
-import type { ArkhamCard, ArkhamFaction, ArkhamCardType } from '../../types/arkham';
+import type { ArkhamCard, ArkhamFaction, ArkhamCardType, ArkhamPack } from '../../types/arkham';
 import { FACTION_COLORS, FACTION_NAMES } from '../../config/games/arkham';
 
 type SortField = 'name' | 'type' | 'faction' | 'cost' | 'xp';
@@ -35,6 +35,8 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
   const [factionFilter, setFactionFilter] = useState<ArkhamFaction | null>(null);
   const [typeFilter, setTypeFilter] = useState<ArkhamCardType | null>(null);
   const [traitFilter, setTraitFilter] = useState<string | null>(null);
+  const [packFilter, setPackFilter] = useState<Set<string>>(new Set());
+  const [showPackFilter, setShowPackFilter] = useState(false);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -61,6 +63,10 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
       });
     }
 
+    if (packFilter.size > 0) {
+      cards = cards.filter(card => packFilter.has(card.pack_code));
+    }
+
     if (factionFilter) {
       cards = cards.filter(card =>
         card.faction_code === factionFilter || card.faction2_code === factionFilter
@@ -72,7 +78,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
     }
 
     return cards;
-  }, [allCards, query, factionFilter, typeFilter]);
+  }, [allCards, query, factionFilter, typeFilter, packFilter]);
 
   // Extract available traits from base filtered cards
   const availableTraits = useMemo(() => {
@@ -89,6 +95,22 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([trait]) => trait);
   }, [baseFilteredCards]);
+
+  // Compute packs grouped by cycle (stable — not affected by filters)
+  const packsByCycle = useMemo(() => {
+    const packs = arkhamCardService.getPacks();
+    const cycles = new Map<string, { name: string; packs: ArkhamPack[] }>();
+    for (const pack of packs) {
+      const key = pack.cycle_code || 'standalone';
+      const name = pack.cycle_name || 'Standalone';
+      if (!cycles.has(key)) cycles.set(key, { name, packs: [] });
+      cycles.get(key)!.packs.push(pack);
+    }
+    for (const cycle of cycles.values()) {
+      cycle.packs.sort((a, b) => a.position - b.position);
+    }
+    return cycles;
+  }, []);
 
   // Auto-clear stale trait filter
   useEffect(() => {
@@ -193,7 +215,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
 
   const factions: ArkhamFaction[] = ['guardian', 'seeker', 'rogue', 'mystic', 'survivor', 'neutral'];
   const types: ArkhamCardType[] = ['asset', 'event', 'skill'];
-  const hasActiveFilters = factionFilter || typeFilter || traitFilter;
+  const hasActiveFilters = factionFilter || typeFilter || traitFilter || packFilter.size > 0;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -306,6 +328,90 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
               ))}
             </div>
           )}
+
+          {/* Expansion / Pack filter */}
+          <div>
+            <button
+              onClick={() => setShowPackFilter(!showPackFilter)}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
+                packFilter.size > 0
+                  ? 'bg-orange-600/20 text-orange-400'
+                  : 'bg-cc-darker text-gray-400 hover:text-white'
+              }`}
+            >
+              <Package className="w-3 h-3" />
+              Expansion
+              {packFilter.size > 0 && (
+                <span className="text-[10px] bg-orange-600/30 px-1 rounded">{packFilter.size}</span>
+              )}
+              <ChevronRight className={`w-3 h-3 transition-transform ${showPackFilter ? 'rotate-90' : ''}`} />
+            </button>
+            {showPackFilter && (
+              <div className="mt-1 max-h-48 overflow-y-auto rounded border border-cc-border bg-cc-darker p-2 space-y-2">
+                {packFilter.size > 0 && (
+                  <button
+                    onClick={() => setPackFilter(new Set())}
+                    className="text-[10px] text-orange-400 hover:text-orange-300 underline"
+                  >
+                    Clear all
+                  </button>
+                )}
+                {[...packsByCycle.entries()].map(([cycleCode, { name: cycleName, packs }]) => (
+                  <div key={cycleCode}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[10px] font-medium text-gray-300 uppercase tracking-wide">{cycleName}</span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => {
+                            const next = new Set(packFilter);
+                            for (const p of packs) next.add(p.code);
+                            setPackFilter(next);
+                          }}
+                          className="text-[9px] text-gray-500 hover:text-orange-400"
+                        >
+                          All
+                        </button>
+                        <button
+                          onClick={() => {
+                            const next = new Set(packFilter);
+                            for (const p of packs) next.delete(p.code);
+                            setPackFilter(next);
+                          }}
+                          className="text-[9px] text-gray-500 hover:text-orange-400"
+                        >
+                          None
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-0.5">
+                      {packs.map(pack => {
+                        const isActive = packFilter.has(pack.code);
+                        return (
+                          <button
+                            key={pack.code}
+                            onClick={() => {
+                              const next = new Set(packFilter);
+                              if (isActive) next.delete(pack.code);
+                              else next.add(pack.code);
+                              setPackFilter(next);
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap transition-colors ${
+                              isActive
+                                ? 'bg-orange-600/30 text-orange-400'
+                                : 'bg-cc-card text-gray-500 hover:text-white'
+                            }`}
+                            title={pack.name}
+                          >
+                            {pack.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Status */}
@@ -313,7 +419,7 @@ export function AllCardsTable({ onCardSelect, selectedCard }: AllCardsTableProps
           <span>{sortedCards.length} cards</span>
           {hasActiveFilters && (
             <button
-              onClick={() => { setFactionFilter(null); setTypeFilter(null); setTraitFilter(null); }}
+              onClick={() => { setFactionFilter(null); setTypeFilter(null); setTraitFilter(null); setPackFilter(new Set()); }}
               className="text-orange-400 hover:text-orange-300"
             >
               Clear filters

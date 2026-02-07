@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef } from 'react';
-import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Award, FileText } from 'lucide-react';
+import { Minus, Plus, AlertTriangle, CheckCircle, XCircle, User, Shuffle, PlayCircle, BarChart3, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Award, FileText, History } from 'lucide-react';
 import { marked } from 'marked';
 import { useArkhamDeckBuilder } from '../../context/ArkhamDeckBuilderContext';
 import RichTextEditor from '../RichTextEditor';
@@ -8,6 +8,7 @@ import { isExceptional, isMyriad } from '../../services/arkhamDeckValidation';
 import { CardPreviewPanel, InvestigatorPreviewPanel, SingleSkillIcon, getSkillIconsArray } from './ArkhamCardTable';
 import { DrawSimulator } from './DrawSimulator';
 import { DeckStats } from './DeckStats';
+import { DeckVersionDiff } from './DeckVersionDiff';
 import { BottomSheet } from '../ui/BottomSheet';
 import type { DeckStatsFilter } from './DeckStats';
 import type { ArkhamCard, Investigator } from '../../types/arkham';
@@ -139,6 +140,7 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
   const [showEditXP, setShowEditXP] = useState(false);
   const [editXpEarned, setEditXpEarned] = useState(0);
   const [showNotes, setShowNotes] = useState(false);
+  const [showVersionDiff, setShowVersionDiff] = useState(false);
   const [notesTab, setNotesTab] = useState<'guide' | 'strategy' | 'campaign'>('guide');
   const [notesGuide, setNotesGuide] = useState('');
   const [notesStrategy, setNotesStrategy] = useState('');
@@ -698,6 +700,19 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
             {state.deckDescription && state.deckDescription !== '{"guide":"","strategy":"","campaign":""}' && <span className="w-2 h-2 rounded-full bg-amber-400" />}
           </button>
         </div>
+        {(state.version > 1 || state.previousVersionId) && state.deckId && (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => setShowVersionDiff(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-600/50 text-cyan-300 text-sm font-medium rounded-lg transition-colors"
+            >
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">Version History</span>
+              <span className="sm:hidden">History</span>
+              <span className="text-xs text-cyan-400/70">v{state.version}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Validation errors */}
@@ -1131,6 +1146,15 @@ export function ArkhamDeckPanel({ onCrossFilter }: ArkhamDeckPanelProps) {
           </div>
         </div>
       </BottomSheet>
+
+      {/* Version diff */}
+      {state.deckId && (
+        <DeckVersionDiff
+          deckId={state.deckId}
+          isOpen={showVersionDiff}
+          onClose={() => setShowVersionDiff(false)}
+        />
+      )}
     </div>
   );
 }
