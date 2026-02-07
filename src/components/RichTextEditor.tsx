@@ -487,8 +487,62 @@ export default function RichTextEditor({ value, onChange, placeholder, enableArk
   // Align each line separately
   const alignLines = useCallback((alignment: 'left' | 'center' | 'right') => {
     if (showPreview && previewRef.current) {
-      // In visual mode, use execCommand
-      document.execCommand('justify' + alignment.charAt(0).toUpperCase() + alignment.slice(1), false);
+      restoreSelection();
+
+      // Check if the selection is on or near an image
+      const selection = window.getSelection();
+      let targetImg: HTMLImageElement | null = null;
+
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const node = range.startContainer;
+
+        // Direct image selection
+        if (node instanceof HTMLImageElement) {
+          targetImg = node;
+        } else if (node instanceof HTMLElement) {
+          // Image is a child of the selected element (e.g. clicked on image wrapper)
+          const img = node.querySelector('img');
+          if (img) targetImg = img;
+        } else if (node.parentElement) {
+          // Cursor is in text next to an image, or image is sibling
+          const parent = node.parentElement;
+          if (parent instanceof HTMLImageElement) {
+            targetImg = parent;
+          } else {
+            const img = parent.querySelector('img');
+            if (img && parent.childNodes.length <= 3) targetImg = img;
+          }
+        }
+      }
+
+      if (targetImg) {
+        // Find the nearest block-level parent of the image
+        let block = targetImg.parentElement;
+        const editor = previewRef.current;
+
+        // Walk up to find a block element (not the editor root)
+        while (block && block !== editor) {
+          const display = window.getComputedStyle(block).display;
+          if (display === 'block' || display === 'flex' || display === 'list-item') break;
+          block = block.parentElement;
+        }
+
+        if (block === editor || !block) {
+          // Image is a direct child of the editor with no block wrapper — wrap it in a <div>
+          const wrapper = document.createElement('div');
+          wrapper.style.textAlign = alignment;
+          targetImg.parentNode?.insertBefore(wrapper, targetImg);
+          wrapper.appendChild(targetImg);
+        } else {
+          // Set alignment on the existing block parent
+          (block as HTMLElement).style.textAlign = alignment;
+        }
+      } else {
+        // Normal text alignment via execCommand
+        document.execCommand('justify' + alignment.charAt(0).toUpperCase() + alignment.slice(1), false);
+      }
+
       // Sync content after applying alignment from toolbar
       const newContent = previewRef.current.innerHTML;
       lastExternalValueRef.current = newContent;
@@ -526,7 +580,7 @@ export default function RichTextEditor({ value, onChange, placeholder, enableArk
         textarea.setSelectionRange(start, start + alignedLines.length);
       }, 0);
     }
-  }, [showPreview, value, onChange]);
+  }, [showPreview, value, onChange, restoreSelection]);
 
   const insertTag = useCallback((openTag: string, closeTag: string, placeholder?: string) => {
     const textarea = textareaRef.current;
@@ -1098,6 +1152,11 @@ export default function RichTextEditor({ value, onChange, placeholder, enableArk
         .dark .rich-editor h3 { color: #e5e7eb; }
         .dark .rich-editor blockquote { border-color: #4b5563; color: #9ca3af; }
         .dark .rich-editor hr { border-color: #4b5563; }
+        .rich-editor img { max-width: 100%; height: auto; }
+        .rich-editor [style*="text-align: center"] > img,
+        .rich-editor [style*="text-align:center"] > img { display: inline-block; }
+        .rich-editor [style*="text-align: right"] > img,
+        .rich-editor [style*="text-align:right"] > img { display: inline-block; }
         .rich-editor font[size="1"] { font-size: 0.625rem; }
         .rich-editor font[size="2"] { font-size: 0.8rem; }
         .rich-editor font[size="3"] { font-size: 1rem; }
