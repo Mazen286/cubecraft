@@ -107,11 +107,31 @@ export default function RichTextEditor({ value, onChange, placeholder, enableArk
     };
   }, [enableArkhamCardTooltips, showPreview, showTooltipForLink, scheduleHide]);
 
-  // Open links in new tab when clicked in visual editor
+  // Track the last-clicked image so alignment buttons can target it
+  const activeImageRef = useRef<HTMLImageElement | null>(null);
+
+  // Open links in new tab when clicked in visual editor, track image clicks
   useEffect(() => {
     if (!showPreview || !previewRef.current) return;
 
     const container = previewRef.current;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Track image clicks for alignment — use mousedown so it fires before toolbar
+      if (e.target instanceof HTMLImageElement) {
+        activeImageRef.current = e.target;
+        // Programmatically select the image so browser selection covers it
+        const range = document.createRange();
+        range.selectNode(e.target);
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } else {
+        activeImageRef.current = null;
+      }
+    };
 
     const handleClick = (e: MouseEvent) => {
       const link = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null;
@@ -121,8 +141,12 @@ export default function RichTextEditor({ value, onChange, placeholder, enableArk
       }
     };
 
+    container.addEventListener('mousedown', handleMouseDown);
     container.addEventListener('click', handleClick);
-    return () => container.removeEventListener('click', handleClick);
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('click', handleClick);
+    };
   }, [showPreview]);
 
   // Smart tooltip positioning
@@ -489,58 +513,68 @@ export default function RichTextEditor({ value, onChange, placeholder, enableArk
     if (showPreview && previewRef.current) {
       restoreSelection();
 
-      // Check if the selection is on or near an image
-      const selection = window.getSelection();
-      let targetImg: HTMLImageElement | null = null;
+      // Always run execCommand for text alignment — this handles text and
+      // block-level alignment for the current selection/line
+      document.execCommand('justify' + alignment.charAt(0).toUpperCase() + alignment.slice(1), false);
 
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const node = range.startContainer;
+      // Also align any images in the selection or tracked via click
+      // Collect all images to align
+      const images: HTMLImageElement[] = [];
 
-        // Direct image selection
-        if (node instanceof HTMLImageElement) {
-          targetImg = node;
-        } else if (node instanceof HTMLElement) {
-          // Image is a child of the selected element (e.g. clicked on image wrapper)
-          const img = node.querySelector('img');
-          if (img) targetImg = img;
-        } else if (node.parentElement) {
-          // Cursor is in text next to an image, or image is sibling
-          const parent = node.parentElement;
-          if (parent instanceof HTMLImageElement) {
-            targetImg = parent;
-          } else {
-            const img = parent.querySelector('img');
-            if (img && parent.childNodes.length <= 3) targetImg = img;
+      // Check activeImageRef (set on mousedown)
+      if (activeImageRef.current && previewRef.current.contains(activeImageRef.current)) {
+        images.push(activeImageRef.current);
+      }
+
+      // Also find images within the current selection range
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        // If selection wraps content, find all images inside it
+        const container = range.commonAncestorContainer;
+        const searchRoot = container.nodeType === Node.ELEMENT_NODE
+          ? container as HTMLElement
+          : container.parentElement;
+        if (searchRoot) {
+          // Check if the searchRoot itself is an image
+          if (searchRoot instanceof HTMLImageElement) {
+            images.push(searchRoot);
+          }
+          // Find all images within the selection range
+          searchRoot.querySelectorAll('img').forEach(img => {
+            if (sel.containsNode(img, true)) {
+              images.push(img as HTMLImageElement);
+            }
+          });
+        }
+        // Also check direct child at startOffset (how browsers represent single-image selection)
+        if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+          const child = range.startContainer.childNodes[range.startOffset];
+          if (child instanceof HTMLImageElement) {
+            images.push(child);
           }
         }
       }
 
-      if (targetImg) {
-        // Find the nearest block-level parent of the image
-        let block = targetImg.parentElement;
-        const editor = previewRef.current;
-
-        // Walk up to find a block element (not the editor root)
-        while (block && block !== editor) {
-          const display = window.getComputedStyle(block).display;
-          if (display === 'block' || display === 'flex' || display === 'list-item') break;
-          block = block.parentElement;
-        }
-
-        if (block === editor || !block) {
-          // Image is a direct child of the editor with no block wrapper — wrap it in a <div>
-          const wrapper = document.createElement('div');
-          wrapper.style.textAlign = alignment;
-          targetImg.parentNode?.insertBefore(wrapper, targetImg);
-          wrapper.appendChild(targetImg);
+      // Deduplicate and apply alignment to each image
+      const seen = new Set<HTMLImageElement>();
+      for (const img of images) {
+        if (seen.has(img)) continue;
+        seen.add(img);
+        if (alignment === 'center') {
+          img.style.display = 'block';
+          img.style.marginLeft = 'auto';
+          img.style.marginRight = 'auto';
+        } else if (alignment === 'right') {
+          img.style.display = 'block';
+          img.style.marginLeft = 'auto';
+          img.style.marginRight = '0';
         } else {
-          // Set alignment on the existing block parent
-          (block as HTMLElement).style.textAlign = alignment;
+          // Left — reset to defaults
+          img.style.display = '';
+          img.style.marginLeft = '';
+          img.style.marginRight = '';
         }
-      } else {
-        // Normal text alignment via execCommand
-        document.execCommand('justify' + alignment.charAt(0).toUpperCase() + alignment.slice(1), false);
       }
 
       // Sync content after applying alignment from toolbar
@@ -1153,10 +1187,6 @@ export default function RichTextEditor({ value, onChange, placeholder, enableArk
         .dark .rich-editor blockquote { border-color: #4b5563; color: #9ca3af; }
         .dark .rich-editor hr { border-color: #4b5563; }
         .rich-editor img { max-width: 100%; height: auto; }
-        .rich-editor [style*="text-align: center"] > img,
-        .rich-editor [style*="text-align:center"] > img { display: inline-block; }
-        .rich-editor [style*="text-align: right"] > img,
-        .rich-editor [style*="text-align:right"] > img { display: inline-block; }
         .rich-editor font[size="1"] { font-size: 0.625rem; }
         .rich-editor font[size="2"] { font-size: 0.8rem; }
         .rich-editor font[size="3"] { font-size: 1rem; }
